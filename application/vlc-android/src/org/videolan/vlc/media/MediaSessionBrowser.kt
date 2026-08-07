@@ -127,7 +127,6 @@ class MediaSessionBrowser {
         const val ID_HOME = "$ID_ROOT/home"
         const val ID_PLAYLIST = "$ID_ROOT/playlist"
         private const val ID_LIBRARY = "$ID_ROOT/l"
-        const val ID_STREAM = "$ID_ROOT/stream"
 
         // Home menu
         const val ID_SHUFFLE_ALL = "$ID_HOME/shuffle_all"
@@ -184,13 +183,6 @@ class MediaSessionBrowser {
                             .setExtras(getContentStyle(CONTENT_STYLE_CATEGORY_ITEM_HINT_VALUE))
                             .build()
                     results.add(MediaBrowserCompat.MediaItem(libraryMediaDesc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE))
-                    //Streams
-                    val streamsMediaDesc = MediaDescriptionCompat.Builder()
-                            .setMediaId(ID_STREAM)
-                            .setTitle(res.getString(R.string.streams))
-                            .setIconUri(res.getResourceUri(R.drawable.ic_auto_stream))
-                            .build()
-                    results.add(MediaBrowserCompat.MediaItem(streamsMediaDesc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE))
                     return results
                 }
                 ID_HOME -> {
@@ -303,10 +295,6 @@ class MediaSessionBrowser {
                     list = ml.getPlaylists(Playlist.Type.All, false).toMutableList().filter { it.nbAudio > 0 || it.nbUnknown > 0}.toTypedArray()
                     list.sortWith(MediaComparators.ANDROID_AUTO)
                 }
-                ID_STREAM -> {
-                    list = ml.history(Medialibrary.HISTORY_TYPE_NETWORK)
-                    list.sortWith(MediaComparators.ANDROID_AUTO)
-                }
                 ID_LAST_ADDED -> {
                     limitSize = true
                     list = ml.getPagedAudio(Medialibrary.SORT_INSERTIONDATE, true, false, false, MAX_HISTORY_SIZE, 0)
@@ -378,7 +366,6 @@ class MediaSessionBrowser {
                         emptyMediaDesc.setMediaId(ID_NO_PLAYLIST)
                         emptyMediaDesc.setTitle(res.getString(R.string.noplaylist))
                     }
-                    ID_STREAM -> emptyMediaDesc.setIconUri(res.getResourceUri(R.drawable.ic_auto_stream_unknown))
                 }
                 results.add(MediaBrowserCompat.MediaItem(emptyMediaDesc.build(), MediaBrowserCompat.MediaItem.FLAG_PLAYABLE))
             }

@@ -2,10 +2,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools"
         tools:ignore="MissingTranslation">
 
-    <!-- Main VLC Interface -->
+    <!-- Main Mix Wave Interface -->
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
-    <string name="app_name" translatable="false">VLC</string>
+    <string name="app_name" translatable="false">Mix Wave</string>
     <string name="other">Other</string>
     <string name="sortby">Sort by…</string>
     <string name="sortby_name">Name</string>
@@ -23,6 +23,8 @@
     <string name="sortby_number">Nb tracks</string>
     <string name="searchable_hint">Search…</string>
     <string name="history">History</string>
+    <string name="music">Music</string>
+    <string name="you">You</string>
 
     <string name="sort_alpha_asc">A → Z</string>
     <string name="sort_alpha_desc">Z → A</string>
@@ -44,14 +46,14 @@
     <string name="playback_controls">Playback controls</string>
     <string name="medialibrary_scan">Media library scan</string>
     <string name="Medialibrary_progress">Media library scanning progress updates</string>
-    <string name="ml_database_warning">Your database contains the list of all of your media. It will be shared with VLC\'s developers</string>
-    <string name="logs_warning">May contain info about your played media. It will be shared with VLC\'s developers</string>
+    <string name="ml_database_warning">Your database contains a list of your media. Review it before sharing it with Mix Wave support.</string>
+    <string name="logs_warning">Logs may contain information about media you played. Review them before sharing them with Mix Wave support.</string>
     <string name="play_from_start">Play from start</string>
     <string name="play_as_audio">Play as audio</string>
     <string name="play_as_video">Play as video</string>
     <string name="return_to_video">Long tap the cover to restore the video</string>
     <string name="video_app_switch_title">Background/PiP mode</string>
-    <string name="video_app_switch_summary">Select VLC behavior when you switch to other application from video playback</string>
+    <string name="video_app_switch_summary">Choose how Mix Wave behaves when you switch to another app during video playback</string>
     <string name="play_pip_title">Play videos in Picture-in-picture mode</string>
     <string name="play_as_audio_background">Play videos in background</string>
     <string name="append">Add to play queue</string>
@@ -322,15 +324,15 @@
     <string name="hold_to_stop">Hold to stop</string>
 
     <!-- About -->
-    <string name="app_name_full">VLC for Android</string>
+    <string name="app_name_full">Mix Wave</string>
     <string name="revision">Revision</string>
     <string name="about">About</string>
-    <string name="about_vlc_text">VLC for Android™ is a port of VLC media player, the popular open source media player. The Android™ version can read all files and network streams.</string>
+    <string name="about_vlc_text">Mix Wave is a local media player distributed by Sandalbar Enterprises, Inc. It is built from open-source software; upstream authors and licenses are listed below.</string>
     <string name="authors">Authors</string>
     <string name="about_copyright" translatable="false">Copyleft &#169; 1996&#8211;2026 by VideoLAN</string>
     <string name="about_license" translatable="false">GNU General Public License v2.0</string>
     <string name="about_license_text" translatable="false"></string>
-    <string name="vlc_authors">and VLC Authors.</string>
+    <string name="vlc_authors">and upstream open-source contributors.</string>
     <string name="is_compiled_by">Compiled by</string>
     <string name="is_signed_by">Signed by</string>
     <string name="sources">Source code</string>
