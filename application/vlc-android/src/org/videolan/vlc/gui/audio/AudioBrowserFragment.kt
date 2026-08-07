@@ -30,6 +30,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.lifecycle.asFlow
@@ -57,6 +58,7 @@ import org.videolan.tools.KEY_AUDIO_LAST_PLAYLIST
 import org.videolan.tools.RESULT_RESTART
 import org.videolan.tools.Settings
 import org.videolan.tools.putSingle
+import org.videolan.vlc.PlaybackService
 import org.videolan.vlc.R
 import org.videolan.vlc.databinding.AudioBrowserBinding
 import org.videolan.vlc.gui.AudioPlayerContainerActivity
@@ -99,6 +101,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
     private lateinit var albumsAdapter: AudioBrowserAdapter
     private lateinit var genresAdapter: AudioBrowserAdapter
     private lateinit var playlistAdapter: AudioBrowserAdapter
+    private lateinit var mixerAdapter: AudioBrowserAdapter
     private lateinit var playlistModel: PlaylistModel
 
     private val lists = mutableListOf<RecyclerView>()
@@ -137,11 +140,12 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
                 lists.add(it.findViewById(R.id.audio_list))
             }
         }
-        val titles = arrayOf(getString(R.string.artists), getString(R.string.albums), getString(R.string.tracks), getString(R.string.genres), getString(R.string.playlists))
+        val titles = arrayOf(getString(R.string.artists), getString(R.string.albums), getString(R.string.tracks), getString(R.string.genres), getString(R.string.playlists), getString(R.string.audio_mixer))
         viewPager.offscreenPageLimit = MODE_TOTAL - 1
         audioPagerAdapter = AudioPagerAdapter(views.toTypedArray(), titles)
         @Suppress("UNCHECKED_CAST")
         viewPager.adapter = audioPagerAdapter
+        setupMixerControls(views[MIXER_TAB])
         savedInstanceState?.getIntegerArrayList(KEY_LISTS_POSITIONS)?.withIndex()?.forEach {
             restorePositions.put(it.index, it.value)
         }
@@ -265,8 +269,26 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         }.launchWhenStarted(lifecycleScope)
         genresAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_GENRE, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
         playlistAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_PLAYLIST, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
-        adapters = arrayOf(artistsAdapter, albumsAdapter, songsAdapter, genresAdapter, playlistAdapter)
+        mixerAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
+        mixerAdapter.currentMedia = PlaybackService.instance?.mixerMedia
+        adapters = arrayOf(artistsAdapter, albumsAdapter, songsAdapter, genresAdapter, playlistAdapter, mixerAdapter)
         setupProvider()
+    }
+
+    private fun setupMixerControls(view: View) {
+        val volume = view.findViewById<SeekBar>(R.id.audio_mixer_volume)
+        volume.progress = PlaybackService.instance?.mixerVolume ?: 50
+        volume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) PlaybackService.instance?.setAudioMixerVolume(progress)
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+        view.findViewById<View>(R.id.audio_mixer_off).setOnClickListener {
+            PlaybackService.instance?.disableAudioMixer()
+            if (::mixerAdapter.isInitialized) mixerAdapter.currentMedia = null
+        }
     }
 
     private fun setupProvider(index: Int = viewModel.currentTab) {
@@ -444,6 +466,17 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
             return
         }
         if (inSearchMode()) UiTools.setKeyboardVisibility(v, false)
+        if (currentTab == MIXER_TAB && item is MediaWrapper) {
+            if (!item.isPresent) {
+                UiTools.snackerMissing(requireActivity())
+                return
+            }
+            PlaybackService.instance?.let {
+                it.playInAudioMixer(item)
+                mixerAdapter.currentMedia = item
+            }
+            return
+        }
         if (item.itemType == MediaLibraryItem.TYPE_MEDIA) {
             if (item is MediaWrapper && !item.isPresent) {
                 UiTools.snackerMissing(requireActivity())
@@ -499,7 +532,8 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         const val TAG = "VLC/AudioBrowserFragment"
 
         private const val KEY_LISTS_POSITIONS = "key_lists_position"
-        private const val MODE_TOTAL = 5 // Number of audio lists
+        private const val MODE_TOTAL = 6 // Number of audio lists
+        private const val MIXER_TAB = 5
 
         const val TAG_ITEM = "ML_ITEM"
     }

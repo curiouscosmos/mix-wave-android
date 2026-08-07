@@ -2,6 +2,9 @@
 <resources xmlns:tools="http://schemas.android.com/tools"
         tools:ignore="MissingTranslation">
 
+    <string name="audio_mixer">Audio Mixer</string>
+    <string name="audio_mixer_volume">Mixer volume</string>
+    <string name="audio_mixer_turn_off">Turn off</string>
     <!-- Main VLC Interface -->
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>

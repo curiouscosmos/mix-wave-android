@@ -265,6 +265,11 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     private var popupManager: PopupManager? = null
 
     private val mediaFactory = FactoryManager.getFactory(IMediaFactory.factoryId) as IMediaFactory
+    private var mixerPlayer: MediaPlayer? = null
+    var mixerMedia: MediaWrapper? = null
+        private set
+    var mixerVolume: Int = 50
+        private set
     private lateinit var carConnection: CarConnection
 
     /**
@@ -333,6 +338,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 if (!wakeLock.isHeld) wakeLock.acquire()
                 showNotification()
                 nbErrors = 0
+                mixerPlayer?.play()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     NetworkConnectionManager.isMetered.value?.let {
                         checkMetered(it)
@@ -344,6 +350,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 executeUpdate(true)
                 showNotification()
                 if (wakeLock.isHeld) wakeLock.release()
+                mixerPlayer?.pause()
             }
             MediaPlayer.Event.EncounteredError -> executeUpdate()
             MediaPlayer.Event.LengthChanged -> {
@@ -372,7 +379,9 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             MediaPlayer.Event.EndReached -> {
                 mediaEndReached = true
                 playQueueFinished = !playlistManager.hasNext() || playlistManager.stopAfter == currentMediaPosition
+                mixerPlayer?.stop()
             }
+            MediaPlayer.Event.Stopped -> mixerPlayer?.stop()
         }
         cbActor.trySend(CbMediaPlayerEvent(event))
     }
@@ -911,6 +920,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     override fun onDestroy() {
+        disableAudioMixer()
         serviceFlow.value = null
         dispatcher.onServicePreSuperOnDestroy()
         PlaylistManager.playingState.value = false
@@ -1817,6 +1827,29 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     @MainThread
     fun setVolume(volume: Int) = playlistManager.player.setVolume(volume)
 
+    /** Selects a second local track which follows the main player's play/pause state. */
+    fun playInAudioMixer(mediaWrapper: MediaWrapper) {
+        val player = mixerPlayer ?: MediaPlayer(VLCInstance.getInstance(this)).also { mixerPlayer = it }
+        val media = mediaFactory.getFromUri(VLCInstance.getInstance(this), mediaWrapper.uri)
+        player.media = media
+        media.release()
+        player.setVolume(mixerVolume)
+        mixerMedia = mediaWrapper
+        if (isPlaying) player.play()
+    }
+
+    fun setAudioMixerVolume(volume: Int) {
+        mixerVolume = volume.coerceIn(0, 100)
+        mixerPlayer?.setVolume(mixerVolume)
+    }
+
+    fun disableAudioMixer() {
+        mixerPlayer?.stop()
+        mixerPlayer?.release()
+        mixerPlayer = null
+        mixerMedia = null
+    }
+
     @MainThread
     @JvmOverloads
     fun seek(time: Long, length: Double = this.length.toDouble(), fromUser: Boolean = false, fast: Boolean = false) {
@@ -2126,4 +2159,3 @@ fun PlaybackService.manageAbRepeatStep(abRepeatReset: View, abRepeatStop: View, 
         }
     }
 }
-
