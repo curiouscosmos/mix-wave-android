@@ -34,26 +34,16 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.onEach
-import org.videolan.libvlc.Dialog
 import org.videolan.medialibrary.interfaces.Medialibrary
 import org.videolan.medialibrary.interfaces.media.MediaWrapper
-import org.videolan.medialibrary.media.MediaLibraryItem
 import org.videolan.resources.ACTIVITY_RESULT_PREFERENCES
-import org.videolan.resources.util.parcelable
 import org.videolan.tools.*
 import org.videolan.vlc.R
-import org.videolan.vlc.gui.dialogs.CONFIRM_RENAME_DIALOG_RESULT
-import org.videolan.vlc.gui.dialogs.RENAME_DIALOG_MEDIA
-import org.videolan.vlc.gui.dialogs.RENAME_DIALOG_NEW_NAME
 import org.videolan.vlc.gui.helpers.Click
 import org.videolan.vlc.gui.helpers.ImageClick
 import org.videolan.vlc.gui.helpers.LongClick
 import org.videolan.vlc.gui.helpers.SimpleClick
 import org.videolan.vlc.gui.helpers.UiTools.showDonations
-import org.videolan.vlc.gui.network.IStreamsFragmentDelegate
-import org.videolan.vlc.gui.network.KeyboardListener
-import org.videolan.vlc.gui.network.MRLAdapter
-import org.videolan.vlc.gui.network.StreamsFragmentDelegate
 import org.videolan.vlc.gui.preferences.PreferencesActivity
 import org.videolan.vlc.gui.view.EmptyLoadingState
 import org.videolan.vlc.gui.view.TitleListView
@@ -61,40 +51,30 @@ import org.videolan.vlc.interfaces.IHistory
 import org.videolan.vlc.interfaces.IRefreshable
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
-import org.videolan.vlc.util.DialogDelegate
-import org.videolan.vlc.util.IDialogManager
 import org.videolan.vlc.util.launchWhenStarted
 import org.videolan.vlc.viewmodels.HistoryModel
-import org.videolan.vlc.viewmodels.StreamsModel
 
-private const val TAG = "VLC/HistoryFragment"
+private const val TAG = "MixWave/HistoryFragment"
 private const val KEY_SELECTION = "key_selection"
 
-class MoreFragment : BaseFragment(), IRefreshable, IHistory, IDialogManager,
-        IStreamsFragmentDelegate by StreamsFragmentDelegate() {
+class MoreFragment : BaseFragment(), IRefreshable, IHistory {
 
-    private lateinit var streamsAdapter: MRLAdapter
     private lateinit var historyEntry: TitleListView
-    private lateinit var streamsEntry: TitleListView
     private lateinit var settingsButton: Button
     private lateinit var aboutButton: Button
     private lateinit var donationsButton: CardView
     private lateinit var viewModel: HistoryModel
-    private lateinit var streamsViewModel: StreamsModel
     private lateinit var multiSelectHelper: MultiSelectHelper<MediaWrapper>
     private val historyAdapter: HistoryAdapter = HistoryAdapter(true)
     override fun hasFAB() = false
     @Suppress("UNCHECKED_CAST")
     private fun getMultiHelper(): MultiSelectHelper<HistoryModel>? = historyAdapter.multiSelectHelper as? MultiSelectHelper<HistoryModel>
     private var savedSelection = ArrayList<Int>()
-    private val dialogsDelegate = DialogDelegate()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         (savedInstanceState?.getIntegerArrayList(KEY_SELECTION))?.let { savedSelection = it }
-        dialogsDelegate.observeDialogs(this, this)
         viewModel = ViewModelProvider(requireActivity(), HistoryModel.Factory(requireContext()))[HistoryModel::class.java]
-        streamsViewModel = ViewModelProvider(requireActivity(), StreamsModel.Factory(requireContext(), showDummy = true))[StreamsModel::class.java]
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -130,37 +110,6 @@ class MoreFragment : BaseFragment(), IRefreshable, IHistory, IDialogManager,
         }
         historyAdapter.events.onEach { it.process() }.launchWhenStarted(lifecycleScope)
 
-        streamsEntry = view.findViewById(R.id.streams_entry)
-        setup(this, streamsViewModel, object : KeyboardListener {
-            override fun hideKeyboard() {}
-        })
-
-        streamsAdapter = MRLAdapter(getlistEventActor(), inCards = true)
-        streamsAdapter.setOnDummyClickListener {
-            val i = Intent(activity, SecondaryActivity::class.java)
-            i.putExtra("fragment", SecondaryActivity.STREAMS)
-            requireActivity().startActivityForResult(i, SecondaryActivity.ACTIVITY_RESULT_SECONDARY)
-        }
-        streamsViewModel.dataset.observe(viewLifecycleOwner) {
-            streamsAdapter.update(it)
-            if (streamsViewModel.loading.value == false)
-                streamsEntry.isLoading = false
-
-        }
-        streamsViewModel.loading.observe(viewLifecycleOwner) {
-            lifecycleScope.launchWhenStarted {
-                if (it) delay(300L)
-                (activity as? MainActivity)?.refreshing = it
-                streamsEntry.isLoading = it
-            }
-        }
-        streamsEntry.actionButton.setVisible()
-        streamsEntry.setOnActionClickListener {
-            val i = Intent(requireActivity(), SecondaryActivity::class.java)
-            i.putExtra("fragment", SecondaryActivity.STREAMS)
-            requireActivity().startActivityForResult(i, SecondaryActivity.ACTIVITY_RESULT_SECONDARY)
-        }
-
         settingsButton.setOnClickListener {
             requireActivity().startActivityForResult(Intent(requireActivity(), PreferencesActivity::class.java), ACTIVITY_RESULT_PREFERENCES)
         }
@@ -183,8 +132,6 @@ class MoreFragment : BaseFragment(), IRefreshable, IHistory, IDialogManager,
         historyEntry.list.nextFocusRightId = android.R.id.list
         historyEntry.list.nextFocusForwardId = android.R.id.list
 
-        streamsEntry.list.adapter = streamsAdapter
-
         historyEntry.setOnActionClickListener {
             val i = Intent(requireActivity(), SecondaryActivity::class.java)
             i.putExtra("fragment", SecondaryActivity.HISTORY)
@@ -193,11 +140,6 @@ class MoreFragment : BaseFragment(), IRefreshable, IHistory, IDialogManager,
 
         multiSelectHelper = historyAdapter.multiSelectHelper
         registerForContextMenu(historyEntry.list)
-        requireActivity().supportFragmentManager.setFragmentResultListener(CONFIRM_RENAME_DIALOG_RESULT, viewLifecycleOwner) { requestKey, bundle ->
-            val media = bundle.parcelable<MediaWrapper>(RENAME_DIALOG_MEDIA) ?: return@setFragmentResultListener
-            val name = bundle.getString(RENAME_DIALOG_NEW_NAME) ?: return@setFragmentResultListener
-            renameStream(media, name)
-        }
     }
 
     private fun manageDonationVisibility() {
@@ -323,10 +265,4 @@ class MoreFragment : BaseFragment(), IRefreshable, IHistory, IDialogManager,
         invalidateActionMode()
     }
 
-    override fun fireDialog(dialog: Dialog) {
-        DialogActivity.dialog = dialog
-        startActivity(Intent(DialogActivity.KEY_DIALOG, null, requireActivity(), DialogActivity::class.java))
-    }
-
-    override fun dialogCanceled(dialog: Dialog?) { }
 }
