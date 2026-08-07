@@ -136,23 +136,13 @@
         </androidx.cardview.widget.CardView>
 
         <org.videolan.vlc.gui.view.TitleListView
-                android:id="@+id/streams_entry"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/donationsButton"
-                app:title="@string/streams" />
-
-        <org.videolan.vlc.gui.view.TitleListView
                 android:id="@+id/history_entry"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/streams_entry"
+                app:layout_constraintTop_toBottomOf="@+id/donationsButton"
                 app:title="@string/history" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

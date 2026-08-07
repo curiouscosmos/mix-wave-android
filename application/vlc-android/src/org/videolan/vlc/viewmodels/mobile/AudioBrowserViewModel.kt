@@ -45,13 +45,14 @@ class AudioBrowserViewModel(context: Context) : MedialibraryViewModel(context) {
             Settings.getInstance(context).getBoolean(KEY_ARTISTS_SHOW_ALL, false))
     val albumsProvider = AlbumsProvider(null, context, this)
     val tracksProvider = TracksProvider(null, context, this)
+    val mixerTracksProvider = TracksProvider(null, context, this)
     val genresProvider = GenresProvider(context, this)
     private val playlistsProvider = PlaylistsProvider(context, this, Playlist.Type.Audio)
-    override val providers = arrayOf(artistsProvider, albumsProvider, tracksProvider, genresProvider, playlistsProvider)
-    val providersInCard = arrayOf(true, true, false, false, true)
+    override val providers = arrayOf(artistsProvider, albumsProvider, tracksProvider, genresProvider, playlistsProvider, mixerTracksProvider)
+    val providersInCard = arrayOf(true, true, false, false, true, false)
 
     var showResumeCard = settings.getBoolean(KEY_AUDIO_RESUME_CARD, true)
-    val displayModeKeys = arrayOf("display_mode_audio_browser_artists", "display_mode_audio_browser_albums", "display_mode_audio_browser_track", "display_mode_audio_browser_genres", "display_mode_playlists_AudioOnly")
+    val displayModeKeys = arrayOf("display_mode_audio_browser_artists", "display_mode_audio_browser_albums", "display_mode_audio_browser_track", "display_mode_audio_browser_genres", "display_mode_playlists_AudioOnly", "display_mode_audio_mixer")
 
 
     init {

@@ -303,13 +303,6 @@ internal class MediaSessionCallback(private val playbackService: PlaybackService
                             loadMedia(mediaList, position)
                         }
                     }
-                    MediaSessionBrowser.ID_STREAM -> {
-                        val tracks = context.getFromMl { history(Medialibrary.HISTORY_TYPE_NETWORK) }
-                        if (tracks.isNotEmpty() && isActive) {
-                            tracks.sortWith(MediaComparators.ANDROID_AUTO)
-                            loadMedia(tracks.toList(), position)
-                        }
-                    }
                     MediaSessionBrowser.ID_TRACK -> {
                         val tracks = context.getFromMl { audio }
                         if (tracks.isNotEmpty() && isActive) {

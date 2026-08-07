@@ -141,8 +141,8 @@ class MainBrowserFragment : BaseFragment(), View.OnClickListener, CtxActionRecei
 
         menu.findItem(R.id.ml_menu_display_grid).isVisible = displayInList
         menu.findItem(R.id.ml_menu_display_list).isVisible = !displayInList
-        menu.findItem(R.id.add_server_favorite).isVisible = true
-        menu.findItem(R.id.browse_network)?.isVisible = true
+        menu.findItem(R.id.add_server_favorite).isVisible = false
+        menu.findItem(R.id.browse_network)?.isVisible = false
         menu.findItem(R.id.browse_network)?.isChecked = Settings.getInstance(requireActivity()).getBoolean(KEY_BROWSE_NETWORK, true)
     }
 
@@ -270,6 +270,7 @@ class MainBrowserFragment : BaseFragment(), View.OnClickListener, CtxActionRecei
         }
 
         networkEntry = view.findViewById(R.id.network_browser_entry)
+        networkEntry.setGone()
         networkEntry.loading.showNoMedia = false
         networkEntry.loading.emptyText = getString(R.string.nomedia)
         val networkBrowserContainer = MainBrowserContainer(isNetwork = true, isFile = false, inCards = !displayInList)
