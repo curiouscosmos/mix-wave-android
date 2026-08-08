@@ -270,6 +270,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         private set
     var mixerVolume: Int = 50
         private set
+    var mixerEnabled = false
+        private set
+    var mixerLoop = true
+        private set
     private lateinit var carConnection: CarConnection
 
     /**
@@ -338,7 +342,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 if (!wakeLock.isHeld) wakeLock.acquire()
                 showNotification()
                 nbErrors = 0
-                mixerPlayer?.play()
+                if (mixerEnabled) mixerPlayer?.play()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     NetworkConnectionManager.isMetered.value?.let {
                         checkMetered(it)
@@ -920,7 +924,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     override fun onDestroy() {
-        disableAudioMixer()
+        releaseAudioMixer()
         serviceFlow.value = null
         dispatcher.onServicePreSuperOnDestroy()
         PlaylistManager.playingState.value = false
@@ -1829,12 +1833,18 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
     /** Selects a second local track which follows the main player's play/pause state. */
     fun playInAudioMixer(mediaWrapper: MediaWrapper) {
-        val player = mixerPlayer ?: MediaPlayer(VLCInstance.getInstance(this)).also { mixerPlayer = it }
+        val player = mixerPlayer ?: MediaPlayer(VLCInstance.getInstance(this)).also { newPlayer ->
+            newPlayer.setEventListener { event ->
+                if (event.type == MediaPlayer.Event.EndReached && mixerEnabled && mixerLoop && this@PlaybackService.isPlaying) newPlayer.play()
+            }
+            mixerPlayer = newPlayer
+        }
         val media = mediaFactory.getFromUri(VLCInstance.getInstance(this), mediaWrapper.uri)
         player.media = media
         media.release()
         player.setVolume(mixerVolume)
         mixerMedia = mediaWrapper
+        mixerEnabled = true
         if (isPlaying) player.play()
     }
 
@@ -1843,11 +1853,21 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         mixerPlayer?.setVolume(mixerVolume)
     }
 
-    fun disableAudioMixer() {
-        mixerPlayer?.stop()
+    fun setAudioMixerEnabled(enabled: Boolean) {
+        mixerEnabled = enabled && mixerMedia != null
+        if (mixerEnabled && isPlaying) mixerPlayer?.play() else mixerPlayer?.stop()
+    }
+
+    fun setAudioMixerLoop(loop: Boolean) {
+        mixerLoop = loop
+    }
+
+    private fun releaseAudioMixer() {
+        mixerPlayer?.setEventListener(null)
         mixerPlayer?.release()
         mixerPlayer = null
         mixerMedia = null
+        mixerEnabled = false
     }
 
     @MainThread

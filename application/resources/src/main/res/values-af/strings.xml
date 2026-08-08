@@ -2,7 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools"
         tools:ignore="MissingTranslation">
 
-    <!-- Main VLC Interface -->
+    <!-- Main Mix Wave Interface -->
     <string name="ok">Goed</string>
     <string name="cancel">Kanselleer</string>
     <string name="other">Ander</string>

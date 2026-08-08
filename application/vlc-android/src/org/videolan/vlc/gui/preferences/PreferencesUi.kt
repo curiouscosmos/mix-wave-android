@@ -96,7 +96,7 @@ class PreferencesUi : BasePreferenceFragment(), SharedPreferences.OnSharedPrefer
     private fun setupTheme() {
         val prefs = preferenceScreen.sharedPreferences!!
         if (!prefs.contains(KEY_APP_THEME)) {
-            var theme = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            var theme = AppCompatDelegate.MODE_NIGHT_YES
             if (prefs.getBoolean(KEY_DAYNIGHT, false) && !AndroidDevices.canUseSystemNightMode()) {
                 theme = AppCompatDelegate.MODE_NIGHT_AUTO
             } else if (prefs.contains(KEY_BLACK_THEME)) {

@@ -48,7 +48,7 @@
             app:layout_constraintHorizontal_bias="0.5"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintVertical_chainStyle="packed"
-            app:srcCompat="@drawable/ic_onboarding_notification" />
+            app:srcCompat="@mipmap/ic_launcher_foreground" />
 
     <TextView
             android:id="@+id/permission_title"

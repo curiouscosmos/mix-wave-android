@@ -533,13 +533,13 @@ object UiTools {
             AboutVersionDialog.newInstance().show(activity.supportFragmentManager, "AboutVersionDialog")
         }
         v.findViewById<View>(R.id.about_website_container).setOnClickListener {
-            activity.openLinkIfPossible("https://www.videolan.org/vlc/")
+            activity.openLinkIfPossible("https://sandalbar.online")
         }
         v.findViewById<View>(R.id.about_report_container).setOnClickListener {
             activity.startActivity(Intent(activity, FeedbackActivity::class.java))
         }
         v.findViewById<View>(R.id.about_sources_container).setOnClickListener {
-            activity.openLinkIfPossible("https://code.videolan.org/videolan/vlc-android")
+            activity.openLinkIfPossible("https://github.com/curiouscosmos/mix-wave-android")
         }
 
         v.findViewById<View>(R.id.about_authors_container).setOnClickListener {
@@ -1105,7 +1105,7 @@ fun BaseActivity.applyTheme() {
         return
     }
 
-    val string = settings.getString(KEY_APP_THEME, "-1")
+    val string = settings.getString(KEY_APP_THEME, AppCompatDelegate.MODE_NIGHT_YES.toString())
     when (string) {
         "1" -> {
             window.setBackgroundDrawable(ContextCompat.getColor(this, R.color.white).toDrawable())

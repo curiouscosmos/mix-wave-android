@@ -44,12 +44,6 @@
 
                 <include layout="@layout/audio_recyclerview" />
 
-                <include layout="@layout/audio_recyclerview" />
-
-                <include layout="@layout/audio_recyclerview" />
-
-                <include layout="@layout/audio_recyclerview" />
-
                 <include layout="@layout/audio_mixer" />
             </androidx.viewpager.widget.ViewPager>
         </org.videolan.vlc.gui.view.SwipeRefreshLayout>

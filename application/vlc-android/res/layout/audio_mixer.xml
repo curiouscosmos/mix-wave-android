@@ -3,6 +3,19 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
+    <TextView
+            android:id="@+id/audio_mixer_selected"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="8dp"
+            android:background="?attr/colorPrimary"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:padding="12dp"
+            android:textColor="?attr/colorOnPrimary"
+            android:textStyle="bold"
+            android:visibility="gone" />
     <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -21,12 +34,26 @@
                 android:layout_weight="1"
                 android:max="100"
                 android:progress="50" />
+    </LinearLayout>
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
         <com.google.android.material.button.MaterialButton
                 android:id="@+id/audio_mixer_off"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/audio_mixer_turn_off" />
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/audio_mixer_loop"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/audio_mixer_loop" />
     </LinearLayout>
     <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/audio_list"

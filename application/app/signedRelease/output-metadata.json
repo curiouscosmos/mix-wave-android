@@ -1,0 +1,37 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "com.sandalbar.mixwave",
+  "variantName": "signedRelease",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 13070110,
+      "versionName": "1.0.0",
+      "outputFile": "Mix-Wave-Android-1.0.0-all.apk"
+    }
+  ],
+  "elementType": "File",
+  "baselineProfiles": [
+    {
+      "minApi": 28,
+      "maxApi": 30,
+      "baselineProfiles": [
+        "baselineProfiles/1/Mix-Wave-Android-1.0.0-all.dm"
+      ]
+    },
+    {
+      "minApi": 31,
+      "maxApi": 2147483647,
+      "baselineProfiles": [
+        "baselineProfiles/0/Mix-Wave-Android-1.0.0-all.dm"
+      ]
+    }
+  ],
+  "minSdkVersionForDexing": 17
+}
