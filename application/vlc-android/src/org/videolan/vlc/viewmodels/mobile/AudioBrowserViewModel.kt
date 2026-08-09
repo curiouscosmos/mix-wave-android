@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import org.videolan.medialibrary.interfaces.media.Playlist
 import org.videolan.tools.KEY_AUDIO_RESUME_CARD
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
+import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.providers.medialibrary.PlaylistsProvider
 import org.videolan.vlc.providers.medialibrary.TracksProvider
 import org.videolan.vlc.viewmodels.MedialibraryViewModel
@@ -36,7 +37,7 @@ class AudioBrowserViewModel(context: Context) : MedialibraryViewModel(context) {
 
     var currentTab = 0
     val tracksProvider = TracksProvider(null, context, this)
-    val mixerTracksProvider = TracksProvider(null, context, this)
+    val mixerTracksProvider = AudioMixerProvider(context, this)
     private val playlistsProvider = PlaylistsProvider(context, this, Playlist.Type.Audio)
     override val providers = arrayOf(tracksProvider, playlistsProvider, mixerTracksProvider)
     val providersInCard = arrayOf(false, true, false)

@@ -128,7 +128,9 @@ import org.videolan.vlc.gui.view.AudioMediaSwitcher.AudioMediaSwitcherListener
 import org.videolan.vlc.manageAbRepeatStep
 import org.videolan.vlc.media.PlaylistManager
 import org.videolan.vlc.media.PlaylistManager.Companion.hasMedia
+import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.util.ContextOption
+import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_AUDIO_MIXER
 import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_PLAYLIST
 import org.videolan.vlc.util.ContextOption.CTX_FAV_ADD
 import org.videolan.vlc.util.ContextOption.CTX_FAV_REMOVE
@@ -433,6 +435,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
                     val mw = playlistAdapter.getItem(position)
                     requireActivity().addToPlaylist(listOf(mw))
                 }
+                CTX_ADD_TO_AUDIO_MIXER -> AudioMixerProvider.add(requireContext(), playlistAdapter.getItem(position))
                 CTX_REMOVE_FROM_PLAYLIST -> view?.let {
                     val mw = playlistAdapter.getItem(position)
                     val message = String.format(getString(R.string.remove_playlist_item), mw.title)
@@ -483,7 +486,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         if (activity === null || position >= playlistAdapter.itemCount) return
         val flags = FlagSet(ContextOption::class.java).apply {
             addAll(CTX_GO_TO_FOLDER, CTX_INFORMATION, CTX_REMOVE_FROM_PLAYLIST, CTX_STOP_AFTER_THIS)
-            if (item?.uri?.scheme != "content") addAll(CTX_ADD_TO_PLAYLIST, CTX_SET_RINGTONE, CTX_SHARE)
+            if (item?.uri?.scheme != "content") addAll(CTX_ADD_TO_PLAYLIST, CTX_ADD_TO_AUDIO_MIXER, CTX_SET_RINGTONE, CTX_SHARE)
             if (item?.album != null) add(CTX_GO_TO_ALBUM)
             if (item?.artist != null) add(CTX_GO_TO_ARTIST)
             if (item?.isFavorite == true) add(CTX_FAV_REMOVE) else add(CTX_FAV_ADD)

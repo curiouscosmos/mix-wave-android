@@ -107,8 +107,10 @@ import org.videolan.vlc.interfaces.IEventsHandler
 import org.videolan.vlc.interfaces.IListEventsHandler
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
+import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.util.ContextOption
 import org.videolan.vlc.util.ContextOption.CTX_ADD_SHORTCUT
+import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_AUDIO_MIXER
 import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_PLAYLIST
 import org.videolan.vlc.util.ContextOption.CTX_APPEND
 import org.videolan.vlc.util.ContextOption.CTX_COPY
@@ -461,6 +463,7 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
                     if (media.type == MediaWrapper.TYPE_STREAM || (media.type == MediaWrapper.TYPE_ALL && isSchemeHttpOrHttps(media.uri.scheme)))
                         addAll(CTX_COPY, CTX_RENAME)
                     if (media.type == MediaWrapper.TYPE_AUDIO) {
+                        add(CTX_ADD_TO_AUDIO_MIXER)
                         add(CTX_GO_TO_ARTIST)
                         if (BuildConfig.DEBUG) Log.d("CtxPrep", "Artist id is: ${media.artistId}, album artist is: ${media.albumArtistId}")
                         if (media.artistId != media.albumArtistId) add(CTX_GO_TO_ALBUM_ARTIST)
@@ -580,6 +583,7 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
             CTX_PLAY_NEXT -> MediaUtils.insertNext(this, media.tracks)
             CTX_PLAY_ALL -> MediaUtils.playTracks(this, viewModel.tracksProvider, position, false)
             CTX_ADD_TO_PLAYLIST -> addToPlaylist(media.tracks, SavePlaylistDialog.KEY_NEW_TRACKS)
+            CTX_ADD_TO_AUDIO_MIXER -> AudioMixerProvider.add(this, media)
             CTX_SET_RINGTONE -> setRingtone(media)
             CTX_SHARE -> lifecycleScope.launch { share(media) }
             CTX_RENAME -> {

@@ -25,4 +25,5 @@
 <resources>
     <item type="id" name="sort" />
     <item type="id" name="sort_desc" />
+    <item type="id" name="nav_directories" />
 </resources>

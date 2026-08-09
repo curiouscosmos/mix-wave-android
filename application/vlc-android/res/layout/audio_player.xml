@@ -202,7 +202,7 @@
                     android:id="@+id/header_background"
                     android:layout_width="0dp"
                     android:layout_height="0dp"
-                    android:background="?attr/audio_header_background"
+                    android:background="@drawable/audio_mini_player_background"
                     android:minHeight="68dp"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintLeft_toLeftOf="parent"

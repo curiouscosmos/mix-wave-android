@@ -11,6 +11,7 @@
     <string name="audio_mixer_on">Mixer On</string>
     <string name="audio_mixer_turn_off">Mixer Off</string>
     <string name="audio_mixer_loop">Loop</string>
+    <string name="add_to_audio_mixer">Add to Audio Mixer</string>
     <string name="other">Other</string>
     <string name="sortby">Sort by…</string>
     <string name="sortby_name">Name</string>

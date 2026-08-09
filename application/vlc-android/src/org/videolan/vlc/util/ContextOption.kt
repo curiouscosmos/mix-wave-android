@@ -62,23 +62,24 @@ enum class ContextOption : Flag {
     CTX_GO_TO_ALBUM,
     CTX_GO_TO_ARTIST,
     CTX_GO_TO_ALBUM_ARTIST,
+    CTX_ADD_TO_AUDIO_MIXER,
     CTX_QUICK_PLAY;
 
     override fun toLong() = 1L shl this.ordinal
 
     companion object {
         private fun createBaseFlags() = FlagSet(ContextOption::class.java).apply {
-            addAll(CTX_ADD_SHORTCUT, CTX_ADD_TO_PLAYLIST, CTX_APPEND)
+            addAll(CTX_ADD_TO_PLAYLIST, CTX_APPEND)
         }
 
         fun createCtxVideoFlags() = createBaseFlags().apply {
             addAll(CTX_DELETE, CTX_DOWNLOAD_SUBTITLES, CTX_INFORMATION)
-            addAll(CTX_PLAY, CTX_PLAY_ALL, CTX_PLAY_AS_AUDIO, CTX_PLAY_NEXT)
+            addAll(CTX_PLAY, CTX_PLAY_ALL, CTX_PLAY_AS_AUDIO, CTX_PLAY_NEXT, CTX_ADD_TO_AUDIO_MIXER)
             addAll(CTX_SET_RINGTONE, CTX_SHARE)
         }
 
         fun createCtxTrackFlags() = createBaseFlags().apply {
-            addAll(CTX_DELETE, CTX_GO_TO_FOLDER, CTX_INFORMATION, CTX_GO_TO_ALBUM, CTX_GO_TO_ARTIST, CTX_PLAY_ALL, CTX_PLAY_NEXT)
+            addAll(CTX_DELETE, CTX_INFORMATION, CTX_PLAY_ALL, CTX_PLAY_NEXT, CTX_ADD_TO_AUDIO_MIXER)
             addAll(CTX_SET_RINGTONE, CTX_SHARE)
         }
 

@@ -273,8 +273,10 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
             selected.text = service?.mixerMedia?.title
             selected.visibility = if (service?.mixerMedia == null) View.GONE else View.VISIBLE
             toggle.text = getString(if (service?.mixerEnabled == true) R.string.audio_mixer_on else R.string.audio_mixer_turn_off)
+            toggle.setIconResource(if (service?.mixerEnabled == true) R.drawable.ic_playasaudio_on else R.drawable.ic_playasaudio_off)
             toggle.isEnabled = service?.mixerMedia != null
             loop.isChecked = service?.mixerLoop ?: true
+            loop.setIconResource(if (loop.isChecked) R.drawable.ic_repeat_all else R.drawable.ic_repeat)
         }
         val volume = view.findViewById<SeekBar>(R.id.audio_mixer_volume)
         volume.progress = PlaybackService.instance?.mixerVolume ?: 50
@@ -291,6 +293,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         }
         loop.addOnCheckedChangeListener { _, checked ->
             PlaybackService.instance?.setAudioMixerLoop(checked)
+            loop.setIconResource(if (checked) R.drawable.ic_repeat_all else R.drawable.ic_repeat)
         }
         refreshMixerControls = ::update
         update()
@@ -329,9 +332,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
 
     override fun onStart() {
         super.onStart()
-        setFabPlayShuffleAllVisibility()
-        fabPlay?.setImageResource(R.drawable.ic_fab_shuffle)
-        fabPlay?.contentDescription = getString(R.string.shuffle_play)
+        setFabPlayVisibility(false)
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -342,7 +343,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         }
         sortMenuTitles(currentTab)
         reopenSearchIfNeeded()
-         if (requireActivity().isTalkbackIsEnabled()) menu.findItem(R.id.shuffle_all).isVisible = true
+        menu.findItem(R.id.shuffle_all).isVisible = false
    }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -384,12 +385,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
     }
 
     private fun setFabPlayShuffleAllVisibility(force: Boolean = false) {
-        setFabPlayVisibility(
-                currentTab == TRACKS_TAB && (
-                        force ||
-                                (viewModel.providers[currentTab].pagedList.value?.size ?: 0) > 2
-                        )
-        )
+        setFabPlayVisibility(false)
     }
 
     override fun getTitle(): String = getString(R.string.music)

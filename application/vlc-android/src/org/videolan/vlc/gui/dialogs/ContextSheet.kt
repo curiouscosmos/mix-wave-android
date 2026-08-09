@@ -46,6 +46,7 @@ import org.videolan.vlc.util.ContextOption.CTX_ADD_FOLDER_PLAYLIST
 import org.videolan.vlc.util.ContextOption.CTX_ADD_GROUP
 import org.videolan.vlc.util.ContextOption.CTX_ADD_SCANNED
 import org.videolan.vlc.util.ContextOption.CTX_ADD_SHORTCUT
+import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_AUDIO_MIXER
 import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_PLAYLIST
 import org.videolan.vlc.util.ContextOption.CTX_APPEND
 import org.videolan.vlc.util.ContextOption.CTX_BAN_FOLDER
@@ -162,9 +163,7 @@ class ContextSheet : VLCBottomSheetDialogFragment() {
         if (flags.contains(CTX_PLAY_NEXT)) add(Simple(CTX_PLAY_NEXT, getString(R.string.insert_next), R.drawable.ic_play_next))
         if (flags.contains(CTX_DOWNLOAD_SUBTITLES) && VlcMigrationHelper.isLolliPopOrLater) add(Simple(CTX_DOWNLOAD_SUBTITLES, getString(R.string.download_subtitles), R.drawable.ic_download_subtitles))
         if (flags.contains(CTX_INFORMATION)) add(Simple(CTX_INFORMATION, getString(R.string.info), R.drawable.ic_information))
-        if (flags.contains(CTX_GO_TO_ALBUM)) add(Simple(CTX_GO_TO_ALBUM, getString(R.string.go_to_album), R.drawable.ic_album))
-        if (flags.contains(CTX_GO_TO_ARTIST)) add(Simple(CTX_GO_TO_ARTIST, getString(R.string.go_to_artist), R.drawable.ic_no_artist))
-        if (flags.contains(CTX_GO_TO_ALBUM_ARTIST)) add(Simple(CTX_GO_TO_ALBUM_ARTIST, getString(R.string.go_to_album_artist), R.drawable.ic_no_artist))
+        if (flags.contains(CTX_ADD_TO_AUDIO_MIXER)) add(Simple(CTX_ADD_TO_AUDIO_MIXER, getString(R.string.add_to_audio_mixer), R.drawable.ic_playasaudio_on))
         if (flags.contains(CTX_ADD_TO_PLAYLIST)) add(Simple(CTX_ADD_TO_PLAYLIST, getString(R.string.add_to_playlist), R.drawable.ic_add_to_playlist))
         if (flags.contains(CTX_SET_RINGTONE) && AndroidDevices.isPhone) add(Simple(CTX_SET_RINGTONE, getString(R.string.set_song), R.drawable.ic_set_ringtone))
         if (flags.contains(CTX_FAV_ADD)) add(Simple(CTX_FAV_ADD, getString(R.string.favorites_add), R.drawable.ic_fav_add))
@@ -177,7 +176,6 @@ class ContextSheet : VLCBottomSheetDialogFragment() {
         if (flags.contains(CTX_COPY)) add(Simple(CTX_COPY, getString(R.string.copy_to_clipboard), R.drawable.ic_link))
         if (flags.contains(CTX_DELETE)) add(Simple(CTX_DELETE, getString(R.string.delete), R.drawable.ic_delete))
         if (flags.contains(CTX_SHARE)) add(Simple(CTX_SHARE, getString(R.string.share), R.drawable.ic_share))
-        if (flags.contains(CTX_ADD_SHORTCUT) && ShortcutManagerCompat.isRequestPinShortcutSupported(requireActivity())) add(Simple(CTX_ADD_SHORTCUT, getString(R.string.create_shortcut), R.drawable.ic_app_shortcut))
         if (flags.contains(CTX_FIND_METADATA)) add(Simple(CTX_FIND_METADATA, getString(R.string.find_metadata), R.drawable.ic_delete))
         if (flags.contains(CTX_ADD_FOLDER_PLAYLIST)) add(Simple(CTX_ADD_FOLDER_PLAYLIST, getString(R.string.this_folder), R.drawable.ic_add_to_playlist))
         if (flags.contains(CTX_ADD_FOLDER_AND_SUB_PLAYLIST)) add(Simple(CTX_ADD_FOLDER_AND_SUB_PLAYLIST, getString(R.string.all_subfolders), R.drawable.ic_add_to_playlist))
@@ -190,7 +188,6 @@ class ContextSheet : VLCBottomSheetDialogFragment() {
         if (flags.contains(CTX_MARK_AS_UNPLAYED)) add(Simple(CTX_MARK_AS_UNPLAYED, getString(R.string.mark_as_not_played), R.drawable.ic_mark_as_not_played))
         if (flags.contains(CTX_MARK_ALL_AS_PLAYED)) add(Simple(CTX_MARK_ALL_AS_PLAYED, getString(R.string.mark_all_as_played), R.drawable.ic_mark_all_as_played))
         if (flags.contains(CTX_MARK_ALL_AS_UNPLAYED)) add(Simple(CTX_MARK_ALL_AS_UNPLAYED, getString(R.string.mark_all_as_not_played), R.drawable.ic_mark_all_as_not_played))
-        if (flags.contains(CTX_GO_TO_FOLDER)) add(Simple(CTX_GO_TO_FOLDER, getString(R.string.go_to_folder), R.drawable.ic_browse_parent))
         if (flags.contains(CTX_CUSTOM_REMOVE)) add(Simple(CTX_CUSTOM_REMOVE, getString(R.string.remove_custom_path), R.drawable.ic_delete))
         if (flags.contains(CTX_BAN_FOLDER)) add(Simple(CTX_BAN_FOLDER, getString(R.string.group_ban_folder), R.drawable.ic_hide_source))
     }

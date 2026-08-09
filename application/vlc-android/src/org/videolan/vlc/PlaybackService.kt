@@ -342,7 +342,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 if (!wakeLock.isHeld) wakeLock.acquire()
                 showNotification()
                 nbErrors = 0
-                if (mixerEnabled) mixerPlayer?.play()
+                if (mixerEnabled) playAudioMixer()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     NetworkConnectionManager.isMetered.value?.let {
                         checkMetered(it)
@@ -354,7 +354,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 executeUpdate(true)
                 showNotification()
                 if (wakeLock.isHeld) wakeLock.release()
-                mixerPlayer?.pause()
+                pauseAudioMixer()
             }
             MediaPlayer.Event.EncounteredError -> executeUpdate()
             MediaPlayer.Event.LengthChanged -> {
@@ -383,9 +383,9 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             MediaPlayer.Event.EndReached -> {
                 mediaEndReached = true
                 playQueueFinished = !playlistManager.hasNext() || playlistManager.stopAfter == currentMediaPosition
-                mixerPlayer?.stop()
+                stopAudioMixer()
             }
-            MediaPlayer.Event.Stopped -> mixerPlayer?.stop()
+            MediaPlayer.Event.Stopped -> stopAudioMixer()
         }
         cbActor.trySend(CbMediaPlayerEvent(event))
     }
@@ -1833,19 +1833,50 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
     /** Selects a second local track which follows the main player's play/pause state. */
     fun playInAudioMixer(mediaWrapper: MediaWrapper) {
+        val player = loadAudioMixerMedia(mediaWrapper)
+        mixerMedia = mediaWrapper
+        mixerEnabled = true
+        if (isPlaying) player.play()
+    }
+
+    private fun loadAudioMixerMedia(mediaWrapper: MediaWrapper): MediaPlayer {
         val player = mixerPlayer ?: MediaPlayer(VLCInstance.getInstance(this)).also { newPlayer ->
             newPlayer.setEventListener { event ->
-                if (event.type == MediaPlayer.Event.EndReached && mixerEnabled && mixerLoop && this@PlaybackService.isPlaying) newPlayer.play()
+                when (event.type) {
+                    MediaPlayer.Event.Playing -> newPlayer.setVolume(mixerVolume)
+                    MediaPlayer.Event.EndReached -> if (mixerLoop && mixerEnabled && isPlaying) restartAudioMixer()
+                }
             }
             mixerPlayer = newPlayer
         }
         val media = mediaFactory.getFromUri(VLCInstance.getInstance(this), mediaWrapper.uri)
+        if (mixerLoop) media.addOption(":input-repeat=65535")
         player.media = media
         media.release()
         player.setVolume(mixerVolume)
-        mixerMedia = mediaWrapper
-        mixerEnabled = true
-        if (isPlaying) player.play()
+        return player
+    }
+
+    private fun playAudioMixer(mediaWrapper: MediaWrapper? = mixerMedia) {
+        val player = mixerPlayer ?: mediaWrapper?.let { loadAudioMixerMedia(it) } ?: return
+        player.setVolume(mixerVolume)
+        player.play()
+    }
+
+    private fun restartAudioMixer(mediaWrapper: MediaWrapper? = mixerMedia) {
+        mediaWrapper?.let {
+            val player = loadAudioMixerMedia(it)
+            player.setVolume(mixerVolume)
+            player.play()
+        }
+    }
+
+    private fun pauseAudioMixer() {
+        mixerPlayer?.pause()
+    }
+
+    private fun stopAudioMixer() {
+        mixerPlayer?.stop()
     }
 
     fun setAudioMixerVolume(volume: Int) {
@@ -1855,11 +1886,15 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
     fun setAudioMixerEnabled(enabled: Boolean) {
         mixerEnabled = enabled && mixerMedia != null
-        if (mixerEnabled && isPlaying) mixerPlayer?.play() else mixerPlayer?.stop()
+        if (mixerEnabled && isPlaying) playAudioMixer() else stopAudioMixer()
     }
 
     fun setAudioMixerLoop(loop: Boolean) {
+        if (mixerLoop == loop) return
         mixerLoop = loop
+        mixerMedia?.let {
+            if (mixerEnabled && isPlaying) restartAudioMixer(it) else loadAudioMixerMedia(it)
+        }
     }
 
     private fun releaseAudioMixer() {
