@@ -36,6 +36,7 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.PagedList
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -46,6 +47,8 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.videolan.medialibrary.interfaces.Medialibrary
@@ -71,17 +74,23 @@ import org.videolan.vlc.gui.dialogs.DISPLAY_IN_CARDS
 import org.videolan.vlc.gui.dialogs.DisplaySettingsDialog
 import org.videolan.vlc.gui.dialogs.KEY_PERMISSION_CHANGED
 import org.videolan.vlc.gui.dialogs.ONLY_FAVS
+import org.videolan.vlc.gui.dialogs.showContext
 import org.videolan.vlc.gui.helpers.DefaultPlaybackAction
 import org.videolan.vlc.gui.helpers.DefaultPlaybackActionMediaType
+import org.videolan.vlc.gui.helpers.SwipeDragItemTouchHelperCallback
 import org.videolan.vlc.gui.helpers.UiTools
 import org.videolan.vlc.gui.helpers.UiTools.addFavoritesIcon
 import org.videolan.vlc.gui.helpers.UiTools.removeDrawables
+import org.videolan.vlc.interfaces.IListEventsHandler
 import org.videolan.vlc.gui.view.EmptyLoadingState
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
+import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.providers.medialibrary.MedialibraryProvider
 import org.videolan.vlc.util.ContextOption
 import org.videolan.vlc.util.ContextOption.CTX_PLAY_ALL
+import org.videolan.vlc.util.ContextOption.CTX_REMOVE_FROM_PLAYLIST
+import org.videolan.vlc.util.FlagSet
 import org.videolan.vlc.util.Permissions
 import org.videolan.vlc.util.isTalkbackIsEnabled
 import org.videolan.vlc.util.launchWhenStarted
@@ -90,7 +99,7 @@ import org.videolan.vlc.viewmodels.PlaylistModel
 import org.videolan.vlc.viewmodels.mobile.AudioBrowserViewModel
 import org.videolan.vlc.viewmodels.mobile.getViewModel
 
-class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
+class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEventsHandler {
 
     private lateinit var binding: AudioBrowserBinding
     private lateinit var audioPagerAdapter: AudioPagerAdapter
@@ -98,6 +107,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
     private lateinit var playlistAdapter: AudioBrowserAdapter
     private lateinit var mixerAdapter: AudioBrowserAdapter
     private lateinit var playlistModel: PlaylistModel
+    private var mixerTouchHelper: ItemTouchHelper? = null
     private var refreshMixerControls: (() -> Unit)? = null
 
     private val lists = mutableListOf<RecyclerView>()
@@ -127,7 +137,12 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         val coordinator = view.rootView.findViewById<CoordinatorLayout>(R.id.coordinator)
         val fab = view.rootView.findViewById<FloatingActionButton>(R.id.fab)
         binding.songsFastScroller.attachToCoordinator(appbar, coordinator, fab)
-        binding.audioEmptyLoading.setOnNoMediaClickListener { requireActivity().setResult(RESULT_RESTART) }
+        binding.audioEmptyLoading.setOnNoMediaClickListener {
+            if (currentTab == MIXER_TAB) {
+                viewPager.currentItem = TRACKS_TAB
+                UiTools.snacker(requireActivity(), R.string.audio_mixer_empty)
+            } else requireActivity().setResult(RESULT_RESTART)
+        }
 
         val views = ArrayList<View>(MODE_TOTAL)
         for (i in 0 until MODE_TOTAL) {
@@ -160,6 +175,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
             list.adapter = adapters[i]
             list.addOnScrollListener(scrollListener)
         }
+        mixerTouchHelper = ItemTouchHelper(SwipeDragItemTouchHelperCallback(mixerAdapter, true)).also { it.attachToRecyclerView(lists[MIXER_TAB]) }
         viewPager.setOnTouchListener(swipeFilter)
         swipeRefreshLayout.setOnRefreshListener {
             (requireActivity() as ContentActivity).closeSearchView()
@@ -180,6 +196,9 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         requireActivity().supportFragmentManager.setFragmentResultListener(CONFIRM_PERMISSION_CHANGED, viewLifecycleOwner) { requestKey, bundle ->
             val changed = bundle.getBoolean(KEY_PERMISSION_CHANGED)
             if (changed) viewModel.refresh()
+        }
+        PlaylistManager.showAudioPlayer.observe(viewLifecycleOwner) {
+            if (it == true && currentTab == MIXER_TAB) (activity as? AudioPlayerContainerActivity)?.hideAudioPlayer()
         }
     }
 
@@ -247,6 +266,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
 
     private fun setupModels() {
         viewModel = getViewModel()
+        if (arguments?.getBoolean(EXTRA_OPEN_AUDIO_MIXER) == true) viewModel.currentTab = MIXER_TAB
         currentTab = viewModel.currentTab
 
         songsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
@@ -257,8 +277,8 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
             delay(50L)
         }.launchWhenStarted(lifecycleScope)
         playlistAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_PLAYLIST, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
-        mixerAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
-        mixerAdapter.currentMedia = PlaybackService.instance?.mixerMedia
+        mixerAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
+        mixerAdapter.currentMedia = PlaybackService.instance?.mixerMedia ?: AudioMixerProvider.selected(requireContext())
         adapters = arrayOf(songsAdapter, playlistAdapter, mixerAdapter)
         setupProvider()
     }
@@ -267,16 +287,19 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         val selected = view.findViewById<TextView>(R.id.audio_mixer_selected)
         val toggle = view.findViewById<MaterialButton>(R.id.audio_mixer_off)
         val loop = view.findViewById<MaterialButton>(R.id.audio_mixer_loop)
+        val clear = view.findViewById<MaterialButton>(R.id.audio_mixer_clear)
         loop.isCheckable = true
         fun update() {
             val service = PlaybackService.instance
-            selected.text = service?.mixerMedia?.title
-            selected.visibility = if (service?.mixerMedia == null) View.GONE else View.VISIBLE
+            val media = service?.mixerMedia ?: AudioMixerProvider.selected(requireContext())
+            selected.text = media?.title?.let { getString(R.string.audio_mixer_selected_track, it) }
+            selected.visibility = if (media == null) View.GONE else View.VISIBLE
             toggle.text = getString(if (service?.mixerEnabled == true) R.string.audio_mixer_on else R.string.audio_mixer_turn_off)
             toggle.setIconResource(if (service?.mixerEnabled == true) R.drawable.ic_playasaudio_on else R.drawable.ic_playasaudio_off)
-            toggle.isEnabled = service?.mixerMedia != null
+            toggle.isEnabled = media != null
             loop.isChecked = service?.mixerLoop ?: true
             loop.setIconResource(if (loop.isChecked) R.drawable.ic_repeat_all else R.drawable.ic_repeat)
+            clear.isEnabled = AudioMixerProvider.count(requireContext()) > 0
         }
         val volume = view.findViewById<SeekBar>(R.id.audio_mixer_volume)
         volume.progress = PlaybackService.instance?.mixerVolume ?: 50
@@ -288,12 +311,28 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
         })
         toggle.setOnClickListener {
-            PlaybackService.instance?.let { it.setAudioMixerEnabled(!it.mixerEnabled) }
+            val media = PlaybackService.instance?.mixerMedia ?: AudioMixerProvider.selected(requireContext()) ?: return@setOnClickListener
+            PlaybackService.instance?.setAudioMixerEnabled(PlaybackService.instance?.mixerEnabled != true) ?: startMixerService(media)
             update()
         }
         loop.addOnCheckedChangeListener { _, checked ->
             PlaybackService.instance?.setAudioMixerLoop(checked)
-            loop.setIconResource(if (checked) R.drawable.ic_repeat_all else R.drawable.ic_repeat)
+            update()
+        }
+        clear.setOnClickListener {
+            val snapshot = AudioMixerProvider.snapshot(requireContext())
+            AudioMixerProvider.clear(requireContext())
+            PlaybackService.instance?.clearAudioMixer()
+            mixerAdapter.currentMedia = null
+            viewModel.mixerTracksProvider.refresh()
+            updateTabs()
+            update()
+            UiTools.snackerConfirm(requireActivity(), getString(R.string.audio_mixer_cleared), confirmMessage = R.string.undo) {
+                AudioMixerProvider.replace(requireContext(), snapshot)
+                viewModel.mixerTracksProvider.refresh()
+                updateTabs()
+                update()
+            }
         }
         refreshMixerControls = ::update
         update()
@@ -333,6 +372,12 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
     override fun onStart() {
         super.onStart()
         setFabPlayVisibility(false)
+        updateMainPlayerForTab()
+    }
+
+    override fun onDestroyView() {
+        showMainPlayerIfNeeded()
+        super.onDestroyView()
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -396,6 +441,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         if (!isAdded) return
         swipeRefreshLayout.visibility = if (Medialibrary.getInstance().isInitiated) View.VISIBLE else View.GONE
         binding.audioEmptyLoading.emptyText = viewModel.filterQuery?.let {  getString(R.string.empty_search, it) } ?: if (viewModel.providers[currentTab].onlyFavorites) getString(R.string.nofav) else getString(R.string.nomedia)
+        if (currentTab == MIXER_TAB && viewModel.filterQuery == null) binding.audioEmptyLoading.emptyText = getString(R.string.audio_mixer_empty)
         binding.audioEmptyLoading.state = when {
             !Permissions.canReadStorage(requireActivity()) && empty -> EmptyLoadingState.MISSING_PERMISSION
             !Permissions.canReadAudios(AppContextProvider.appContext) && empty -> EmptyLoadingState.MISSING_AUDIO_PERMISSION
@@ -422,7 +468,8 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
             val tab = tabLayout!!.getTabAt(i)
             val view = tab?.customView ?: View.inflate(requireActivity(), R.layout.audio_tab, null)
             val title = view.findViewById<TextView>(R.id.tab_title)
-            title.text = audioPagerAdapter.getPageTitle(i)
+            val pageTitle = audioPagerAdapter.getPageTitle(i)
+            title.text = if (i == MIXER_TAB) "$pageTitle (${AudioMixerProvider.count(requireContext())})" else pageTitle
             if (viewModel.providers[i].onlyFavorites) title.addFavoritesIcon() else title.removeDrawables()
             tab?.customView = view
         }
@@ -431,6 +478,8 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
     override fun onPageSelected(position: Int) {
         updateEmptyView()
         setFabPlayShuffleAllVisibility()
+        if (position == MIXER_TAB) setFabPlayVisibility(false)
+        updateMainPlayerForTab()
     }
 
     override fun onTabSelected(tab: TabLayout.Tab) {
@@ -438,6 +487,8 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         viewModel.currentTab = tab.position
         setupProvider()
         super.onTabSelected(tab)
+        updateMainPlayerForTab()
+        if (tab.position == MIXER_TAB) setFabPlayVisibility(false)
         binding.songsFastScroller.setRecyclerView(lists[tab.position], viewModel.providers[tab.position])
         if (Medialibrary.getInstance().isInitiated) setRefreshing(viewModel.providers[currentTab].isRefreshing)
         activity?.invalidateOptionsMenu()
@@ -456,7 +507,17 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
     override fun onCtxAction(position: Int, option: ContextOption) {
         @Suppress("UNCHECKED_CAST")
         if (option == CTX_PLAY_ALL) MediaUtils.playAll(activity, viewModel.providers[currentTab] as MedialibraryProvider<MediaWrapper>, position, false)
-        else super.onCtxAction(position, option)
+        else if (currentTab == MIXER_TAB && option == CTX_REMOVE_FROM_PLAYLIST) {
+            (mixerAdapter.getItem(position) as? MediaWrapper)?.let { removeMixerItem(it) }
+        } else super.onCtxAction(position, option)
+    }
+
+    override fun onCtxClick(v: View, position: Int, item: MediaLibraryItem) {
+        if (currentTab == MIXER_TAB && item is MediaWrapper) {
+            showContext(requireActivity(), this, position, item, FlagSet(ContextOption::class.java).apply {
+                add(CTX_REMOVE_FROM_PLAYLIST)
+            })
+        } else super.onCtxClick(v, position, item)
     }
 
     private val TAG = this::class.java.name
@@ -471,11 +532,10 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
                 UiTools.snackerMissing(requireActivity())
                 return
             }
-            PlaybackService.instance?.let {
-                it.playInAudioMixer(item)
-                mixerAdapter.currentMedia = item
-                refreshMixerControls?.invoke()
-            }
+            AudioMixerProvider.select(requireContext(), item)
+            PlaybackService.instance?.playInAudioMixer(item) ?: startMixerService(item)
+            mixerAdapter.currentMedia = item
+            refreshMixerControls?.invoke()
             return
         }
         if (item.itemType == MediaLibraryItem.TYPE_MEDIA) {
@@ -523,6 +583,47 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
 
     override fun allowedToExpand() = getCurrentRV().scrollState == RecyclerView.SCROLL_STATE_IDLE
 
+    override fun onRemove(position: Int, item: MediaLibraryItem) {
+        (item as? MediaWrapper)?.let { removeMixerItem(it) }
+    }
+
+    override fun onMove(oldPosition: Int, newPosition: Int) {
+        AudioMixerProvider.move(requireContext(), oldPosition, newPosition)
+        viewModel.mixerTracksProvider.refresh()
+    }
+
+    override fun onStartDrag(viewHolder: RecyclerView.ViewHolder) {
+        mixerTouchHelper?.startDrag(viewHolder)
+    }
+
+    private fun removeMixerItem(media: MediaWrapper) {
+        AudioMixerProvider.remove(requireContext(), media)
+        PlaybackService.instance?.clearAudioMixer(media)
+        if (mixerAdapter.currentMedia?.uri == media.uri) mixerAdapter.currentMedia = null
+        viewModel.mixerTracksProvider.refresh()
+        updateTabs()
+        refreshMixerControls?.invoke()
+        UiTools.snacker(requireActivity(), R.string.audio_mixer_removed)
+    }
+
+    private fun startMixerService(media: MediaWrapper) {
+        PlaybackService.start(requireContext())
+        lifecycleScope.launch {
+            PlaybackService.serviceFlow.filterNotNull().first().playInAudioMixer(media)
+            refreshMixerControls?.invoke()
+            if (currentTab == MIXER_TAB) setFabPlayVisibility(false)
+        }
+    }
+
+    private fun updateMainPlayerForTab() {
+        if (currentTab == MIXER_TAB) (activity as? AudioPlayerContainerActivity)?.hideAudioPlayer()
+        else showMainPlayerIfNeeded()
+    }
+
+    private fun showMainPlayerIfNeeded() {
+        if (PlaybackService.instance?.hasMedia() == true) PlaylistManager.showAudioPlayer.value = true
+    }
+
     companion object {
         const val TAG = "VLC/AudioBrowserFragment"
 
@@ -531,6 +632,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>() {
         private const val TRACKS_TAB = 0
         private const val PLAYLISTS_TAB = 1
         private const val MIXER_TAB = 2
+        const val EXTRA_OPEN_AUDIO_MIXER = "extra_open_audio_mixer"
 
         const val TAG_ITEM = "ML_ITEM"
     }

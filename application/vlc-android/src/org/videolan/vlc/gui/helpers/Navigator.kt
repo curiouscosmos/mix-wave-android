@@ -72,12 +72,14 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
     override lateinit var navigationView: List<NavigationBarView>
     override lateinit var appbarLayout: AppBarLayout
     private var forExpresso: ArrayList<MediaLibraryItem>? = null
+    private var openAudioMixer = false
 
 
     override fun MainActivity.setupNavigation(state: Bundle?) {
         activity = this
         this@Navigator.settings = settings
         forExpresso = intent.parcelableList(EXTRA_FOR_ESPRESSO)
+        openAudioMixer = intent.getBooleanExtra(AudioBrowserFragment.EXTRA_OPEN_AUDIO_MIXER, false)
         currentFragmentId = intent.getIntExtra(EXTRA_TARGET, 0)
         if (state !== null) {
             currentFragment = supportFragmentManager.getFragment(state, "current_fragment")
@@ -98,7 +100,9 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
 
     private fun getNewFragment(id: Int): Fragment {
         return when (id) {
-            R.id.nav_audio -> AudioBrowserFragment()
+            R.id.nav_audio -> AudioBrowserFragment().apply {
+                arguments = bundleOf(AudioBrowserFragment.EXTRA_OPEN_AUDIO_MIXER to openAudioMixer)
+            }
             R.id.nav_directories -> MainBrowserFragment().apply {
                 arguments = bundleOf(EXTRA_FOR_ESPRESSO to forExpresso)
             }

@@ -11,6 +11,12 @@
     <string name="audio_mixer_on">Mixer On</string>
     <string name="audio_mixer_turn_off">Mixer Off</string>
     <string name="audio_mixer_loop">Loop</string>
+    <string name="audio_mixer_clear">Clear Mixer</string>
+    <string name="audio_mixer_empty">Add tracks from any file menu to build your mixer.</string>
+    <string name="audio_mixer_selected_track">Selected: %1$s</string>
+    <string name="audio_mixer_added">Added to Audio Mixer</string>
+    <string name="audio_mixer_removed">Removed from Audio Mixer</string>
+    <string name="audio_mixer_cleared">Audio Mixer cleared</string>
     <string name="add_to_audio_mixer">Add to Audio Mixer</string>
     <string name="other">Other</string>
     <string name="sortby">Sort by…</string>

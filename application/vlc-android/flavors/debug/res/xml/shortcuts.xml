@@ -51,4 +51,16 @@
                 android:targetClass="org.videolan.vlc.StartActivity" />
         <categories android:name="vlc.shortcut.category" />
     </shortcut>
+    <shortcut
+            android:shortcutId="audio_mixer"
+            android:enabled="true"
+            android:icon="@drawable/ic_playasaudio_on"
+            android:shortcutShortLabel="@string/audio_mixer"
+            android:shortcutLongLabel="@string/audio_mixer">
+        <intent
+                android:action="vlc.shortcut.audio_mixer"
+                android:targetPackage="org.videolan.vlc.debug"
+                android:targetClass="org.videolan.vlc.StartActivity" />
+        <categories android:name="vlc.shortcut.category" />
+    </shortcut>
 </shortcuts>

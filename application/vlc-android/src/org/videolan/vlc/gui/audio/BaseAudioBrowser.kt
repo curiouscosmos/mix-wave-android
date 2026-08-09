@@ -559,6 +559,7 @@ abstract class BaseAudioBrowser<T : MedialibraryViewModel> : MediaBrowserFragmen
             CTX_ADD_TO_AUDIO_MIXER -> {
                 AudioMixerProvider.add(requireContext(), media as MediaWrapper)
                 viewModel.providers.lastOrNull()?.refresh()
+                UiTools.snacker(requireActivity(), R.string.audio_mixer_added)
             }
             CTX_SET_RINGTONE -> activity?.setRingtone(media as MediaWrapper)
             CTX_SHARE -> lifecycleScope.launch { (requireActivity() as AppCompatActivity).share(media as MediaWrapper) }

@@ -96,6 +96,7 @@ import org.videolan.libvlc.interfaces.IMedia
 import org.videolan.libvlc.interfaces.IMediaFactory
 import org.videolan.libvlc.interfaces.IVLCVout
 import org.videolan.libvlc.util.AndroidUtil
+import org.videolan.medialibrary.MLServiceLocator
 import org.videolan.medialibrary.interfaces.Medialibrary
 import org.videolan.medialibrary.interfaces.media.MediaWrapper
 import org.videolan.resources.ACTION_PLAY_FROM_SEARCH
@@ -179,6 +180,10 @@ import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.NO_LENGTH_PROGRESS_MAX
 import org.videolan.vlc.media.PlayerController
 import org.videolan.vlc.media.PlaylistManager
+import org.videolan.vlc.providers.medialibrary.KEY_AUDIO_MIXER_ENABLED
+import org.videolan.vlc.providers.medialibrary.KEY_AUDIO_MIXER_LOOP
+import org.videolan.vlc.providers.medialibrary.KEY_AUDIO_MIXER_SELECTED
+import org.videolan.vlc.providers.medialibrary.KEY_AUDIO_MIXER_VOLUME
 import org.videolan.vlc.util.AccessControl
 import org.videolan.vlc.util.FlagSet
 import org.videolan.vlc.util.LifecycleAwareScheduler
@@ -266,6 +271,8 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
     private val mediaFactory = FactoryManager.getFactory(IMediaFactory.factoryId) as IMediaFactory
     private var mixerPlayer: MediaPlayer? = null
+    private var mixerFadeJob: Job? = null
+    private var mixerStopJob: Job? = null
     var mixerMedia: MediaWrapper? = null
         private set
     var mixerVolume: Int = 50
@@ -759,6 +766,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
         medialibrary = Medialibrary.getInstance()
         artworkMap = HashMap<String, Uri>()
+        restoreAudioMixer()
 
         browserCallback = MediaBrowserCallback(this)
         browserCallback.registerCallback {
@@ -1831,11 +1839,27 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     @MainThread
     fun setVolume(volume: Int) = playlistManager.player.setVolume(volume)
 
+    private fun restoreAudioMixer() {
+        mixerVolume = settings.getInt(KEY_AUDIO_MIXER_VOLUME, mixerVolume)
+        mixerLoop = settings.getBoolean(KEY_AUDIO_MIXER_LOOP, mixerLoop)
+        mixerEnabled = settings.getBoolean(KEY_AUDIO_MIXER_ENABLED, mixerEnabled)
+        settings.getString(KEY_AUDIO_MIXER_SELECTED, null)?.let { location ->
+            val uri = Uri.parse(location)
+            mixerMedia = medialibrary.getMedia(uri) ?: MLServiceLocator.getAbstractMediaWrapper(uri)
+            mixerMedia?.let { loadAudioMixerMedia(it) }
+        }
+        mixerEnabled = mixerEnabled && mixerMedia != null
+    }
+
     /** Selects a second local track which follows the main player's play/pause state. */
     fun playInAudioMixer(mediaWrapper: MediaWrapper) {
         val player = loadAudioMixerMedia(mediaWrapper)
         mixerMedia = mediaWrapper
         mixerEnabled = true
+        settings.edit {
+            putString(KEY_AUDIO_MIXER_SELECTED, mediaWrapper.uri.toString())
+            putBoolean(KEY_AUDIO_MIXER_ENABLED, true)
+        }
         if (isPlaying) player.play()
     }
 
@@ -1859,8 +1883,11 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
     private fun playAudioMixer(mediaWrapper: MediaWrapper? = mixerMedia) {
         val player = mixerPlayer ?: mediaWrapper?.let { loadAudioMixerMedia(it) } ?: return
-        player.setVolume(mixerVolume)
+        mixerFadeJob?.cancel()
+        mixerStopJob?.cancel()
+        player.setVolume(0)
         player.play()
+        fadeAudioMixer(player, 0, mixerVolume)
     }
 
     private fun restartAudioMixer(mediaWrapper: MediaWrapper? = mixerMedia) {
@@ -1876,33 +1903,70 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     private fun stopAudioMixer() {
+        mixerFadeJob?.cancel()
+        mixerStopJob?.cancel()
         mixerPlayer?.stop()
+    }
+
+    private fun fadeAudioMixer(player: MediaPlayer, from: Int, to: Int) {
+        mixerFadeJob?.cancel()
+        mixerFadeJob = lifecycleScope.launch {
+            val steps = 5
+            repeat(steps) { step ->
+                player.setVolume(from + ((to - from) * (step + 1) / steps))
+                delay(40L)
+            }
+        }
     }
 
     fun setAudioMixerVolume(volume: Int) {
         mixerVolume = volume.coerceIn(0, 100)
+        settings.edit { putInt(KEY_AUDIO_MIXER_VOLUME, mixerVolume) }
         mixerPlayer?.setVolume(mixerVolume)
     }
 
     fun setAudioMixerEnabled(enabled: Boolean) {
         mixerEnabled = enabled && mixerMedia != null
-        if (mixerEnabled && isPlaying) playAudioMixer() else stopAudioMixer()
+        settings.edit { putBoolean(KEY_AUDIO_MIXER_ENABLED, mixerEnabled) }
+        if (mixerEnabled && isPlaying) playAudioMixer()
+        else mixerPlayer?.let { player ->
+            mixerStopJob?.cancel()
+            fadeAudioMixer(player, mixerVolume, 0)
+            mixerStopJob = lifecycleScope.launch {
+                delay(220L)
+                if (!mixerEnabled) player.stop()
+            }
+        }
     }
 
     fun setAudioMixerLoop(loop: Boolean) {
         if (mixerLoop == loop) return
         mixerLoop = loop
+        settings.edit { putBoolean(KEY_AUDIO_MIXER_LOOP, mixerLoop) }
         mixerMedia?.let {
             if (mixerEnabled && isPlaying) restartAudioMixer(it) else loadAudioMixerMedia(it)
         }
     }
 
     private fun releaseAudioMixer() {
+        mixerFadeJob?.cancel()
+        mixerStopJob?.cancel()
         mixerPlayer?.setEventListener(null)
         mixerPlayer?.release()
         mixerPlayer = null
         mixerMedia = null
         mixerEnabled = false
+    }
+
+    fun clearAudioMixer(mediaWrapper: MediaWrapper? = null) {
+        if (mediaWrapper != null && mixerMedia?.uri != mediaWrapper.uri) return
+        stopAudioMixer()
+        mixerMedia = null
+        mixerEnabled = false
+        settings.edit {
+            remove(KEY_AUDIO_MIXER_SELECTED)
+            putBoolean(KEY_AUDIO_MIXER_ENABLED, false)
+        }
     }
 
     @MainThread
