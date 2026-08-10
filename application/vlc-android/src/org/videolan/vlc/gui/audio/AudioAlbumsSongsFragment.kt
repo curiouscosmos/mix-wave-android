@@ -32,6 +32,7 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.PagedList
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -58,13 +59,17 @@ import org.videolan.vlc.gui.dialogs.DEFAULT_ACTIONS
 import org.videolan.vlc.gui.dialogs.DISPLAY_IN_CARDS
 import org.videolan.vlc.gui.dialogs.DisplaySettingsDialog
 import org.videolan.vlc.gui.dialogs.ONLY_FAVS
+import org.videolan.vlc.gui.dialogs.SavePlaylistDialog
 import org.videolan.vlc.gui.helpers.DefaultPlaybackAction
 import org.videolan.vlc.gui.helpers.DefaultPlaybackActionMediaType
+import org.videolan.vlc.gui.helpers.SwipeDragItemTouchHelperCallback
 import org.videolan.vlc.gui.helpers.UiTools
+import org.videolan.vlc.gui.helpers.UiTools.addToPlaylist
 import org.videolan.vlc.gui.helpers.UiTools.addFavoritesIcon
 import org.videolan.vlc.gui.helpers.UiTools.removeDrawables
 import org.videolan.vlc.gui.view.FastScroller
 import org.videolan.vlc.gui.view.RecyclerSectionItemGridDecoration
+import org.videolan.vlc.interfaces.IListEventsHandler
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
 import org.videolan.vlc.providers.medialibrary.MedialibraryProvider
@@ -83,7 +88,7 @@ private const val MODE_SONG = 1
 private const val MODE_TOTAL = 2 // Number of audio mProvider modes
 
 /* All subclasses of Fragment must include a public empty constructor. */
-class AudioAlbumsSongsFragment : BaseAudioBrowser<AlbumSongsViewModel>(), SwipeRefreshLayout.OnRefreshListener {
+class AudioAlbumsSongsFragment : BaseAudioBrowser<AlbumSongsViewModel>(), SwipeRefreshLayout.OnRefreshListener, IListEventsHandler {
 
     private var spacing: Int = 0
 
@@ -126,7 +131,7 @@ class AudioAlbumsSongsFragment : BaseAudioBrowser<AlbumSongsViewModel>(), SwipeR
         lists = arrayOf(albumsList, songsList)
         val titles = arrayOf(getString(R.string.albums), getString(R.string.songs))
         albumsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_ALBUM, this, cardSize = if (viewModel.providersInCard[0]) itemSize else -1)
-        songsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, cardSize = if (viewModel.providersInCard[1]) itemSize else -1)
+        songsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this, cardSize = if (viewModel.providersInCard[1]) itemSize else -1)
         val playlistModel = PlaylistModel.get(this)
         songsAdapter.setModel(playlistModel)
         playlistModel.dataset.asFlow().conflate().onEach {
@@ -138,6 +143,7 @@ class AudioAlbumsSongsFragment : BaseAudioBrowser<AlbumSongsViewModel>(), SwipeR
 
         songsList.adapter = songsAdapter
         albumsList.adapter = albumsAdapter
+        ItemTouchHelper(SwipeDragItemTouchHelperCallback(songsAdapter, swipeFlags = ItemTouchHelper.LEFT)).attachToRecyclerView(songsList)
         viewPager.offscreenPageLimit = MODE_TOTAL - 1
         audioPagerAdapter = AudioPagerAdapter(arrayOf(viewPager.getChildAt(MODE_ALBUM), viewPager.getChildAt(MODE_SONG)), titles)
         @Suppress("UNCHECKED_CAST")
@@ -192,6 +198,17 @@ class AudioAlbumsSongsFragment : BaseAudioBrowser<AlbumSongsViewModel>(), SwipeR
     }
 
     override fun getCurrentAdapter() = adapters[currentTab]
+
+    override fun onRemove(position: Int, item: MediaLibraryItem) {
+        val media = item as? MediaWrapper ?: return
+        if (!media.isPresent) UiTools.snackerMissing(requireActivity())
+        else requireActivity().addToPlaylist(media.tracks, SavePlaylistDialog.KEY_NEW_TRACKS)
+        songsAdapter.notifyItemChanged(position)
+    }
+
+    override fun onMove(oldPosition: Int, newPosition: Int) = Unit
+
+    override fun onStartDrag(viewHolder: RecyclerView.ViewHolder) = Unit
 
     override fun onRefresh() {
         (requireActivity() as ContentActivity).closeSearchView()

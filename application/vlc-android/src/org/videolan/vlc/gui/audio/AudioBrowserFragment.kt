@@ -74,11 +74,13 @@ import org.videolan.vlc.gui.dialogs.DISPLAY_IN_CARDS
 import org.videolan.vlc.gui.dialogs.DisplaySettingsDialog
 import org.videolan.vlc.gui.dialogs.KEY_PERMISSION_CHANGED
 import org.videolan.vlc.gui.dialogs.ONLY_FAVS
+import org.videolan.vlc.gui.dialogs.SavePlaylistDialog
 import org.videolan.vlc.gui.dialogs.showContext
 import org.videolan.vlc.gui.helpers.DefaultPlaybackAction
 import org.videolan.vlc.gui.helpers.DefaultPlaybackActionMediaType
 import org.videolan.vlc.gui.helpers.SwipeDragItemTouchHelperCallback
 import org.videolan.vlc.gui.helpers.UiTools
+import org.videolan.vlc.gui.helpers.UiTools.addToPlaylist
 import org.videolan.vlc.gui.helpers.UiTools.addFavoritesIcon
 import org.videolan.vlc.gui.helpers.UiTools.removeDrawables
 import org.videolan.vlc.interfaces.IListEventsHandler
@@ -175,6 +177,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
             list.adapter = adapters[i]
             list.addOnScrollListener(scrollListener)
         }
+        ItemTouchHelper(SwipeDragItemTouchHelperCallback(songsAdapter, swipeFlags = ItemTouchHelper.LEFT)).attachToRecyclerView(lists[TRACKS_TAB])
         mixerTouchHelper = ItemTouchHelper(SwipeDragItemTouchHelperCallback(mixerAdapter, true)).also { it.attachToRecyclerView(lists[MIXER_TAB]) }
         viewPager.setOnTouchListener(swipeFilter)
         swipeRefreshLayout.setOnRefreshListener {
@@ -269,7 +272,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         if (arguments?.getBoolean(EXTRA_OPEN_AUDIO_MIXER) == true) viewModel.currentTab = MIXER_TAB
         currentTab = viewModel.currentTab
 
-        songsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
+        songsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
         playlistModel = PlaylistModel.get(this)
         songsAdapter.setModel(playlistModel)
         playlistModel.dataset.asFlow().conflate().onEach {
@@ -584,7 +587,9 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
     override fun allowedToExpand() = getCurrentRV().scrollState == RecyclerView.SCROLL_STATE_IDLE
 
     override fun onRemove(position: Int, item: MediaLibraryItem) {
-        (item as? MediaWrapper)?.let { removeMixerItem(it) }
+        val media = item as? MediaWrapper ?: return
+        if (currentTab == MIXER_TAB) removeMixerItem(media)
+        else addSwipedTrackToPlaylist(position, media, songsAdapter)
     }
 
     override fun onMove(oldPosition: Int, newPosition: Int) {
@@ -604,6 +609,12 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         updateTabs()
         refreshMixerControls?.invoke()
         UiTools.snacker(requireActivity(), R.string.audio_mixer_removed)
+    }
+
+    private fun addSwipedTrackToPlaylist(position: Int, media: MediaWrapper, adapter: RecyclerView.Adapter<*>) {
+        if (!media.isPresent) UiTools.snackerMissing(requireActivity())
+        else requireActivity().addToPlaylist(media.tracks, SavePlaylistDialog.KEY_NEW_TRACKS)
+        adapter.notifyItemChanged(position)
     }
 
     private fun startMixerService(media: MediaWrapper) {

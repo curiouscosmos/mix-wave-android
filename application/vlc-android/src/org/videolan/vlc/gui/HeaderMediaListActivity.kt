@@ -233,6 +233,9 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
             binding.releaseDate.visibility = View.GONE
         } else {
             audioBrowserAdapter = AudioAlbumTracksAdapter(MediaLibraryItem.TYPE_MEDIA, this, this)
+            itemTouchHelperCallback = SwipeDragItemTouchHelperCallback(audioBrowserAdapter, swipeFlags = ItemTouchHelper.LEFT)
+            itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
+            itemTouchHelper!!.attachToRecyclerView(binding.songs)
             binding.songs.addItemDecoration(RecyclerSectionItemDecoration(resources.getDimensionPixelSize(R.dimen.recycler_section_header_height), true, viewModel.tracksProvider))
 
         }
@@ -480,9 +483,16 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
     override fun onItemFocused(v: View, item: MediaLibraryItem) {}
 
     override fun onRemove(position: Int, item: MediaLibraryItem) {
-        lastDismissedPosition = position
-        val tracks = ArrayList(listOf(*item.tracks))
-        lifecycleScope.launch {  removeFromPlaylist(tracks, ArrayList(listOf(position))) }
+        if (isPlaylist) {
+            lastDismissedPosition = position
+            val tracks = ArrayList(listOf(*item.tracks))
+            lifecycleScope.launch { removeFromPlaylist(tracks, ArrayList(listOf(position))) }
+        } else {
+            val media = item as? MediaWrapper ?: return
+            if (!media.isPresent) UiTools.snackerMissing(this)
+            else addToPlaylist(media.tracks, SavePlaylistDialog.KEY_NEW_TRACKS)
+            audioBrowserAdapter.notifyItemChanged(position)
+        }
     }
 
     override fun onMove(oldPosition: Int, newPosition: Int) {
