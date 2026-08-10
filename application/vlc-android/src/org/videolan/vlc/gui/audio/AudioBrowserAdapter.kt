@@ -41,9 +41,11 @@ import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import org.videolan.libvlc.util.AndroidUtil
+import org.videolan.medialibrary.Tools
 import org.videolan.medialibrary.interfaces.media.Artist
 import org.videolan.medialibrary.interfaces.media.Genre
 import org.videolan.medialibrary.interfaces.media.MediaWrapper
+import org.videolan.medialibrary.interfaces.media.Playlist
 import org.videolan.medialibrary.media.MediaLibraryItem
 import org.videolan.medialibrary.media.MediaLibraryItem.FLAG_SELECTED
 import org.videolan.resources.AppContextProvider
@@ -72,6 +74,7 @@ import org.videolan.vlc.util.LifecycleAwareScheduler
 import org.videolan.vlc.util.isOTG
 import org.videolan.vlc.util.isSD
 import org.videolan.vlc.util.isSchemeSMB
+import org.videolan.vlc.util.TextUtils
 import org.videolan.vlc.viewmodels.PlaylistModel
 
 private const val SHOW_IN_LIST = -1
@@ -186,6 +189,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             holder.binding.setVariable(BR.isPresent, true)
             holder.binding.setVariable(BR.played, false)
         }
+        holder.binding.setVariable(BR.rowSubtitle, getSubtitle(holder.binding.root.context, item))
         val miniVisualizer: MiniVisualizer = holder.getMiniVisu()
         if (currentMedia == item) {
             if (model?.playing != false) miniVisualizer.start() else miniVisualizer.stop()
@@ -431,6 +435,15 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
          * Awful hack to workaround the [PagedListAdapter] not keeping track of notifyItemMoved operations
          */
         private var preventNextAnim: Boolean = false
+
+        private fun getSubtitle(context: Context, item: MediaLibraryItem?) = when (item) {
+            is MediaWrapper -> if (item.length > 0L) Tools.millisToString(item.length) else null
+            is Playlist -> if (item.duration != 0L) {
+                val duration = Tools.millisToString(item.duration)
+                TextUtils.separatedString(context.getString(R.string.track_number, item.tracksCount), if (item.nbDurationUnknown > 0) "$duration+" else duration)
+            } else context.getString(R.string.track_number, item.tracksCount)
+            else -> item?.description
+        }
 
         private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<MediaLibraryItem>() {
             override fun areItemsTheSame(

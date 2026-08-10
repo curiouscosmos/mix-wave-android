@@ -53,6 +53,10 @@
                 type="boolean" />
 
         <variable
+                name="rowSubtitle"
+                type="String" />
+
+        <variable
                 name="inSelection"
                 type="boolean" />
 
@@ -233,8 +237,8 @@
                 android:layout_marginEnd="16dp"
                 android:ellipsize="end"
                 android:gravity="center_vertical"
-                android:maxLines="2"
-                android:singleLine="false"
+                android:maxLines="1"
+                android:singleLine="true"
                 vlc:asyncText="@{item.title}"
                 vlc:layout_constraintBottom_toTopOf="@+id/subtitle"
                 vlc:layout_constraintEnd_toStartOf="@+id/linearLayout6"
@@ -250,7 +254,9 @@
                 style="@style/VLC.TextViewDescription"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                vlc:asyncText="@{item}"
+                android:maxLines="1"
+                android:singleLine="true"
+                vlc:asyncText="@{rowSubtitle}"
                 vlc:layout_constraintBottom_toBottomOf="parent"
                 vlc:layout_constraintEnd_toEndOf="@+id/title"
                 vlc:layout_constraintStart_toStartOf="@+id/title"

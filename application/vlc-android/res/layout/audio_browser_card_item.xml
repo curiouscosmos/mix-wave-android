@@ -61,6 +61,10 @@
                 type="boolean" />
 
         <variable
+                name="rowSubtitle"
+                type="String" />
+
+        <variable
                 name="inSelection"
                 type="boolean" />
 
@@ -291,8 +295,9 @@
                 android:layout_marginEnd="8dp"
                 android:layout_marginBottom="8dp"
                 android:maxLines="1"
-                tools:text="Subitle"
-                vlc:asyncText="@{item}"
+                android:singleLine="true"
+                tools:text="3:45"
+                vlc:asyncText="@{rowSubtitle}"
                 vlc:layout_constraintBottom_toBottomOf="parent"
                 vlc:layout_constraintEnd_toStartOf="@+id/item_more"
                 vlc:layout_constraintStart_toStartOf="parent"

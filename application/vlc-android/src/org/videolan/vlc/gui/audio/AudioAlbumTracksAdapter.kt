@@ -34,6 +34,7 @@ import androidx.core.view.MotionEventCompat
 import androidx.databinding.ViewDataBinding
 import androidx.paging.PagedList
 import org.videolan.libvlc.util.AndroidUtil
+import org.videolan.medialibrary.Tools
 import org.videolan.medialibrary.interfaces.media.MediaWrapper
 import org.videolan.medialibrary.media.MediaLibraryItem
 import org.videolan.tools.Settings
@@ -41,7 +42,6 @@ import org.videolan.vlc.BR
 import org.videolan.vlc.databinding.AudioAlbumTrackItemBinding
 import org.videolan.vlc.interfaces.IEventsHandler
 import org.videolan.vlc.interfaces.IListEventsHandler
-import org.videolan.vlc.media.MediaUtils
 
 class AudioAlbumTracksAdapter @JvmOverloads constructor(
     type: Int, eventsHandler: IEventsHandler<MediaLibraryItem>,
@@ -119,7 +119,7 @@ class AudioAlbumTracksAdapter @JvmOverloads constructor(
         override fun setItem(item: MediaLibraryItem?) {
             binding.item = item as MediaWrapper
             binding.trackNumber.text = if (item.trackNumber > 0 && Settings.showTrackNumber)  "${item.trackNumber}." else ""
-            binding.subtitle.text = MediaUtils.getMediaSubtitle(item)
+            binding.subtitle.text = if (item.length > 0L) Tools.millisToString(item.length) else null
         }
 
         fun shouldShowTrackNumber() : Int {
@@ -143,4 +143,3 @@ class AudioAlbumTracksAdapter @JvmOverloads constructor(
 
     }
 }
-
