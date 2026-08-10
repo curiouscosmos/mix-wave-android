@@ -181,7 +181,11 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             holder.binding.setVariable(BR.isOTG, item.uri.isOTG())
             holder.binding.setVariable(BR.isSD, item.uri.isSD())
             holder.binding.setVariable(BR.isPresent, item.isPresent)
-        } else holder.binding.setVariable(BR.isPresent, true)
+            holder.binding.setVariable(BR.played, item.playCount > 0L)
+        } else {
+            holder.binding.setVariable(BR.isPresent, true)
+            holder.binding.setVariable(BR.played, false)
+        }
         val miniVisualizer: MiniVisualizer = holder.getMiniVisu()
         if (currentMedia == item) {
             if (model?.playing != false) miniVisualizer.start() else miniVisualizer.stop()
@@ -447,10 +451,10 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 preventNextAnim = false
                 when {
                     oldItem.isFavorite != newItem.isFavorite  -> return UPDATE_FAVORITE_STATE
+                    oldItem is MediaWrapper && newItem is MediaWrapper && oldItem.playCount != newItem.playCount -> return UPDATE_PAYLOAD
                 }
                 return UPDATE_PAYLOAD
             }
         }
     }
 }
-

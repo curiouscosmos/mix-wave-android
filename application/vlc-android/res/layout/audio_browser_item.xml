@@ -49,6 +49,10 @@
                 type="boolean" />
 
         <variable
+                name="played"
+                type="boolean" />
+
+        <variable
                 name="inSelection"
                 type="boolean" />
 
@@ -148,6 +152,17 @@
                 vlc:layout_constraintBottom_toBottomOf="parent"
                 vlc:layout_constraintEnd_toStartOf="@+id/item_more"
                 vlc:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                    android:id="@+id/media_played"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/talkback_already_played"
+                    android:padding="3dp"
+                    android:visibility="@{played ? View.VISIBLE : View.GONE}"
+                    tools:visibility="visible"
+                    vlc:srcCompat="@drawable/ic_mark_as_played"
+                    vlc:tint="@color/red" />
 
             <ImageView
                     android:id="@+id/media_favorite"
