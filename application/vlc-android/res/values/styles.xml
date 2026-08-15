@@ -136,6 +136,10 @@
         <item name="fontFamily">sans-serif-black</item>
     </style>
 
+    <style name="MixWave.BottomNavigation.Text" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">14sp</item>
+    </style>
+
     <style name="Theme.VLC.PickerDialog" parent="Theme.VLC.PickerDialog.Light"/>
     <style name="Theme.VLC.PickerDialog.Dark" parent="Theme.VLC.PickerDialog.Dark.7"/>
     <style name="Theme.VLC.PickerDialog.Light" parent="Theme.VLC.PickerDialog.Light.7"/>
