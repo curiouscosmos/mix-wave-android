@@ -24,14 +24,27 @@
 
 package org.videolan.vlc.gui.onboarding
 
+import android.os.Bundle
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
+import android.widget.ImageView
 import androidx.fragment.app.Fragment
+import org.videolan.vlc.R
 import org.videolan.vlc.util.isTalkbackIsEnabled
 
 abstract class OnboardingFragment: Fragment() {
     lateinit var onboardingFragmentListener: OnboardingFragmentListener
     abstract fun getDefaultViewForTalkback(): View
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        listOf(R.id.imageView, R.id.imageView2).forEach { id ->
+            view.findViewById<ImageView?>(id)?.run {
+                setBackgroundResource(R.drawable.onboarding_logo_background)
+                clipToOutline = true
+            }
+        }
+    }
 
     override fun onResume() {
         super.onResume()
