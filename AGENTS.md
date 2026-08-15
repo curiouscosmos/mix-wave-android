@@ -89,3 +89,4 @@ The shell may print an `npm_config_prefix` / `nvm` warning. It is unrelated to t
 - Do not remove generated/signed APK artifacts unless explicitly asked.
 - `.ai/` is local/untracked context; do not edit it unless explicitly asked.
 - Build output under `application/vlc-android/build/` may change during verification; treat it as generated.
+- After each change, commit the change to master branch with proper commit message and push
