@@ -22,11 +22,15 @@ package org.videolan.vlc.gui.view
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Outline
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import org.videolan.tools.dp
 import org.videolan.vlc.R
 
 class HeaderMediaSwitcher(context: Context, attrs: AttributeSet) : AudioMediaSwitcher(context, attrs) {
@@ -46,9 +50,16 @@ class HeaderMediaSwitcher(context: Context, attrs: AttributeSet) : AudioMediaSwi
         val titleView = v.findViewById<View>(R.id.title) as TextView
         val artistView = v.findViewById<View>(R.id.artist) as TextView
 
+        coverView.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, 4.dp.toFloat())
+            }
+        }
+        coverView.clipToOutline = true
         if (cover != null) {
-            coverView.visibility = VISIBLE
             coverView.setImageBitmap(cover)
+        } else {
+            coverView.setImageDrawable(ContextCompat.getDrawable(v.context, R.drawable.ic_no_thumbnail_song))
         }
 
         titleView.text = title

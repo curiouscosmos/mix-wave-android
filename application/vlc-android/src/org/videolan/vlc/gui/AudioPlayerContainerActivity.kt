@@ -73,6 +73,7 @@ import org.videolan.medialibrary.interfaces.Medialibrary
 import org.videolan.resources.util.getFromMl
 import org.videolan.resources.util.startMedialibrary
 import org.videolan.tools.AUDIO_RESUME_PLAYBACK
+import org.videolan.tools.KEY_AUDIO_LAST_PLAYLIST
 import org.videolan.tools.KEY_AUDIO_PLAYER_SHOW_COVER
 import org.videolan.tools.KEY_CURRENT_AUDIO
 import org.videolan.tools.PREF_AUDIOPLAYER_TIPS_SHOWN
@@ -792,13 +793,10 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         delay(1000L)
         if (PlaylistManager.showAudioPlayer.value == true) return@launchWhenStarted
         val song = settings.getString(KEY_CURRENT_AUDIO, null) ?: return@launchWhenStarted
-        val media = getFromMl { getMedia(song.toUri()) } ?: return@launchWhenStarted
+        if (settings.getString(KEY_AUDIO_LAST_PLAYLIST, null).isNullOrEmpty()) return@launchWhenStarted
+        getFromMl { getMedia(song.toUri()) } ?: return@launchWhenStarted
         if (!settings.getBoolean(AUDIO_RESUME_PLAYBACK, true)) return@launchWhenStarted
-        val title = media.title
-        resumeCard = Snackbar.make(getSnackAnchorView()
-                ?: appBarLayout, getString(R.string.resume_card_message, title), Snackbar.LENGTH_LONG)
-                .setAction(R.string.play) { PlaybackService.loadLastAudio(it.context) }
-        resumeCard.show()
+        PlaybackService.loadLastAudio(this@AudioPlayerContainerActivity, startPaused = true)
     }
 
     fun lockPlayer(lock: Boolean) {

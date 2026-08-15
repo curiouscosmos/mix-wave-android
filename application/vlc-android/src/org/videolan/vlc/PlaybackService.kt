@@ -902,7 +902,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                             play()
                     } else if (isPlaying) pause()
                     else play()
-                } else loadLastAudioPlaylist()
+                } else loadLastAudioPlaylist(intent.getBooleanExtra(EXTRA_START_PAUSED, false))
             }
             ACTION_REMOTE_BACKWARD -> previous(false)
             ACTION_REMOTE_FORWARD -> next()
@@ -1474,7 +1474,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         }
     }
 
-    private fun loadLastAudioPlaylist() {
+    private fun loadLastAudioPlaylist(startPaused: Boolean = false) {
         if (!AndroidDevices.isAndroidTv) {
             // If playback in background is enabled it should load the last media of any type
             // not only audio
@@ -1487,13 +1487,13 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 PLAYLIST_TYPE_AUDIO
             else
                 PLAYLIST_TYPE_ALL
-            loadLastPlaylist(playlistType)
+            loadLastPlaylist(playlistType, startPaused)
         }
     }
 
-    fun loadLastPlaylist(type: Int) {
+    fun loadLastPlaylist(type: Int, startPaused: Boolean = false) {
         forceForeground(true)
-        if (!playlistManager.loadLastPlaylist(type)) {
+        if (!playlistManager.loadLastPlaylist(type, startPaused)) {
             Toast.makeText(this, getString(R.string.resume_playback_error), Toast.LENGTH_LONG).show()
             stopService(Intent(applicationContext, PlaybackService::class.java))
         }
@@ -2182,6 +2182,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         private const val SHOW_TOAST = "show_toast"
         private const val END_MEDIASESSION = "end_mediasession"
         private const val UPDATE_META = "update_meta"
+        private const val EXTRA_START_PAUSED = "extra_start_paused"
 
         val playerSleepTime by lazy(LazyThreadSafetyMode.NONE) { MutableLiveData<Calendar?>().apply { value = null } }
 
@@ -2191,9 +2192,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             context.launchForeground(serviceIntent)
         }
 
-        fun loadLastAudio(context: Context, playOnly: Boolean = false) {
+        fun loadLastAudio(context: Context, playOnly: Boolean = false, startPaused: Boolean = false) {
             val i = Intent(ACTION_REMOTE_LAST_PLAYLIST, null, context, PlaybackService::class.java).apply {
                 if (playOnly) putExtra(EXTRA_PLAY_ONLY, true)
+                if (startPaused) putExtra(EXTRA_START_PAUSED, true)
             }
             context.launchForeground(i)
         }

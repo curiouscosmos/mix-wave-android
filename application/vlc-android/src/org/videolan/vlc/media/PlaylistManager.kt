@@ -298,7 +298,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
 
     @Volatile
     private var loadingLastPlaylist = false
-    fun loadLastPlaylist(type: Int = PLAYLIST_TYPE_AUDIO) : Boolean {
+    fun loadLastPlaylist(type: Int = PLAYLIST_TYPE_AUDIO, startPaused: Boolean = false) : Boolean {
         if (loadingLastPlaylist) return true
         loadingLastPlaylist = true
         val currentMediaKey = when (type) {
@@ -336,7 +336,10 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             if (!audio && position < playList.size && settings.getBoolean(VIDEO_PAUSED, false)) {
                 playList[position].addFlags(MediaWrapper.MEDIA_PAUSED)
             }
-            if (audio && position < playList.size) playList[position].addFlags(MediaWrapper.MEDIA_FORCE_AUDIO)
+            if (audio && position < playList.size) {
+                playList[position].addFlags(MediaWrapper.MEDIA_FORCE_AUDIO)
+                if (startPaused) playList[position].addFlags(MediaWrapper.MEDIA_PAUSED)
+            }
             load(playList, position, mlUpdate = true, avoidErasingStop = true)
             loadingLastPlaylist = false
             if (!audio) {
