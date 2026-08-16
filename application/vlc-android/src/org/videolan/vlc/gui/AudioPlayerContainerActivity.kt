@@ -381,7 +381,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         playerBehavior.addBottomSheetCallback(object : BottomSheetCallback() {
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
                 audioPlayer.onSlide(slideOffset)
-                updateMiniPlayerLayout(if (slideOffset > 0f) STATE_EXPANDED else STATE_COLLAPSED)
+                updateMiniPlayerLayout()
                 val translationpercent = min(1f, max(0f, slideOffset))
                 bottomBehavior?.let { bottomBehavior ->
                     bottomBar?.let { bottomBar ->
@@ -396,7 +396,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
                 hideStatusIfNeeded(newState)
                 audioPlayer.onStateChanged(newState)
                 if (newState == STATE_COLLAPSED || newState == STATE_HIDDEN) removeTipViewIfDisplayed()
-                updateMiniPlayerLayout(newState)
+                updateMiniPlayerLayout()
                 updateFragmentMargins(newState)
                 applyMarginToProgressBar(playerBehavior.peekHeight)
                 setContentBottomPadding()
@@ -421,9 +421,9 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         }
     }
 
-    private fun updateMiniPlayerLayout(state: Int = if (::playerBehavior.isInitialized) playerBehavior.state else STATE_HIDDEN) {
+    private fun updateMiniPlayerLayout() {
         if (!::audioPlayerContainer.isInitialized) return
-        val margin = if (this is MainActivity && !isTablet() && state == STATE_COLLAPSED) 8.dp else 0
+        val margin = 0
         audioPlayerContainer.updateLayoutParams<CoordinatorLayout.LayoutParams> {
             if (leftMargin == margin && rightMargin == margin && bottomMargin == bottomInset) return@updateLayoutParams
             leftMargin = margin
