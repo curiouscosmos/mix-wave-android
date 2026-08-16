@@ -532,8 +532,8 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
                 }
             else binding.bookmarkMarkerContainer.removeAllViews()
             if (isShowingCover()) {
-                binding.audioForward10.setVisible()
-                binding.audioRewind10.setVisible()
+                binding.audioForward10.setGone()
+                binding.audioRewind10.setGone()
             }
         } else {
             binding.audioForwardBookmark.setGone()
@@ -786,6 +786,10 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         if (activity is AudioPlayerContainerActivity)
             (activity as AudioPlayerContainerActivity).closeMiniPlayer()
         return true
+    }
+
+    fun onCollapseClick(@Suppress("UNUSED_PARAMETER") view: View?) {
+        (activity as? AudioPlayerContainerActivity)?.slideDownAudioPlayer()
     }
 
     fun onNextClick(@Suppress("UNUSED_PARAMETER") view: View?) {

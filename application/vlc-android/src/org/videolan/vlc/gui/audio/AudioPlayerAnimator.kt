@@ -173,12 +173,12 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
 
         hidePlaylistConstraint.setVisibility(R.id.songs_list, View.GONE)
         hidePlaylistConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
-        hidePlaylistConstraint.setVisibility(R.id.audio_rewind_10, View.VISIBLE)
-        hidePlaylistConstraint.setVisibility(R.id.audio_rewind_text, View.VISIBLE)
-        hidePlaylistConstraint.setVisibility(R.id.audio_forward_10, View.VISIBLE)
-        hidePlaylistConstraint.setVisibility(R.id.audio_forward_text, View.VISIBLE)
-        hidePlaylistConstraint.setVisibility(R.id.audio_forward_bookmark, View.VISIBLE)
-        hidePlaylistConstraint.setVisibility(R.id.audio_rewind_bookmark, View.VISIBLE)
+        hidePlaylistConstraint.setVisibility(R.id.audio_rewind_10, View.GONE)
+        hidePlaylistConstraint.setVisibility(R.id.audio_rewind_text, View.GONE)
+        hidePlaylistConstraint.setVisibility(R.id.audio_forward_10, View.GONE)
+        hidePlaylistConstraint.setVisibility(R.id.audio_forward_text, View.GONE)
+        hidePlaylistConstraint.setVisibility(R.id.audio_forward_bookmark, View.GONE)
+        hidePlaylistConstraint.setVisibility(R.id.audio_rewind_bookmark, View.GONE)
         headerHidePlaylistConstraint.clear(R.id.playback_chips, ConstraintSet.BOTTOM)
         headerHidePlaylistConstraint.clear(R.id.playback_chips, ConstraintSet.TOP)
         headerHidePlaylistConstraint.connect(R.id.playback_chips, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP)
@@ -275,9 +275,18 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.headerBackground.alpha = if (showCover) (1 - slideOffset) * 0.6F else 0.4F + ((1 - slideOffset) * 0.6F)
         binding.headerDivider.alpha = if (showCover) 0F else slideOffset
         if (slideOffset != 1f) audioPlayer.clearSearch()
-        binding.playlistSearch.alpha = slideOffset
-        binding.playlistSwitch.alpha = slideOffset
-        binding.advFunction.alpha = slideOffset
+        binding.playlistSearch.alpha = if (showCover) 0F else slideOffset
+        binding.playlistSwitch.alpha = if (showCover) 0F else slideOffset
+        binding.advFunction.alpha = if (showCover) 0F else slideOffset
+        binding.playlistSearch.visibility = if (showCover && slideOffset > 0F) View.GONE else View.VISIBLE
+        binding.playlistSwitch.visibility = if (showCover && slideOffset > 0F) View.GONE else View.VISIBLE
+        binding.advFunction.visibility = if (showCover && slideOffset > 0F) View.GONE else View.VISIBLE
+        binding.expandedBack?.alpha = if (showCover) slideOffset else 0F
+        binding.expandedTitle?.alpha = if (showCover) slideOffset else 0F
+        binding.expandedMore?.alpha = if (showCover) slideOffset else 0F
+        binding.expandedBack?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
+        binding.expandedTitle?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
+        binding.expandedMore?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
         //views disappearing in full player
         val disappearingViews = arrayOf(binding.headerPlayPause, binding.headerTime, binding.headerShuffle, binding.headerPrevious, binding.headerLargePlayPause, binding.headerNext, binding.headerRepeat)
         disappearingViews.forEach {
@@ -288,6 +297,9 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.playlistSearch.translationY = -(1 - translationOffset) * 48.dp
         binding.playlistSwitch.translationY = -(1 - translationOffset) * 48.dp
         binding.advFunction.translationY = -(1 - translationOffset) * 48.dp
+        binding.expandedBack?.translationY = -(1 - translationOffset) * 48.dp
+        binding.expandedTitle?.translationY = -(1 - translationOffset) * 48.dp
+        binding.expandedMore?.translationY = -(1 - translationOffset) * 48.dp
         disappearingViews.forEach {
             it.translationY = translationOffset * 48.dp
         }
