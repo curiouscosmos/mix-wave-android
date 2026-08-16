@@ -257,7 +257,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         // insets from soft nav buttons
         var bottomMargin = if (this is MainActivity && isTablet()) 0 else bottomInset
         // Bottom bar navigation
-        bottomMargin += if (this is MainActivity && !isTablet()) 58.dp else 0
+        bottomMargin += if (this is MainActivity && !isTablet()) 108.dp else 0
         //mini player
         bottomMargin += if (::playerBehavior.isInitialized && playerBehavior.state != STATE_HIDDEN) 72.dp else 0 + 4.dp
         fragmentContainer.setPadding(fragmentContainer.paddingLeft, fragmentContainer.paddingTop, fragmentContainer.paddingRight, bottomMargin)

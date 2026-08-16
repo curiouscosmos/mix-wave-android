@@ -29,8 +29,8 @@
 
     <item
             android:id="@+id/nav_audio"
-            android:title="@string/music"
-            android:icon="@drawable/ic_menu_audio" />
+            android:title="@string/home"
+            android:icon="@drawable/ic_auto_home" />
     <item
             android:id="@+id/nav_video"
             android:title="@string/videos"
@@ -41,7 +41,7 @@
             android:icon="@drawable/ic_playlist" />
     <item
             android:id="@+id/nav_more"
-            android:title="@string/you"
-            android:icon="@drawable/ic_nav_more" />
+            android:title="@string/preferences"
+            android:icon="@drawable/ic_settings" />
 
 </menu>
