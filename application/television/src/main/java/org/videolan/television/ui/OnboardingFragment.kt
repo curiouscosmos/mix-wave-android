@@ -67,7 +67,7 @@ class OnboardingFragment : OnboardingSupportFragment() {
 
     override fun onCreateContentView(inflater: LayoutInflater?, container: ViewGroup?): View? {
         val view = ImageView(requireActivity())
-        view.setImageResource(R.drawable.ic_launcher_foreground)
+        view.setImageResource(R.mipmap.ic_launcher_foreground)
         return view
     }
 
