@@ -115,6 +115,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
     private val lists = mutableListOf<RecyclerView>()
     private lateinit var settings: SharedPreferences
     override val hasTabs = true
+    override fun hasFAB() = false
     private var spacing = 0
     private var restorePositions: SparseArray<Int> = SparseArray()
 
