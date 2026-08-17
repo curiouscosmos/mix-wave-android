@@ -209,8 +209,6 @@
                 android:id="@+id/media_progress"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/tv_overscan_horizontal_progressbar"
-                android:layout_marginEnd="@dimen/tv_overscan_horizontal_progressbar"
                 android:focusable="true"
                 android:layoutDirection="ltr"
                 android:max="@{(int)progress.length}"
