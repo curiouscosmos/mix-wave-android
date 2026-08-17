@@ -27,7 +27,6 @@ import android.app.Activity
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.MenuItem
-import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -43,7 +42,6 @@ import org.videolan.resources.ID_AUDIO
 import org.videolan.resources.ID_DIRECTORIES
 import org.videolan.resources.ID_VIDEO
 import org.videolan.resources.util.parcelableList
-import org.videolan.tools.KEY_FRAGMENT_ID
 import org.videolan.tools.isStarted
 import org.videolan.tools.setGone
 import org.videolan.tools.setVisible
@@ -135,7 +133,7 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
     private fun idIsExtension(id: Int) = id in 1..100
 
     override fun reloadPreferences() {
-        currentFragmentId = settings.getInt(KEY_FRAGMENT_ID, defaultFragmentId)
+        currentFragmentId = defaultFragmentId
     }
 
     override fun configurationChanged(size: Int) {
@@ -192,8 +190,6 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
                 val current = it.menu.findItem(currentId)
                 if (current != null) current.isChecked = false
                 target.isChecked = true
-                /* Save the tab status in pref */
-                settings.edit { putInt(KEY_FRAGMENT_ID, id) }
             }
         }
     }
