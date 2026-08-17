@@ -1860,15 +1860,17 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             putString(KEY_AUDIO_MIXER_SELECTED, mediaWrapper.uri.toString())
             putBoolean(KEY_AUDIO_MIXER_ENABLED, true)
         }
-        if (isPlaying) player.play()
+        if (isPlaying && canPlayAudioMixer()) player.play()
     }
+
+    private fun canPlayAudioMixer() = currentMediaWrapper?.type == MediaWrapper.TYPE_AUDIO && !isVideoPlaying
 
     private fun loadAudioMixerMedia(mediaWrapper: MediaWrapper): MediaPlayer {
         val player = mixerPlayer ?: MediaPlayer(VLCInstance.getInstance(this)).also { newPlayer ->
             newPlayer.setEventListener { event ->
                 when (event.type) {
                     MediaPlayer.Event.Playing -> newPlayer.setVolume(mixerVolume)
-                    MediaPlayer.Event.EndReached -> if (mixerLoop && mixerEnabled && isPlaying) restartAudioMixer()
+                    MediaPlayer.Event.EndReached -> if (mixerLoop && mixerEnabled && isPlaying && canPlayAudioMixer()) restartAudioMixer()
                 }
             }
             mixerPlayer = newPlayer
@@ -1882,6 +1884,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     private fun playAudioMixer(mediaWrapper: MediaWrapper? = mixerMedia) {
+        if (!canPlayAudioMixer()) {
+            stopAudioMixer()
+            return
+        }
         val player = mixerPlayer ?: mediaWrapper?.let { loadAudioMixerMedia(it) } ?: return
         mixerFadeJob?.cancel()
         mixerStopJob?.cancel()
@@ -1891,6 +1897,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     private fun restartAudioMixer(mediaWrapper: MediaWrapper? = mixerMedia) {
+        if (!canPlayAudioMixer()) {
+            stopAudioMixer()
+            return
+        }
         mediaWrapper?.let {
             val player = loadAudioMixerMedia(it)
             player.setVolume(mixerVolume)
@@ -1928,7 +1938,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     fun setAudioMixerEnabled(enabled: Boolean) {
         mixerEnabled = enabled && mixerMedia != null
         settings.edit { putBoolean(KEY_AUDIO_MIXER_ENABLED, mixerEnabled) }
-        if (mixerEnabled && isPlaying) playAudioMixer()
+        if (mixerEnabled && isPlaying && canPlayAudioMixer()) playAudioMixer()
         else mixerPlayer?.let { player ->
             mixerStopJob?.cancel()
             fadeAudioMixer(player, mixerVolume, 0)
@@ -1944,7 +1954,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         mixerLoop = loop
         settings.edit { putBoolean(KEY_AUDIO_MIXER_LOOP, mixerLoop) }
         mixerMedia?.let {
-            if (mixerEnabled && isPlaying) restartAudioMixer(it) else loadAudioMixerMedia(it)
+            if (mixerEnabled && isPlaying && canPlayAudioMixer()) restartAudioMixer(it) else loadAudioMixerMedia(it)
         }
     }
 
