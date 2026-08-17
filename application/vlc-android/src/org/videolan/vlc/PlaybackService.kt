@@ -349,7 +349,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 if (!wakeLock.isHeld) wakeLock.acquire()
                 showNotification()
                 nbErrors = 0
-                if (mixerEnabled) playAudioMixer()
+                syncAudioMixerWithPlayback()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     NetworkConnectionManager.isMetered.value?.let {
                         checkMetered(it)
@@ -1853,17 +1853,21 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
     /** Selects a second local track which follows the main player's play/pause state. */
     fun playInAudioMixer(mediaWrapper: MediaWrapper) {
-        val player = loadAudioMixerMedia(mediaWrapper)
+        loadAudioMixerMedia(mediaWrapper)
         mixerMedia = mediaWrapper
         mixerEnabled = true
         settings.edit {
             putString(KEY_AUDIO_MIXER_SELECTED, mediaWrapper.uri.toString())
             putBoolean(KEY_AUDIO_MIXER_ENABLED, true)
         }
-        if (isPlaying && canPlayAudioMixer()) player.play()
+        syncAudioMixerWithPlayback()
     }
 
     private fun canPlayAudioMixer() = currentMediaWrapper?.type == MediaWrapper.TYPE_AUDIO && !isVideoPlaying
+
+    private fun syncAudioMixerWithPlayback() {
+        if (mixerEnabled && isPlaying) playAudioMixer() else pauseAudioMixer()
+    }
 
     private fun loadAudioMixerMedia(mediaWrapper: MediaWrapper): MediaPlayer {
         val player = mixerPlayer ?: MediaPlayer(VLCInstance.getInstance(this)).also { newPlayer ->
@@ -1938,7 +1942,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     fun setAudioMixerEnabled(enabled: Boolean) {
         mixerEnabled = enabled && mixerMedia != null
         settings.edit { putBoolean(KEY_AUDIO_MIXER_ENABLED, mixerEnabled) }
-        if (mixerEnabled && isPlaying && canPlayAudioMixer()) playAudioMixer()
+        if (mixerEnabled && isPlaying) playAudioMixer()
         else mixerPlayer?.let { player ->
             mixerStopJob?.cancel()
             fadeAudioMixer(player, mixerVolume, 0)
