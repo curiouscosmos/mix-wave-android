@@ -90,7 +90,7 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
     }
 
     override fun onStart(owner: LifecycleOwner) {
-        if (currentFragment === null && !currentIdIsExtension()) showFragment(if (currentFragmentId != 0) currentFragmentId else settings.getInt(KEY_FRAGMENT_ID, defaultFragmentId))
+        if (currentFragment === null && !currentIdIsExtension()) showFragment(if (currentFragmentId != 0) currentFragmentId else defaultFragmentId)
         navigationView.forEach { it.setOnItemSelectedListener(this) }
     }
 
