@@ -915,7 +915,7 @@
     <string name="video_remote_disable">Duplicate screen</string>
     <string name="removed_from_playlist_anonymous">Item(s) removed from playlist</string>
     <string name="welcome_title">Welcome to Mix Wave!</string>
-    <string name="welcome_subtitle">The free and open source multimedia player</string>
+    <string name="welcome_subtitle">Your music-first local media player</string>
     <string name="permission_media">Mix Wave needs your permission to access media on your device</string>
     <string name="permission_video">Mix Wave needs your permission to access video media on your device</string>
     <string name="permission_audio">Mix Wave needs your permission to access audio media on your device</string>
@@ -1459,6 +1459,6 @@
     <string name="feedback_email_warning_explanation">The easiest way to share your feedback is to use the %1$s feature.\nTo do so, enable the remote access in the settings, follow the instructions and choose the %2$s entry in the menu.</string>
     <string name="feedback_email_warning_remote_action">Open the settings</string>
     <string name="feedback_email_warning_try_anyway">Try anyway</string>
-    <string name="forum_url" translatable="false">https://forum.videolan.org/viewforum.php?f=35</string>
-    <string name="doc_url" translatable="false">https://docs.videolan.me/vlc-user/android/</string>
+    <string name="forum_url" translatable="false">https://sandalbar.online</string>
+    <string name="doc_url" translatable="false">https://sandalbar.online</string>
 </resources>
