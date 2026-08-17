@@ -89,6 +89,7 @@ import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
 import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.providers.medialibrary.MedialibraryProvider
+import org.videolan.vlc.providers.medialibrary.isFavoriteTracksPlaylist
 import org.videolan.vlc.util.ContextOption
 import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_AUDIO_MIXER
 import org.videolan.vlc.util.ContextOption.CTX_ADD_SHORTCUT
@@ -486,7 +487,8 @@ abstract class BaseAudioBrowser<T : MedialibraryViewModel> : MediaBrowserFragmen
                     remove(CTX_GO_TO_ALBUM_ARTIST)
                     remove(CTX_GO_TO_ARTIST)
                     if (item.tracksCount > 2) add(CTX_PLAY_SHUFFLE)
-                    if (item.isFavorite) add(CTX_FAV_REMOVE) else add(CTX_FAV_ADD)
+                    if (isFavoriteTracksPlaylist(item)) removeAll(CTX_DELETE, CTX_RENAME)
+                    else if (item.isFavorite) add(CTX_FAV_REMOVE) else add(CTX_FAV_ADD)
                 }
             }
             else -> createCtxAudioFlags()

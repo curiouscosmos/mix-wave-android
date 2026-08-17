@@ -108,6 +108,7 @@ import org.videolan.vlc.interfaces.IListEventsHandler
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
 import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
+import org.videolan.vlc.providers.medialibrary.isFavoriteTracksPlaylist
 import org.videolan.vlc.util.ContextOption
 import org.videolan.vlc.util.ContextOption.CTX_ADD_SHORTCUT
 import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_AUDIO_MIXER
@@ -149,6 +150,7 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
     private lateinit var binding: HeaderMediaListActivityBinding
     private var actionMode: ActionMode? = null
     private var isPlaylist: Boolean = false
+    private var isReadOnlyPlaylist: Boolean = false
     private lateinit var viewModel: PlaylistViewModel
     private var itemTouchHelper: ItemTouchHelper? = null
     override fun isTransparent() = true
@@ -194,13 +196,14 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
             return
         }
         isPlaylist = playlist.itemType == MediaLibraryItem.TYPE_PLAYLIST
+        isReadOnlyPlaylist = isFavoriteTracksPlaylist(playlist)
         binding.playlist = playlist
         viewModel = getViewModel(playlist)
         viewModel.tracksProvider.pagedList.observe(this) { tracks ->
             @Suppress("UNCHECKED_CAST")
             (tracks as? PagedList<MediaLibraryItem>)?.let { audioBrowserAdapter.submitList(it) }
             menu.let { UiTools.updateSortTitles(it, viewModel.tracksProvider) }
-            if (::itemTouchHelperCallback.isInitialized) itemTouchHelperCallback.swipeEnabled = true
+            if (::itemTouchHelperCallback.isInitialized) itemTouchHelperCallback.swipeEnabled = !isReadOnlyPlaylist
         }
 
         viewModel.playlistLiveData.observe(this) { playlist ->
@@ -223,13 +226,15 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
         }
 
         if (isPlaylist) {
-            audioBrowserAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this, isPlaylist)
-            itemTouchHelperCallback = SwipeDragItemTouchHelperCallback(audioBrowserAdapter, lockedInSafeMode = Settings.safeMode)
-            itemTouchHelperCallback.swipeAttemptListener = {
-                lifecycleScope.launch { showPinIfNeeded() }
+            audioBrowserAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, if (isReadOnlyPlaylist) null else this, !isReadOnlyPlaylist)
+            if (!isReadOnlyPlaylist) {
+                itemTouchHelperCallback = SwipeDragItemTouchHelperCallback(audioBrowserAdapter, lockedInSafeMode = Settings.safeMode)
+                itemTouchHelperCallback.swipeAttemptListener = {
+                    lifecycleScope.launch { showPinIfNeeded() }
+                }
+                itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
+                itemTouchHelper!!.attachToRecyclerView(binding.songs)
             }
-            itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
-            itemTouchHelper!!.attachToRecyclerView(binding.songs)
             binding.releaseDate.visibility = View.GONE
         } else {
             audioBrowserAdapter = AudioAlbumTracksAdapter(MediaLibraryItem.TYPE_MEDIA, this, this)
@@ -251,6 +256,7 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
                 viewModel.toggleFavorite()
             }
         }
+        binding.btnFavorite.visibility = if (isReadOnlyPlaylist) View.GONE else View.VISIBLE
 
         binding.headerListArtist.setOnClickListener {
             lifecycleScope.launch {
@@ -462,6 +468,7 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
         if (actionMode == null) {
             (item as? MediaWrapper)?.let { media ->
                 val flags = createCtxPlaylistItemFlags().apply {
+                    if (isReadOnlyPlaylist) remove(CTX_DELETE)
                     if (item.isFavorite) add(CTX_FAV_REMOVE) else add(CTX_FAV_ADD)
                     if (media.type == MediaWrapper.TYPE_STREAM || (media.type == MediaWrapper.TYPE_ALL && isSchemeHttpOrHttps(media.uri.scheme)))
                         addAll(CTX_COPY, CTX_RENAME)
@@ -540,7 +547,7 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
         menu.findItem(R.id.action_mode_audio_set_song).isVisible = isSong && AndroidDevices.isPhone && !isPlaylist
         menu.findItem(R.id.action_mode_audio_info).isVisible = isSong
         menu.findItem(R.id.action_mode_audio_append).isVisible = PlaylistManager.hasMedia()
-        menu.findItem(R.id.action_mode_audio_delete).isVisible = true
+        menu.findItem(R.id.action_mode_audio_delete).isVisible = !isReadOnlyPlaylist
         menu.findItem(R.id.action_mode_audio_share).isVisible = isSong
         menu.findItem(R.id.action_mode_favorite_add).isVisible = audioBrowserAdapter.multiSelectHelper.getSelection().none { it.isFavorite }
         menu.findItem(R.id.action_mode_favorite_remove).isVisible = audioBrowserAdapter.multiSelectHelper.getSelection().none { !it.isFavorite }

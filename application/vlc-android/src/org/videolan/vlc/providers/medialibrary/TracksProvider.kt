@@ -53,14 +53,17 @@ class TracksProvider(val parent : MediaLibraryItem?, context: Context, model: So
         }
     }
 
-    override fun getAll(): Array<MediaWrapper> = this.pagedList.value?.toTypedArray() ?: medialibrary.getAudio(sort, desc, Settings.includeMissing, onlyFavorites)
+    override fun getAll(): Array<MediaWrapper> = this.pagedList.value?.toTypedArray() ?: when {
+        isFavoriteTracksPlaylist(parent) -> medialibrary.getAudio(sort, desc, Settings.includeMissing, true)
+        else -> medialibrary.getAudio(sort, desc, Settings.includeMissing, onlyFavorites)
+    }
 
     override fun getPage(loadSize: Int, startposition: Int) : Array<MediaWrapper> {
         val list = if (model.filterQuery == null) when(parent) {
             is Artist -> parent.getPagedTracks(sort, desc, Settings.includeMissing, onlyFavorites, loadSize, startposition)
             is Album -> parent.getPagedTracks(sort, desc, Settings.includeMissing, onlyFavorites, loadSize, startposition)
             is Genre -> parent.getPagedTracks(sort, desc, Settings.includeMissing, onlyFavorites, loadSize, startposition)
-            is Playlist -> parent.getPagedTracks(loadSize, startposition, Settings.includeMissing, onlyFavorites)
+            is Playlist -> parent.getPagedTracks(loadSize, startposition, Settings.includeMissing, if (isFavoriteTracksPlaylist(parent)) true else onlyFavorites)
             else -> medialibrary.getPagedAudio(sort, desc, Settings.includeMissing, onlyFavorites, loadSize, startposition)
         } else when(parent) {
             is Artist -> parent.searchTracks(model.filterQuery, sort, desc, Settings.includeMissing, onlyFavorites, loadSize, startposition)
@@ -75,7 +78,7 @@ class TracksProvider(val parent : MediaLibraryItem?, context: Context, model: So
 
     override fun getTotalCount() = if (model.filterQuery == null) when (parent) {
         is Album -> parent.realTracksCount
-        is Playlist -> parent.getRealTracksCount(Settings.includeMissing, onlyFavorites)
+        is Playlist -> parent.getRealTracksCount(Settings.includeMissing, if (isFavoriteTracksPlaylist(parent)) true else onlyFavorites)
         is Artist,
         is Genre -> parent.tracksCount
         else -> medialibrary.audioCount
