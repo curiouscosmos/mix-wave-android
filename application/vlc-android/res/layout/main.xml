@@ -72,6 +72,7 @@
             android:background="@drawable/bottom_navigation_capsule_background"
             android:paddingTop="0dp"
             android:paddingBottom="0dp"
+            app:backgroundTint="@null"
             app:elevation="16dp"
             app:itemBackground="@drawable/bottom_navigation_item_background"
             app:itemIconSize="34dp"

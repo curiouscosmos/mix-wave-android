@@ -267,6 +267,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
 
     override fun onSlide(slideOffset: Float) {
         if (inSearch) return
+        binding.contentLayout.setBackgroundResource(if (slideOffset == 0f) android.R.color.transparent else R.drawable.audio_player_screen_background)
         binding.progressBar.alpha = 1 - slideOffset
         binding.progressBar.layoutParams.height = ((1 - slideOffset) * 4.dp).toInt()
         binding.progressBar.requestLayout()
