@@ -491,23 +491,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/guideline8" />
 
-        <TextView
-                android:id="@+id/audio_play_progress"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:accessibilityLiveRegion="none"
-                android:background="?attr/audio_chip_background"
-                android:elevation="4dp"
-                android:paddingStart="16dp"
-                android:paddingTop="8dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="8dp"
-                android:textColor="?attr/audio_chip_text_color"
-                android:textSize="@dimen/audio_player_time_text_size"
-                app:layout_constraintBottom_toTopOf="@+id/time"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
-
         <org.videolan.vlc.gui.view.CoverMediaSwitcher
                 android:id="@+id/cover_media_switcher"
                 android:layout_width="0dp"
@@ -536,7 +519,7 @@
                 android:contentDescription="@string/previous_bookmark"
                 android:padding="8dp"
                 android:visibility="gone"
-                app:layout_constraintBottom_toTopOf="@+id/audio_play_progress"
+                app:layout_constraintBottom_toTopOf="@+id/time"
                 app:layout_constraintEnd_toStartOf="@+id/audio_rewind_10"
                 app:layout_constraintHorizontal_bias="0.5"
                 app:layout_constraintHorizontal_chainStyle="packed"
@@ -557,7 +540,7 @@
                 android:onLongClick="@{fragment::onJumpBackLong}"
                 android:padding="8dp"
                 android:visibility="gone"
-                app:layout_constraintBottom_toTopOf="@+id/audio_play_progress"
+                app:layout_constraintBottom_toTopOf="@+id/time"
                 app:layout_constraintEnd_toStartOf="@+id/audio_forward_10"
                 app:layout_constraintHorizontal_bias="0.5"
                 app:layout_constraintHorizontal_chainStyle="packed"

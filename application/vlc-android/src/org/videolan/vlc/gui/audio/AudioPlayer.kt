@@ -65,7 +65,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.videolan.libvlc.MediaPlayer
 import org.videolan.medialibrary.Tools
 import org.videolan.medialibrary.interfaces.media.Bookmark
@@ -76,7 +75,6 @@ import org.videolan.resources.AppContextProvider
 import org.videolan.resources.TAG_ITEM
 import org.videolan.resources.util.parcelable
 import org.videolan.tools.AUDIO_HINGE_ON_RIGHT
-import org.videolan.tools.AUDIO_PLAY_PROGRESS_MODE
 import org.videolan.tools.KEY_AUDIO_PLAYER_SHOW_COVER
 import org.videolan.tools.KEY_AUDIO_SHOW_BOOKMARK_MARKERS
 import org.videolan.tools.KEY_AUDIO_SHOW_BOOkMARK_BUTTONS
@@ -90,9 +88,7 @@ import org.videolan.tools.Settings
 import org.videolan.tools.copy
 import org.videolan.tools.dp
 import org.videolan.tools.formatRateString
-import org.videolan.tools.hasRtl
 import org.videolan.tools.isStarted
-import org.videolan.tools.markBidi
 import org.videolan.tools.putSingle
 import org.videolan.tools.setGone
 import org.videolan.tools.setVisible
@@ -151,8 +147,6 @@ import org.videolan.vlc.util.showParentFolder
 import org.videolan.vlc.viewmodels.BookmarkModel
 import org.videolan.vlc.viewmodels.PlaybackProgress
 import org.videolan.vlc.viewmodels.PlaylistModel
-import java.text.DateFormat.getTimeInstance
-import kotlin.math.absoluteValue
 
 private const val TAG = "VLC/AudioPlayer"
 private const val SEARCH_TIMEOUT_MILLIS = 10000L
@@ -179,8 +173,6 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     private lateinit var playToPauseSmall: AnimatedVectorDrawableCompat
 
     lateinit var abRepeatAddMarker: Button
-    private var audioPlayProgressMode:Boolean = false
-    private var lastEndsAt = -1L
     private var isDragging = false
     private var currentChapters: Pair<MediaWrapper,  List<MediaPlayer.Chapter>?>? = null
     private lateinit var callback: SwipeDragItemTouchHelperCallback
@@ -298,7 +290,6 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         playlistModel.service?.playlistManager?.abRepeatOn?.observe(viewLifecycleOwner) {
             binding.abRepeatMarkerGuidelineContainer.visibility = if (it) View.VISIBLE else View.GONE
             abRepeatAddMarker.visibility = if (it) View.VISIBLE else View.GONE
-            binding.audioPlayProgress.visibility = if (!shouldHidePlayProgress()) View.VISIBLE else View.GONE
 
             playlistModel.service?.manageAbRepeatStep(binding.abRepeatReset, binding.abRepeatStop, binding.abRepeatContainer, abRepeatAddMarker)
         }
@@ -313,12 +304,6 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
             playlistModel.service?.playlistManager?.setABRepeatValue(playlistModel.service?.playlistManager?.getCurrentMedia(), binding.timeline.progress.toLong())
         }
 
-        audioPlayProgressMode = Settings.getInstance(requireActivity()).getBoolean(AUDIO_PLAY_PROGRESS_MODE, false)
-        binding.audioPlayProgress.setOnClickListener {
-            audioPlayProgressMode = !audioPlayProgressMode
-            Settings.getInstance(requireActivity()).putSingle(AUDIO_PLAY_PROGRESS_MODE, audioPlayProgressMode)
-            playlistModel.progress.value?.let { updateProgress(it) }
-        }
         binding.playbackSpeedQuickAction.setOnClickListener {
             val newFragment = PlaybackSpeedDialog.newInstance()
             newFragment.show(requireActivity().supportFragmentManager, "playback_speed")
@@ -644,81 +629,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
             binding.progressBar.progress = progress.time.toInt()
         }
 
-        lifecycleScope.launchWhenStarted {
-            val text:Pair<String, String> = withContext(Dispatchers.Default) {
-                val medias = playlistModel.medias ?: return@withContext Pair("", "")
-                withContext(Dispatchers.Main) { if (!shouldHidePlayProgress()) binding.audioPlayProgress.setVisible() else binding.audioPlayProgress.setGone() }
-                if (playlistModel.currentMediaPosition == -1) return@withContext Pair("", "")
-                val elapsedTracksTime = playlistModel.previousTotalTime ?: return@withContext Pair("", "")
-                val progressTime = elapsedTracksTime + progress.time
-                val totalTime = playlistModel.getTotalTime()
-                val progressTimeText = Tools.millisToString(
-                        if (showRemainingTime && totalTime > 0) totalTime - progressTime else progressTime,
-                        false,
-                        true,
-                        false
-                )
-                val totalTimeText = Tools.millisToString(totalTime, false, false, false)
-                val totalTimeDescription = TalkbackUtil.millisToString(requireActivity(), totalTime)
-                val progressTimeDescription =  TalkbackUtil.millisToString(requireActivity(), if (showRemainingTime && totalTime > 0) totalTime - progressTime else progressTime)
-                val currentProgressText = if (progressTimeText.isNullOrEmpty()) "0:00" else progressTimeText
-
-                val isRtlLocale = LocaleUtil.isRtl()
-                val size = if (playlistModel.service?.playlistManager?.stopAfter != -1 ) (playlistModel.service?.playlistManager?.stopAfter ?: 0) + 1 else medias.size
-                val textTrack = getString(R.string.track_index, "${playlistModel.currentMediaPosition + 1} / $size".let {
-                    if (isRtlLocale) it.markBidi(true) else it
-                })
-                val textTrackDescription = getString(R.string.talkback_track_index, "${playlistModel.currentMediaPosition + 1}", "$size")
-
-                val textProgress = if (audioPlayProgressMode) {
-                    val endsAt = System.currentTimeMillis() + totalTime - progressTime
-                    if ((lastEndsAt - endsAt).absoluteValue > 1) lastEndsAt = endsAt
-                    getString(
-                            R.string.audio_queue_progress_finished,
-                            getTimeInstance(java.text.DateFormat.MEDIUM).format(lastEndsAt).let {
-                                if (isRtlLocale) it.markBidi(true) else it
-                            }
-                    )
-                } else
-                    if (showRemainingTime && totalTime > 0) getString(
-                            R.string.audio_queue_progress_remaining,
-                            currentProgressText
-                    )
-                    else getString(
-                            R.string.audio_queue_progress,
-                            if (totalTimeText.isNullOrEmpty()) currentProgressText else "$currentProgressText / $totalTimeText".let {
-                                if (isRtlLocale) it.markBidi(true) else it
-                            }
-                    )
-                val textDescription = if (audioPlayProgressMode) {
-                    val endsAt = System.currentTimeMillis() + totalTime - progressTime
-                    if ((lastEndsAt - endsAt).absoluteValue > 1) lastEndsAt = endsAt
-                    getString(
-                            R.string.audio_queue_progress_finished,
-                            getTimeInstance(java.text.DateFormat.MEDIUM).format(lastEndsAt).let {
-                                if (isRtlLocale) it.markBidi(true) else it
-                            }
-                    )
-                } else
-                    if (showRemainingTime && totalTime > 0) getString(
-                            R.string.audio_queue_progress_remaining,
-                            progressTimeDescription
-                    )
-                    else getString(
-                            R.string.audio_queue_progress,
-                            if (totalTimeText.isNullOrEmpty()) progressTimeDescription else getString(R.string.talkback_out_of, progressTimeDescription, totalTimeDescription)
-                    )
-
-                val finalTextTrack = if (isRtlLocale && !textTrack.hasRtl()) textTrack.markBidi(true) else textTrack
-                val finalTextProgress = if (isRtlLocale && !textProgress.hasRtl()) textProgress.markBidi(true) else textProgress
-                Pair("$finalTextTrack  ${TextUtils.SEPARATOR}  $finalTextProgress", "$textTrackDescription. $textDescription")
-            }
-            binding.audioPlayProgress.text = text.first
-            binding.audioPlayProgress.contentDescription = text.second
-        }
     }
-
-    private fun shouldHidePlayProgress() = abRepeatAddMarker.visibility != View.GONE || areBookmarksVisible() || playlistModel.medias?.size ?: 0 < 2
 
     override fun onSelectionSet(position: Int) {
         if (playlistModel.lastActionWasEdit) {
@@ -851,7 +762,6 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         if (!this::bookmarkListDelegate.isInitialized) {
             bookmarkListDelegate = BookmarkListDelegate(requireActivity(), service, bookmarkModel, false)
             bookmarkListDelegate.visibilityListener = {
-                binding.audioPlayProgress.visibility = if (shouldHidePlayProgress()) View.GONE else View.VISIBLE
                 lifecycleScope.launch {
                     doUpdate()
                 }

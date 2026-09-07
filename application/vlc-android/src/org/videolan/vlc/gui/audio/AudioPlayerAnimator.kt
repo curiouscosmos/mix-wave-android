@@ -194,8 +194,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
             hidePlaylistLandscapeConstraint.connect(R.id.cover_media_switcher, ConstraintSet.TOP, R.id.header, ConstraintSet.BOTTOM)
             hidePlaylistLandscapeConstraint.connect(R.id.cover_media_switcher, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
             hidePlaylistLandscapeConstraint.connect(R.id.track_info_container, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
-            hidePlaylistLandscapeConstraint.connect(R.id.audio_play_progress, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
-            hidePlaylistLandscapeConstraint.createVerticalChain(R.id.header, ConstraintSet.BOTTOM, R.id.time, ConstraintSet.TOP, arrayOf(R.id.cover_media_switcher, R.id.track_info_container, R.id.audio_play_progress).toIntArray(), null, ConstraintSet.CHAIN_PACKED)
+            hidePlaylistLandscapeConstraint.createVerticalChain(R.id.header, ConstraintSet.BOTTOM, R.id.time, ConstraintSet.TOP, arrayOf(R.id.cover_media_switcher, R.id.track_info_container).toIntArray(), null, ConstraintSet.CHAIN_PACKED)
         }
     }
 
