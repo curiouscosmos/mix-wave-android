@@ -298,9 +298,9 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         val volumeUp = view.findViewById<MaterialButton>(R.id.audio_mixer_volume_up)
         loop.isCheckable = true
         fun setVolume(value: Int, persist: Boolean = true) {
-            val volumeInt = value.coerceIn(1, 50)
+            val volumeInt = value.coerceIn(1, 100)
             volume.value = volumeInt.toFloat()
-            volumeValue.text = "${volumeInt * 2}%"
+            volumeValue.text = "$volumeInt%"
             if (persist) PlaybackService.instance?.setAudioMixerVolume(volumeInt)
         }
         fun update() {

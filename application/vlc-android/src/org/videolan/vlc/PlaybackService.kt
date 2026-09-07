@@ -1841,7 +1841,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     fun setVolume(volume: Int) = playlistManager.player.setVolume(volume)
 
     private fun restoreAudioMixer() {
-        mixerVolume = settings.getInt(KEY_AUDIO_MIXER_VOLUME, mixerVolume).coerceIn(1, 50)
+        mixerVolume = settings.getInt(KEY_AUDIO_MIXER_VOLUME, mixerVolume).coerceIn(1, 100)
         mixerLoop = settings.getBoolean(KEY_AUDIO_MIXER_LOOP, mixerLoop)
         mixerEnabled = settings.getBoolean(KEY_AUDIO_MIXER_ENABLED, mixerEnabled)
         settings.getString(KEY_AUDIO_MIXER_SELECTED, null)?.let { location ->
@@ -1949,7 +1949,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     fun setAudioMixerVolume(volume: Int) {
-        mixerVolume = volume.coerceIn(1, 50)
+        mixerVolume = volume.coerceIn(1, 100)
         settings.edit { putInt(KEY_AUDIO_MIXER_VOLUME, mixerVolume) }
         mixerPlayer?.setVolume(mixerVolume)
     }

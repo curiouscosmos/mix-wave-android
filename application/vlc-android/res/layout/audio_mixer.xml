@@ -76,7 +76,7 @@
                         android:contentDescription="@string/audio_mixer_volume"
                         android:value="50"
                         android:valueFrom="1"
-                        android:valueTo="50"
+                        android:valueTo="100"
                         android:stepSize="1"
                         app:tickVisible="false" />
 
