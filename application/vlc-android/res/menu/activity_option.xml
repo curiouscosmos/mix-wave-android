@@ -196,6 +196,18 @@
             android:title="@string/preferences"
             vlc:showAsAction="never" />
     <item
+            android:id="@+id/ml_menu_history"
+            android:icon="@drawable/ic_history"
+            android:orderInCategory="4"
+            android:title="@string/history"
+            vlc:showAsAction="never" />
+    <item
+            android:id="@+id/ml_menu_about"
+            android:icon="@drawable/ic_information"
+            android:orderInCategory="4"
+            android:title="@string/about"
+            vlc:showAsAction="never" />
+    <item
             android:id="@+id/ml_menu_custom_dir"
             android:contentDescription="@string/add_custom_path_description"
             android:orderInCategory="3"

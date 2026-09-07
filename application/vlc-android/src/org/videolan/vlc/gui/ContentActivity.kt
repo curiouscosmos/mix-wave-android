@@ -130,6 +130,14 @@ open class ContentActivity : AudioPlayerContainerActivity(), SearchView.OnQueryT
                 startActivityForResult(Intent(this, PreferencesActivity::class.java), ACTIVITY_RESULT_PREFERENCES)
                 return true
             }
+            R.id.ml_menu_history -> {
+                startActivityForResult(Intent(this, SecondaryActivity::class.java).putExtra(SecondaryActivity.KEY_FRAGMENT, SecondaryActivity.HISTORY), SecondaryActivity.ACTIVITY_RESULT_SECONDARY)
+                return true
+            }
+            R.id.ml_menu_about -> {
+                startActivityForResult(Intent(this, SecondaryActivity::class.java).putExtra(SecondaryActivity.KEY_FRAGMENT, SecondaryActivity.ABOUT), SecondaryActivity.ACTIVITY_RESULT_SECONDARY)
+                return true
+            }
             else -> return super.onOptionsItemSelected(item)
         }
     }
