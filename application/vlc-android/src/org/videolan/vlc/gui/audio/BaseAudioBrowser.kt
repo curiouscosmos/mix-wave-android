@@ -299,7 +299,7 @@ abstract class BaseAudioBrowser<T : MedialibraryViewModel> : MediaBrowserFragmen
     }
 
     private fun unSetTabLayout() {
-        if (::viewPager.isInitialized) viewPager.removeOnPageChangeListener(layoutOnPageChangeListener)
+        if (::viewPager.isInitialized && ::layoutOnPageChangeListener.isInitialized) viewPager.removeOnPageChangeListener(layoutOnPageChangeListener)
         tabLayout?.removeOnTabSelectedListener(this)
         if (::viewPager.isInitialized) viewPager.removeOnPageChangeListener(this)
         tabLayout?.setupWithViewPager(null)
