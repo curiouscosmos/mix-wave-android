@@ -30,6 +30,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.SearchView
+import org.videolan.resources.ACTIVITY_RESULT_PREFERENCES
 import org.videolan.resources.AndroidDevices
 import org.videolan.tools.KEY_ENABLE_CASTING
 import org.videolan.tools.Settings
@@ -39,6 +40,7 @@ import org.videolan.vlc.RendererDelegate
 import org.videolan.vlc.gui.browser.MLStorageBrowserFragment
 import org.videolan.vlc.gui.dialogs.RenderersDialog
 import org.videolan.vlc.gui.helpers.UiTools
+import org.videolan.vlc.gui.preferences.PreferencesActivity
 import org.videolan.vlc.interfaces.Filterable
 
 open class ContentActivity : AudioPlayerContainerActivity(), SearchView.OnQueryTextListener, MenuItem.OnActionExpandListener {
@@ -123,6 +125,10 @@ open class ContentActivity : AudioPlayerContainerActivity(), SearchView.OnQueryT
             R.id.ml_menu_filter -> {
                 if (!item.isActionViewExpanded) setSearchVisibility(true)
                 return super.onOptionsItemSelected(item)
+            }
+            R.id.ml_menu_preferences -> {
+                startActivityForResult(Intent(this, PreferencesActivity::class.java), ACTIVITY_RESULT_PREFERENCES)
+                return true
             }
             else -> return super.onOptionsItemSelected(item)
         }

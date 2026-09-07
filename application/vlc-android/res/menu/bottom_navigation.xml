@@ -40,8 +40,8 @@
             android:title="@string/playlists"
             android:icon="@drawable/ic_playlist" />
     <item
-            android:id="@+id/nav_more"
-            android:title="@string/preferences"
-            android:icon="@drawable/ic_settings" />
+            android:id="@+id/nav_audio_mixer"
+            android:title="@string/audio_mixer"
+            android:icon="@drawable/ic_playasaudio_on" />
 
 </menu>

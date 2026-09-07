@@ -49,7 +49,6 @@ import org.videolan.vlc.BuildConfig
 import org.videolan.vlc.R
 import org.videolan.vlc.gui.BaseFragment
 import org.videolan.vlc.gui.MainActivity
-import org.videolan.vlc.gui.MoreFragment
 import org.videolan.vlc.gui.PlaylistFragment
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.gui.browser.BaseBrowserFragment
@@ -59,6 +58,7 @@ import org.videolan.vlc.gui.video.VideoBrowserFragment
 import org.videolan.vlc.util.getScreenWidth
 
 private const val TAG = "Navigator"
+private const val ID_AUDIO_MIXER = "audio_mixer"
 
 class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObserver, INavigator {
 
@@ -70,14 +70,12 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
     override lateinit var navigationView: List<NavigationBarView>
     override lateinit var appbarLayout: AppBarLayout
     private var forExpresso: ArrayList<MediaLibraryItem>? = null
-    private var openAudioMixer = false
 
 
     override fun MainActivity.setupNavigation(state: Bundle?) {
         activity = this
         this@Navigator.settings = settings
         forExpresso = intent.parcelableList(EXTRA_FOR_ESPRESSO)
-        openAudioMixer = intent.getBooleanExtra(AudioBrowserFragment.EXTRA_OPEN_AUDIO_MIXER, false)
         currentFragmentId = intent.getIntExtra(EXTRA_TARGET, 0)
         if (state !== null) {
             currentFragment = supportFragmentManager.getFragment(state, "current_fragment")
@@ -98,14 +96,14 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
 
     private fun getNewFragment(id: Int): Fragment {
         return when (id) {
-            R.id.nav_audio -> AudioBrowserFragment().apply {
-                arguments = bundleOf(AudioBrowserFragment.EXTRA_OPEN_AUDIO_MIXER to openAudioMixer)
+            R.id.nav_audio -> AudioBrowserFragment()
+            R.id.nav_audio_mixer -> AudioBrowserFragment().apply {
+                arguments = bundleOf(AudioBrowserFragment.EXTRA_OPEN_AUDIO_MIXER to true)
             }
             R.id.nav_directories -> MainBrowserFragment().apply {
                 arguments = bundleOf(EXTRA_FOR_ESPRESSO to forExpresso)
             }
             R.id.nav_playlists -> PlaylistFragment()
-            R.id.nav_more -> MoreFragment()
             else -> VideoBrowserFragment()
         }
     }
@@ -152,6 +150,7 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
 
     private fun getTag(id: Int) = when (id) {
         R.id.nav_audio -> ID_AUDIO
+        R.id.nav_audio_mixer -> ID_AUDIO_MIXER
         R.id.nav_directories -> ID_DIRECTORIES
         else -> ID_VIDEO
     }

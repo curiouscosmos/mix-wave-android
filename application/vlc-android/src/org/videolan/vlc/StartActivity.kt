@@ -74,7 +74,6 @@ import org.videolan.tools.awaitAppIsForegroung
 import org.videolan.tools.getContextWithLocale
 import org.videolan.tools.putSingle
 import org.videolan.vlc.gui.BetaWelcomeActivity
-import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.gui.helpers.hf.StoragePermissionsDelegate.Companion.getStoragePermission
 import org.videolan.vlc.gui.onboarding.ONBOARDING_DONE_KEY
 import org.videolan.vlc.gui.onboarding.startOnboarding
@@ -103,7 +102,7 @@ class StartActivity : FragmentActivity() {
                 return when (action) {
                     "vlc.shortcut.video" -> R.id.nav_video
                     "vlc.shortcut.audio" -> R.id.nav_audio
-                    "vlc.shortcut.audio_mixer" -> R.id.nav_audio
+                    "vlc.shortcut.audio_mixer" -> R.id.nav_audio_mixer
                     "vlc.shortcut.browser" -> R.id.nav_directories
                     "vlc.shortcut.resume" -> R.id.ml_menu_last_playlist
                     else -> 0
@@ -265,7 +264,6 @@ class StartActivity : FragmentActivity() {
             } else if(action != null && action== "vlc.remoteaccess.share") {
                 startActivity(Intent().apply { component = ComponentName(this@StartActivity, "org.videolan.vlc.remoteaccessserver.gui.remoteaccess.RemoteAccessShareActivity") })
             } else {
-                val openAudioMixer = AndroidUtil.isNougatMR1OrLater && intent?.action == "vlc.shortcut.audio_mixer"
                 val target = idFromShortcut
                 val service = PlaybackService.instance
                 if (target == R.id.ml_menu_last_playlist) {
@@ -278,7 +276,7 @@ class StartActivity : FragmentActivity() {
                     startActivity(startIntent)
                 }
                 else
-                    startApplication(tv, firstRun, upgrade, target, removeOldDevices, openAudioMixer)
+                    startApplication(tv, firstRun, upgrade, target, removeOldDevices)
             }
         }
         FileUtils.copyLua(applicationContext, upgrade)
@@ -298,7 +296,7 @@ class StartActivity : FragmentActivity() {
         }
     }
 
-    private fun startApplication(tv: Boolean, firstRun: Boolean, upgrade: Boolean, target: Int, removeDevices:Boolean = false, openAudioMixer: Boolean = false) {
+    private fun startApplication(tv: Boolean, firstRun: Boolean, upgrade: Boolean, target: Int, removeDevices:Boolean = false) {
         val settings = Settings.getInstance(this@StartActivity)
         val onboarding = !settings.getBoolean(if (tv) KEY_TV_ONBOARDING_DONE else ONBOARDING_DONE_KEY, false)
         // Start Medialibrary from background to workaround Dispatchers.Main causing ANR
@@ -321,7 +319,6 @@ class StartActivity : FragmentActivity() {
                     .putExtra(EXTRA_UPGRADE, upgrade)
             if (tv && intent.hasExtra(EXTRA_PATH)) mainIntent.putExtra(EXTRA_PATH, intent.getStringExtra(EXTRA_PATH))
             if (target != 0) mainIntent.putExtra(EXTRA_TARGET, target)
-            if (openAudioMixer) mainIntent.putExtra(AudioBrowserFragment.EXTRA_OPEN_AUDIO_MIXER, true)
             startActivity(mainIntent)
         } else {
             if (!tv) startOnboarding() else startActivity(Intent(Intent.ACTION_VIEW).apply { setClassName(applicationContext, TV_ONBOARDING_ACTIVITY) })

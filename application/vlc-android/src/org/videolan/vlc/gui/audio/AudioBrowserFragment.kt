@@ -114,7 +114,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
 
     private val lists = mutableListOf<RecyclerView>()
     private lateinit var settings: SharedPreferences
-    override val hasTabs = true
+    override val hasTabs = false
     override fun hasFAB() = false
     private var spacing = 0
     private var restorePositions: SparseArray<Int> = SparseArray()
@@ -180,7 +180,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         }
         ItemTouchHelper(SwipeDragItemTouchHelperCallback(songsAdapter, swipeFlags = ItemTouchHelper.LEFT)).attachToRecyclerView(lists[TRACKS_TAB])
         mixerTouchHelper = ItemTouchHelper(SwipeDragItemTouchHelperCallback(mixerAdapter, true)).also { it.attachToRecyclerView(lists[MIXER_TAB]) }
-        viewPager.setOnTouchListener(swipeFilter)
+        viewPager.setOnTouchListener { _, _ -> true }
         swipeRefreshLayout.setOnRefreshListener {
             (requireActivity() as ContentActivity).closeSearchView()
             viewModel.refresh()
@@ -270,7 +270,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
 
     private fun setupModels() {
         viewModel = getViewModel()
-        if (arguments?.getBoolean(EXTRA_OPEN_AUDIO_MIXER) == true) viewModel.currentTab = MIXER_TAB
+        viewModel.currentTab = if (arguments?.getBoolean(EXTRA_OPEN_AUDIO_MIXER) == true) MIXER_TAB else TRACKS_TAB
         currentTab = viewModel.currentTab
 
         songsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
@@ -466,7 +466,6 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
     }
 
     override fun setupTabLayout() {
-        super.setupTabLayout()
         updateTabs()
     }
 
@@ -475,6 +474,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
      *
      */
     private fun updateTabs() {
+        if (!hasTabs || tabLayout == null) return
         for (i in 0 until tabLayout!!.tabCount) {
             val tab = tabLayout!!.getTabAt(i)
             val view = tab?.customView ?: View.inflate(requireActivity(), R.layout.audio_tab, null)
