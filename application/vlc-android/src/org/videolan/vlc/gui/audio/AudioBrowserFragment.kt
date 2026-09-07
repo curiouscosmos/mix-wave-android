@@ -30,7 +30,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.SeekBar
 import android.widget.TextView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.lifecycle.asFlow
@@ -44,6 +43,7 @@ import androidx.viewpager.widget.ViewPager
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.slider.Slider
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
@@ -292,7 +292,17 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         val toggle = view.findViewById<MaterialButton>(R.id.audio_mixer_off)
         val loop = view.findViewById<MaterialButton>(R.id.audio_mixer_loop)
         val clear = view.findViewById<MaterialButton>(R.id.audio_mixer_clear)
+        val volume = view.findViewById<Slider>(R.id.audio_mixer_volume)
+        val volumeValue = view.findViewById<TextView>(R.id.audio_mixer_volume_value)
+        val volumeDown = view.findViewById<MaterialButton>(R.id.audio_mixer_volume_down)
+        val volumeUp = view.findViewById<MaterialButton>(R.id.audio_mixer_volume_up)
         loop.isCheckable = true
+        fun setVolume(value: Int, persist: Boolean = true) {
+            val volumeInt = value.coerceIn(1, 50)
+            volume.value = volumeInt.toFloat()
+            volumeValue.text = "${volumeInt * 2}%"
+            if (persist) PlaybackService.instance?.setAudioMixerVolume(volumeInt)
+        }
         fun update() {
             val service = PlaybackService.instance
             val media = service?.mixerMedia ?: AudioMixerProvider.selected(requireContext())
@@ -304,16 +314,13 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
             loop.isChecked = service?.mixerLoop ?: true
             loop.setIconResource(if (loop.isChecked) R.drawable.ic_repeat_all else R.drawable.ic_repeat)
             clear.isEnabled = AudioMixerProvider.count(requireContext()) > 0
+            setVolume(service?.mixerVolume ?: 50, false)
         }
-        val volume = view.findViewById<SeekBar>(R.id.audio_mixer_volume)
-        volume.progress = PlaybackService.instance?.mixerVolume ?: 50
-        volume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) PlaybackService.instance?.setAudioMixerVolume(progress)
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-        })
+        volume.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) setVolume(value.toInt())
+        }
+        volumeDown.setOnClickListener { setVolume(volume.value.toInt() - 1) }
+        volumeUp.setOnClickListener { setVolume(volume.value.toInt() + 1) }
         toggle.setOnClickListener {
             val media = PlaybackService.instance?.mixerMedia ?: AudioMixerProvider.selected(requireContext()) ?: return@setOnClickListener
             PlaybackService.instance?.setAudioMixerEnabled(PlaybackService.instance?.mixerEnabled != true) ?: startMixerService(media)
