@@ -217,8 +217,6 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
                     if (isTablet()) bottomMargin = insets.bottom
                     topMargin = insets.top
                     topInset = insets.top
-                    val bottomNavigationView = findViewById<BottomNavigationView?>(R.id.navigation)
-                    bottomNavigationView?.setPadding(bottomNavigationView.paddingLeft, bottomNavigationView.paddingTop, bottomNavigationView.paddingRight, insets.bottom)
                     bottomInset = insets.bottom
                     if (::audioPlayer.isInitialized) audioPlayer.setBottomMargin()
                 }
