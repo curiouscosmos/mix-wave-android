@@ -30,22 +30,16 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.appcompat.view.ActionMode
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
-import org.videolan.medialibrary.interfaces.media.Playlist
 import org.videolan.tools.isStarted
 import org.videolan.vlc.R
 import org.videolan.vlc.gui.BaseFragment
 import org.videolan.vlc.gui.ContentActivity
-import org.videolan.vlc.gui.PlaylistFragment
-import org.videolan.vlc.gui.helpers.UiTools.addFavoritesIcon
-import org.videolan.vlc.gui.helpers.UiTools.removeDrawables
 import org.videolan.vlc.interfaces.Filterable
 import org.videolan.vlc.util.findCurrentFragment
 
@@ -58,9 +52,8 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
     override fun getTitle() = getString(R.string.videos)
 
     private lateinit var videoPagerAdapter: VideoPagerAdapter
-    override val hasTabs = true
+    override val hasTabs = false
     private var tabLayout: TabLayout? = null
-    private lateinit var tabLayoutMediator: TabLayoutMediator
     private lateinit var viewPager: ViewPager2
 
     private var needToReopenSearch = false
@@ -68,15 +61,9 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
 
 
     var videoGridOnlyFavorites: Boolean = false
-        set(value) {
-            field = value
-            updateTabs()
-        }
+        set(value) { field = value }
     var playlistOnlyFavorites: Boolean = false
-        set(value) {
-            field = value
-            updateTabs()
-        }
+        set(value) { field = value }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.video_browser, container, false)
@@ -88,6 +75,7 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
         viewPager = view.findViewById(R.id.pager)
         videoPagerAdapter = VideoPagerAdapter(this)
         viewPager.adapter = videoPagerAdapter
+        viewPager.isUserInputEnabled = false
     }
 
     override fun onStart() {
@@ -139,30 +127,15 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
     override fun onTabReselected(tab: TabLayout.Tab) {}
 
     private fun setupTabLayout() {
-        if (tabLayout == null || !::viewPager.isInitialized) return
-        tabLayout?.addOnTabSelectedListener(this)
-        tabLayout?.let {
-            tabLayoutMediator = TabLayoutMediator(it, viewPager) { tab, position ->
-                tab.text = getPageTitle(position)
-            }
-            tabLayoutMediator.attach()
-        }
-        updateTabs()
-    }
-
-    private fun getPageTitle(position: Int) = when (position) {
-        0 -> getString(R.string.videos)
-        else -> getString(R.string.playlists)
     }
 
     override fun hasFAB(): Boolean {
-        return !::viewPager.isInitialized || viewPager.currentItem == 0
+        return true
     }
 
     private fun unSetTabLayout() {
         if (tabLayout == null || !::viewPager.isInitialized) return
         tabLayout?.removeOnTabSelectedListener(this)
-        tabLayoutMediator.detach()
     }
 
     /**
@@ -172,13 +145,12 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
      */
     inner class VideoPagerAdapter(fa: VideoBrowserFragment) : FragmentStateAdapter(fa) {
 
-        override fun getItemCount() = 2
+        override fun getItemCount() = 1
 
         // Returns the fragment to display for that page
         override fun createFragment(position: Int): Fragment {
             return when (position) {
                 0 -> VideoGridFragment.newInstance()
-                1 -> PlaylistFragment.newInstance(Playlist.Type.Video)
                 else -> throw IllegalStateException("Invalid fragment index")
             }
         }
@@ -212,20 +184,5 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
     }
 
     override fun allowedToExpand() = (getCurrentFragment() as? Filterable)?.allowedToExpand() == true
-    private fun updateTabs() {
-        for (i in 0 until tabLayout!!.tabCount) {
-            val tab = tabLayout!!.getTabAt(i)
-            val view = tab?.customView ?: View.inflate(requireActivity(), R.layout.audio_tab, null)
-            val title = view.findViewById<TextView>(R.id.tab_title)
-            title.text = getPageTitle(i)
-            when (i) {
-                0 -> if (videoGridOnlyFavorites) title.addFavoritesIcon() else title.removeDrawables()
-                1 -> if (playlistOnlyFavorites) title.addFavoritesIcon() else title.removeDrawables()
-            }
-            tab?.customView = view
-        }
-    }
-
 
 }
-
