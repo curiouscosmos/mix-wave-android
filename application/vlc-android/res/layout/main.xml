@@ -70,6 +70,7 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginBottom="12dp"
             android:background="@drawable/bottom_navigation_capsule_background"
+            android:backgroundTint="@null"
             android:paddingTop="0dp"
             android:paddingBottom="0dp"
             app:backgroundTint="@null"
