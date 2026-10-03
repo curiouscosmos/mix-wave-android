@@ -58,6 +58,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
@@ -280,7 +281,9 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     }
 
     internal fun applyScrollingBottomPadding(view: View, clearance: Int) {
-        if (view is RecyclerView || view is NestedScrollView || view is ScrollView) {
+        // ViewPager2's RecyclerView sizes entire pages; pad the lists inside those pages instead.
+        val isInternalPager = view is RecyclerView && view.parent is ViewPager2
+        if (!isInternalPager && (view is RecyclerView || view is NestedScrollView || view is ScrollView)) {
             val previous = scrollingBottomPadding[view]
             val original = if (previous != null && view.paddingBottom == previous.second) previous.first else view.paddingBottom
             (view as ViewGroup).clipToPadding = false
