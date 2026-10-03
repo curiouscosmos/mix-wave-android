@@ -59,18 +59,9 @@
                     android:layout_marginTop="4dp"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
-                <ProgressBar
-                    android:id="@+id/discourse_downloaded"
-                    style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_gravity="end"
-                    android:contentDescription="@string/discourse_downloaded"
-                    android:indeterminateTint="@color/green500"
-                    android:progressTint="@color/green500"
-                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
+        <include layout="@layout/discourse_download_progress" />
         <include layout="@layout/discourse_listening_progress" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

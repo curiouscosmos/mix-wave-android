@@ -81,15 +81,7 @@
             android:minWidth="0dp"
             android:text="@string/download" />
 
-        <ProgressBar
-            android:id="@+id/discourse_track_download_progress"
-            style="?android:attr/progressBarStyleSmall"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_marginStart="8dp"
-            android:indeterminateTint="@color/green500"
-            android:progressTint="@color/green500"
-            android:visibility="gone" />
     </LinearLayout>
+    <include layout="@layout/discourse_download_progress" />
     <include layout="@layout/discourse_listening_progress" />
 </LinearLayout>

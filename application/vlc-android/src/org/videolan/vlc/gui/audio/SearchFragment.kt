@@ -113,7 +113,7 @@ class SearchFragment : BaseFragment() {
             val title: TextView = view.findViewById(R.id.discourse_title)
             val language: TextView = view.findViewById(R.id.discourse_language)
             val counts: TextView = view.findViewById(R.id.discourse_counts)
-            val downloaded: ProgressBar = view.findViewById(R.id.discourse_downloaded)
+            val downloaded: ProgressBar = view.findViewById(R.id.discourse_download_progress)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Holder(
@@ -128,7 +128,6 @@ class SearchFragment : BaseFragment() {
             val completed = downloads.downloadedCount(item.id)
             val active = downloads.activeDownloadCount(item.id)
             holder.downloaded.isVisible = active > 0 && item.totalTracks > 0
-            holder.downloaded.isIndeterminate = false
             holder.downloaded.progress = (completed * 100 / item.totalTracks.coerceAtLeast(1)).coerceAtMost(100)
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text)
                 .filter(CharSequence::isNotBlank).joinToString(". ")

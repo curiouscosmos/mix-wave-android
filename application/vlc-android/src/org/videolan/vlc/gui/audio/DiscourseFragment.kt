@@ -214,7 +214,7 @@ class DiscourseFragment : BaseFragment() {
                 val image = detail.findViewById<ImageView>(R.id.discourse_detail_image)
                 detail.findViewById<TextView>(R.id.discourse_detail_title).text = value.discourse.title
                 detail.findViewById<TextView>(R.id.discourse_download_count).isVisible = false
-                detail.findViewById<ProgressBar>(R.id.discourse_downloaded).isVisible = false
+                detail.findViewById<ProgressBar>(R.id.discourse_download_progress).isVisible = false
                 loadImage(image, value.discourse.thumbnailUrl)
                 when {
                     value.error -> showState(getString(R.string.discourse_tracks_failed)) { model.retryDetail() }
@@ -266,19 +266,19 @@ class DiscourseFragment : BaseFragment() {
         val audios = value.tracks ?: return
         val downloaded = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADED }
         val active = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADING }
-        val progress = detail.findViewById<ProgressBar>(R.id.discourse_downloaded)
+        val progress = detail.findViewById<ProgressBar>(R.id.discourse_download_progress)
         detail.findViewById<TextView>(R.id.discourse_download_count).apply {
             isVisible = downloaded in 1 until audios.size
             text = getString(R.string.discourse_download_count, downloaded, audios.size)
         }
         bindDownloadProgress(progress, if (audios.isNotEmpty()) {
-            DiscourseDownloadProgress((downloaded * 100 / audios.size).coerceAtMost(100), false,
+            DiscourseDownloadProgress((downloaded * 100 / audios.size).coerceAtMost(100),
                 when {
                     downloaded == audios.size -> DiscourseDownloadState.DOWNLOADED
                     active > 0 -> DiscourseDownloadState.DOWNLOADING
                     else -> DiscourseDownloadState.MISSING
                 })
-        } else DiscourseDownloadProgress(null, false, DiscourseDownloadState.MISSING), active > 0)
+        } else DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING), active > 0)
     }
 
     private fun refreshDownloadIndicators() {
@@ -289,8 +289,7 @@ class DiscourseFragment : BaseFragment() {
 
     private fun bindDownloadProgress(view: ProgressBar, value: DiscourseDownloadProgress, visible: Boolean = true) {
         view.isVisible = visible && value.state == DiscourseDownloadState.DOWNLOADING && value.percent != null
-        view.isIndeterminate = false
-        if (view.isVisible && !view.isIndeterminate) view.progress = value.percent ?: 0
+        if (view.isVisible) view.progress = value.percent ?: 0
     }
 
     private fun showState(text: String?, loading: Boolean = false, action: (() -> Unit)? = null) {
@@ -330,7 +329,7 @@ class DiscourseFragment : BaseFragment() {
             val title: TextView = view.findViewById(R.id.discourse_title)
             val language: TextView = view.findViewById(R.id.discourse_language)
             val counts: TextView = view.findViewById(R.id.discourse_counts)
-            val downloaded: ProgressBar = view.findViewById(R.id.discourse_downloaded)
+            val downloaded: ProgressBar = view.findViewById(R.id.discourse_download_progress)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Holder(
@@ -378,7 +377,6 @@ class DiscourseFragment : BaseFragment() {
             val active = downloads.activeDownloadCount(item.id)
             bindDownloadProgress(view, DiscourseDownloadProgress(
                 (completed * 100 / item.totalTracks.coerceAtLeast(1)).coerceAtMost(100),
-                false,
                 when {
                     item.totalTracks > 0 && completed >= item.totalTracks -> DiscourseDownloadState.DOWNLOADED
                     active > 0 -> DiscourseDownloadState.DOWNLOADING
@@ -462,5 +460,5 @@ private class DiscourseTrackHolder(view: View) : RecyclerView.ViewHolder(view) {
     val likes: TextView = view.findViewById(R.id.discourse_track_likes)
     val played: ImageView = view.findViewById(R.id.discourse_track_played)
     val download: Button = view.findViewById(R.id.discourse_track_download)
-    val downloadProgress: ProgressBar = view.findViewById(R.id.discourse_track_download_progress)
+    val downloadProgress: ProgressBar = view.findViewById(R.id.discourse_download_progress)
 }

@@ -28,7 +28,6 @@ enum class DiscourseDownloadState { MISSING, DOWNLOADING, DOWNLOADED, FAILED }
 
 data class DiscourseDownloadProgress(
     val percent: Int?,
-    val indeterminate: Boolean,
     val state: DiscourseDownloadState
 )
 
@@ -54,17 +53,17 @@ class DiscourseDownloadStore(context: Context) {
     }
 
     fun progress(audio: DiscourseAudio): DiscourseDownloadProgress {
-        if (verifiedFile(audio) != null) return DiscourseDownloadProgress(100, false, DiscourseDownloadState.DOWNLOADED)
-        val id = downloads()[audio.id] ?: return DiscourseDownloadProgress(null, false, DiscourseDownloadState.MISSING)
+        if (verifiedFile(audio) != null) return DiscourseDownloadProgress(100, DiscourseDownloadState.DOWNLOADED)
+        val id = downloads()[audio.id] ?: return DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING)
         val info = downloadInfo(id)
         val state = when (info.status) {
             DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> DiscourseDownloadState.DOWNLOADING
             else -> DiscourseDownloadState.FAILED
         }
-        if (state != DiscourseDownloadState.DOWNLOADING) return DiscourseDownloadProgress(null, false, state)
+        if (state != DiscourseDownloadState.DOWNLOADING) return DiscourseDownloadProgress(null, state)
         val total = info.totalBytes
         val percent = if (total != null && total > 0L) ((info.downloadedBytes ?: 0L) * 100L / total).toInt().coerceIn(0, 99) else null
-        return DiscourseDownloadProgress(percent, false, state)
+        return DiscourseDownloadProgress(percent, state)
     }
 
     fun playbackUri(audio: DiscourseAudio): Uri? = verifiedFile(audio)?.let(Uri::fromFile)
