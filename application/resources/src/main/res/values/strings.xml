@@ -915,6 +915,7 @@
     <string name="next_step">Next</string>
     <string name="download">Download</string>
     <string name="discourse_download_all">Download all</string>
+    <string name="discourse_cancel_download">Cancel download</string>
     <string name="discourse_remove_all">Remove all</string>
     <string name="discourse_remove_download">Remove</string>
     <string name="discourse_remove_all_confirm">Remove all downloaded tracks from this discourse?</string>

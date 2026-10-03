@@ -124,6 +124,14 @@
                         android:textColor="@color/green500"
                         android:visibility="gone" />
                 </LinearLayout>
+
+                <Button
+                    android:id="@+id/discourse_cancel_downloads"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/discourse_cancel_download"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
 

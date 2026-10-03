@@ -215,6 +215,7 @@ class DiscourseFragment : BaseFragment() {
                 val image = detail.findViewById<ImageView>(R.id.discourse_detail_image)
                 detail.findViewById<TextView>(R.id.discourse_detail_title).text = value.discourse.title
                 detail.findViewById<TextView>(R.id.discourse_download_count).isVisible = false
+                detail.findViewById<Button>(R.id.discourse_cancel_downloads).isVisible = false
                 detail.findViewById<ProgressBar>(R.id.discourse_download_progress).isVisible = false
                 loadImage(image, value.discourse.thumbnailUrl)
                 when {
@@ -239,6 +240,11 @@ class DiscourseFragment : BaseFragment() {
                                     tracks.adapter?.notifyDataSetChanged()
                                     refreshDownloadSummary()
                                 }.show()
+                        }
+                        detail.findViewById<Button>(R.id.discourse_cancel_downloads).setOnClickListener {
+                            value.tracks.filter { downloads.state(it) == DiscourseDownloadState.DOWNLOADING }.forEach(downloads::cancel)
+                            tracks.adapter?.notifyDataSetChanged()
+                            refreshDownloadSummary()
                         }
                         tracks.adapter = TrackAdapter(value.tracks) { position ->
                             model.recordRecentlyPlayed(value.discourse)
@@ -268,6 +274,7 @@ class DiscourseFragment : BaseFragment() {
         val active = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADING }
         detail.findViewById<Button>(R.id.discourse_download_all).isVisible = active == 0 && downloaded < audios.size
         detail.findViewById<Button>(R.id.discourse_remove_all).isVisible = active == 0 && downloaded > 0
+        detail.findViewById<Button>(R.id.discourse_cancel_downloads).isVisible = active > 0
         detail.findViewById<ImageView>(R.id.discourse_detail_download_icon).setColorFilter(
             ContextCompat.getColor(requireContext(), if (downloaded > 0) R.color.green500 else R.color.grey500)
         )
