@@ -59,13 +59,15 @@
                     android:layout_marginTop="4dp"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
-                <ImageView
+                <ProgressBar
                     android:id="@+id/discourse_downloaded"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
                     android:layout_gravity="end"
                     android:contentDescription="@string/discourse_downloaded"
-                    android:src="@drawable/ic_done"
+                    android:indeterminateTint="@color/green500"
+                    android:progressTint="@color/green500"
                     android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>

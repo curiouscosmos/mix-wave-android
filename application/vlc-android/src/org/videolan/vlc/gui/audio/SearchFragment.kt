@@ -15,8 +15,12 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import androidx.appcompat.view.ActionMode
 import kotlinx.coroutines.launch
 import org.videolan.tools.HttpImageLoader
@@ -70,6 +74,14 @@ class SearchFragment : BaseFragment() {
             } else false
         }
         model.state.observe(viewLifecycleOwner, ::render)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (isActive) {
+                    results.adapter?.notifyDataSetChanged()
+                    delay(500)
+                }
+            }
+        }
     }
 
     private fun render(state: SearchViewModel.State) {
@@ -101,7 +113,7 @@ class SearchFragment : BaseFragment() {
             val title: TextView = view.findViewById(R.id.discourse_title)
             val language: TextView = view.findViewById(R.id.discourse_language)
             val counts: TextView = view.findViewById(R.id.discourse_counts)
-            val downloaded: ImageView = view.findViewById(R.id.discourse_downloaded)
+            val downloaded: ProgressBar = view.findViewById(R.id.discourse_downloaded)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Holder(
@@ -113,7 +125,11 @@ class SearchFragment : BaseFragment() {
             holder.title.text = item.title
             holder.language.text = item.language.replaceFirstChar(Char::uppercase)
             holder.counts.text = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
-            holder.downloaded.isVisible = downloads.isFullyDownloaded(item.id, item.totalTracks)
+            val completed = downloads.downloadedCount(item.id)
+            val known = downloads.knownDownloadCount(item.id)
+            holder.downloaded.isVisible = known > 0
+            holder.downloaded.isIndeterminate = false
+            holder.downloaded.progress = (completed * 100 / item.totalTracks.coerceAtLeast(1)).coerceAtMost(100)
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text)
                 .filter(CharSequence::isNotBlank).joinToString(". ")
             holder.itemView.setOnClickListener { click(item) }

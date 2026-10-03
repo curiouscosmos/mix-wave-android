@@ -120,14 +120,16 @@
                 android:textAppearance="?attr/textAppearanceCaption"
                 android:visibility="gone" />
 
-            <ImageView
+            <ProgressBar
                 android:id="@+id/discourse_downloaded"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:layout_gravity="center_vertical"
                 android:layout_marginStart="8dp"
                 android:contentDescription="@string/discourse_downloaded"
-                android:src="@drawable/ic_done"
+                android:indeterminateTint="@color/green500"
+                android:progressTint="@color/green500"
                 android:visibility="gone" />
 
             <Button
