@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import org.videolan.tools.HttpImageLoader
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.Discourse
+import org.videolan.vlc.discourse.DiscourseDownloadStore
 import org.videolan.vlc.gui.BaseFragment
 import org.videolan.vlc.gui.MainActivity
 import org.videolan.vlc.gui.helpers.UiTools
@@ -33,6 +34,7 @@ class SearchFragment : BaseFragment() {
     private lateinit var results: RecyclerView
     private lateinit var progress: ProgressBar
     private lateinit var message: TextView
+    private lateinit var downloads: DiscourseDownloadStore
 
     override fun getTitle() = getString(R.string.search)
 
@@ -43,12 +45,18 @@ class SearchFragment : BaseFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?) =
         inflater.inflate(R.layout.search_fragment, container, false)
 
+    override fun onResume() {
+        super.onResume()
+        results.adapter?.notifyDataSetChanged()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         input = view.findViewById(R.id.search_input)
         results = view.findViewById(R.id.search_results)
         progress = view.findViewById(R.id.search_progress)
         message = view.findViewById(R.id.search_message)
+        downloads = DiscourseDownloadStore(requireContext())
         results.layoutManager = LinearLayoutManager(requireContext())
         results.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -93,6 +101,7 @@ class SearchFragment : BaseFragment() {
             val title: TextView = view.findViewById(R.id.discourse_title)
             val language: TextView = view.findViewById(R.id.discourse_language)
             val counts: TextView = view.findViewById(R.id.discourse_counts)
+            val downloaded: ImageView = view.findViewById(R.id.discourse_downloaded)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Holder(
@@ -104,6 +113,7 @@ class SearchFragment : BaseFragment() {
             holder.title.text = item.title
             holder.language.text = item.language.replaceFirstChar(Char::uppercase)
             holder.counts.text = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
+            holder.downloaded.isVisible = downloads.isFullyDownloaded(item.id, item.totalTracks)
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text)
                 .filter(CharSequence::isNotBlank).joinToString(". ")
             holder.itemView.setOnClickListener { click(item) }

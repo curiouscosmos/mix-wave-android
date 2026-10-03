@@ -11,6 +11,7 @@ import java.net.URI
 
 private const val CDN_BASE_URL = "https://osho.b-cdn.net/OSHO/"
 private const val KEY_DOWNLOADS = "osho_api_discourse_downloads"
+private const val KEY_DOWNLOAD_DISCOURSES = "osho_api_discourse_download_discourses"
 private val URL_SCHEME = Regex("[A-Za-z][A-Za-z0-9+.-]*:.*")
 
 internal fun resolveDiscourseUrl(value: String?): String? {
@@ -49,6 +50,14 @@ class DiscourseDownloadStore(context: Context) {
     fun playbackUri(audio: DiscourseAudio): Uri? = verifiedFile(audio)?.let(Uri::fromFile)
         ?: resolveDiscourseUrl(audio.audioUrl)?.let(Uri::parse)
 
+    fun downloadedCount(discourseId: String): Int = downloadDiscourses()
+        .filterValues { it == discourseId }
+        .keys
+        .count { File(context.getExternalFilesDir("discourses") ?: context.filesDir, "$it.audio").isFile }
+
+    fun isFullyDownloaded(discourseId: String, totalTracks: Int) =
+        totalTracks > 0 && downloadedCount(discourseId) >= totalTracks
+
     fun download(audio: DiscourseAudio): Boolean {
         if (!shouldEnqueue(state(audio))) return true
         val url = resolveDiscourseUrl(audio.audioUrl) ?: return false
@@ -61,6 +70,7 @@ class DiscourseDownloadStore(context: Context) {
         audio.mimeType?.let(request::setMimeType)
         val id = runCatching { manager.enqueue(request) }.getOrNull() ?: return false
         save(downloads() + (audio.id to id))
+        saveDownloadDiscourses(downloadDiscourses() + (audio.id to audio.discourseId))
         return true
     }
 
@@ -71,6 +81,7 @@ class DiscourseDownloadStore(context: Context) {
         current.remove(audio.id)?.let { manager.remove(it) }
         file(audio).delete()
         save(current)
+        saveDownloadDiscourses(downloadDiscourses() - audio.id)
     }
 
     private fun verifiedFile(audio: DiscourseAudio): File? = file(audio).takeIf { isVerifiedDownload(it.takeIf(File::isFile)?.length(), audio.fileSize) }
@@ -90,6 +101,15 @@ class DiscourseDownloadStore(context: Context) {
 
     private fun save(downloads: Map<String, Long>) {
         settings.edit().putStringSet(KEY_DOWNLOADS, downloads.mapTo(mutableSetOf()) { "${it.key}|${it.value}" }).apply()
+    }
+
+    private fun downloadDiscourses(): Map<String, String> = settings.getStringSet(KEY_DOWNLOAD_DISCOURSES, emptySet()).orEmpty().mapNotNull {
+        val parts = it.split('|', limit = 2)
+        parts.getOrNull(1)?.let { discourseId -> parts[0] to discourseId }
+    }.toMap()
+
+    private fun saveDownloadDiscourses(downloads: Map<String, String>) {
+        settings.edit().putStringSet(KEY_DOWNLOAD_DISCOURSES, downloads.mapTo(mutableSetOf()) { "${it.key}|${it.value}" }).apply()
     }
 
     private fun Cursor.int(column: String) = getColumnIndex(column).takeIf { it >= 0 }?.let(::getInt)

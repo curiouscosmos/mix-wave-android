@@ -919,6 +919,8 @@
     <string name="discourse_remove_download">Remove</string>
     <string name="discourse_remove_all_confirm">Remove all downloaded tracks from this discourse?</string>
     <string name="discourse_download_failed">Could not start download</string>
+    <string name="discourse_downloaded">Downloaded</string>
+    <string name="discourse_download_count">%1$d/%2$d downloaded</string>
     <string name="discourse_counts">%1$d tracks · %2$d likes</string>
     <string name="discourse_likes">%1$d likes</string>
     <string-array name="discourse_languages">

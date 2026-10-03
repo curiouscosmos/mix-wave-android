@@ -69,7 +69,9 @@ class DiscourseFragment : BaseFragment() {
     private lateinit var playbackStore: DiscoursePlaybackStore
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
             tracks.adapter?.notifyDataSetChanged()
+            refreshDownloadSummary()
         }
     }
 
@@ -148,7 +150,9 @@ class DiscourseFragment : BaseFragment() {
     override fun onResume() {
         super.onResume()
         model.load()
+        (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
         (tracks.adapter as? TrackAdapter)?.refreshDownloads()
+        refreshDownloadSummary()
     }
 
     override fun onStart() {
@@ -202,6 +206,8 @@ class DiscourseFragment : BaseFragment() {
                 refreshProgress(null)
                 val image = detail.findViewById<ImageView>(R.id.discourse_detail_image)
                 detail.findViewById<TextView>(R.id.discourse_detail_title).text = value.discourse.title
+                detail.findViewById<TextView>(R.id.discourse_download_count).isVisible = false
+                detail.findViewById<ImageView>(R.id.discourse_downloaded).isVisible = false
                 loadImage(image, value.discourse.thumbnailUrl)
                 when {
                     value.error -> showState(getString(R.string.discourse_tracks_failed)) { model.retryDetail() }
@@ -214,6 +220,7 @@ class DiscourseFragment : BaseFragment() {
                                 Toast.makeText(requireContext(), R.string.discourse_download_failed, Toast.LENGTH_SHORT).show()
                             }
                             tracks.adapter?.notifyDataSetChanged()
+                            refreshDownloadSummary()
                         }
                         detail.findViewById<Button>(R.id.discourse_remove_all).setOnClickListener {
                             AlertDialog.Builder(requireContext())
@@ -222,12 +229,14 @@ class DiscourseFragment : BaseFragment() {
                                 .setPositiveButton(R.string.discourse_remove_download) { _, _ ->
                                     value.tracks.forEach(downloads::remove)
                                     tracks.adapter?.notifyDataSetChanged()
+                                    refreshDownloadSummary()
                                 }.show()
                         }
                         tracks.adapter = TrackAdapter(value.tracks) { position ->
                             model.recordRecentlyPlayed(value.discourse)
                             requireContext().playDiscourseAudios(value.tracks, position)
                         }
+                        refreshDownloadSummary()
                     }
                 }
             }
@@ -243,6 +252,17 @@ class DiscourseFragment : BaseFragment() {
         detail.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
         detail.findViewById<TextView>(R.id.discourse_detail_title).contentDescription =
             "${value.discourse.title}. ${getString(R.string.discourse_listening_percentage, percent)}"
+    }
+
+    private fun refreshDownloadSummary() {
+        val value = model.state.value as? DiscourseViewModel.State.Detail ?: return
+        val audios = value.tracks ?: return
+        val downloaded = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADED }
+        detail.findViewById<TextView>(R.id.discourse_download_count).apply {
+            isVisible = downloaded in 1 until audios.size
+            text = getString(R.string.discourse_download_count, downloaded, audios.size)
+        }
+        detail.findViewById<ImageView>(R.id.discourse_downloaded).isVisible = downloaded == audios.size
     }
 
     private fun showState(text: String?, loading: Boolean = false, action: (() -> Unit)? = null) {
@@ -282,6 +302,7 @@ class DiscourseFragment : BaseFragment() {
             val title: TextView = view.findViewById(R.id.discourse_title)
             val language: TextView = view.findViewById(R.id.discourse_language)
             val counts: TextView = view.findViewById(R.id.discourse_counts)
+            val downloaded: ImageView = view.findViewById(R.id.discourse_downloaded)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Holder(
@@ -293,15 +314,13 @@ class DiscourseFragment : BaseFragment() {
             holder.title.text = item.title
             holder.language.text = item.language.replaceFirstChar(Char::uppercase)
             holder.counts.text = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
+            holder.downloaded.isVisible = downloads.isFullyDownloaded(item.id, item.totalTracks)
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text).filter(CharSequence::isNotBlank).joinToString(". ")
             holder.itemView.setOnClickListener { click(item) }
             loadImage(holder.image, item.thumbnailUrl)
             bindProgress(holder, item)
         }
 
-        override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
-            if (payloads.isEmpty()) onBindViewHolder(holder, position) else bindProgress(holder, items[position])
-        }
         private fun bindProgress(holder: Holder, item: Discourse) {
             val percent = playbackStore.discourseProgress(item.id, item.totalTracks)
             holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
@@ -311,7 +330,14 @@ class DiscourseFragment : BaseFragment() {
             if (change == null) notifyItemRangeChanged(0, items.size, "progress")
             else change.discourseIds.forEach { id -> positions[id]?.let { notifyItemChanged(it, "progress") } }
         }
+        fun refreshDownloads() = notifyItemRangeChanged(0, items.size, "download")
         override fun getItemCount() = items.size
+
+        override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
+            if (payloads.isEmpty()) onBindViewHolder(holder, position)
+            else if ("download" in payloads) holder.downloaded.isVisible = downloads.isFullyDownloaded(items[position].id, items[position].totalTracks)
+            else bindProgress(holder, items[position])
+        }
 
         fun update(items: List<Discourse>) {
             this.items = items
@@ -353,6 +379,7 @@ class DiscourseFragment : BaseFragment() {
                     DiscourseDownloadState.DOWNLOADED -> downloads.remove(item)
                 }
                 notifyItemChanged(holder.bindingAdapterPosition)
+                refreshDownloadSummary()
             }
         }
 
