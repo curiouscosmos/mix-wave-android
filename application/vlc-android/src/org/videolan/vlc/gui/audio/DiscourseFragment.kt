@@ -24,6 +24,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.view.ActionMode
 import androidx.core.view.isVisible
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -333,6 +334,8 @@ class DiscourseFragment : BaseFragment() {
             val title: TextView = view.findViewById(R.id.discourse_title)
             val language: TextView = view.findViewById(R.id.discourse_language)
             val counts: TextView = view.findViewById(R.id.discourse_counts)
+            val downloadIcon: ImageView = view.findViewById(R.id.discourse_download_icon)
+            val downloadedCount: TextView = view.findViewById(R.id.discourse_downloaded_count)
             val downloaded: ProgressBar = view.findViewById(R.id.discourse_download_progress)
         }
 
@@ -345,8 +348,8 @@ class DiscourseFragment : BaseFragment() {
             holder.title.text = item.title
             holder.language.text = item.language.replaceFirstChar(Char::uppercase)
             holder.counts.text = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
+            bindDiscourseDownloadIndicator(holder, item)
             bindDiscourseDownloadProgress(holder.downloaded, item)
-            holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text).filter(CharSequence::isNotBlank).joinToString(". ")
             holder.itemView.setOnClickListener { click(item) }
             loadImage(holder.image, item.thumbnailUrl)
             bindProgress(holder, item)
@@ -355,7 +358,11 @@ class DiscourseFragment : BaseFragment() {
         private fun bindProgress(holder: Holder, item: Discourse) {
             val percent = playbackStore.discourseProgress(item.id, item.totalTracks)
             holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
-            holder.itemView.contentDescription = "${item.title}. ${holder.language.text}. ${holder.counts.text}. ${getString(R.string.discourse_listening_percentage, percent)}"
+            val completed = downloads.downloadedCount(item.id)
+            holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text,
+                completed.takeIf { it > 0 }?.let { getString(R.string.discourse_download_count, it, item.totalTracks) },
+                getString(R.string.discourse_listening_percentage, percent)
+            ).filterNotNull().filter(CharSequence::isNotBlank).joinToString(". ")
         }
         fun refreshProgress(change: DiscoursePlaybackStore.Change?) {
             if (change == null) notifyItemRangeChanged(0, items.size, "progress")
@@ -366,7 +373,12 @@ class DiscourseFragment : BaseFragment() {
 
         override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
             if (payloads.isEmpty()) onBindViewHolder(holder, position)
-            else if ("download" in payloads) bindDiscourseDownloadProgress(holder.downloaded, items[position])
+            else if ("download" in payloads) {
+                val item = items[position]
+                bindDiscourseDownloadIndicator(holder, item)
+                bindDiscourseDownloadProgress(holder.downloaded, item)
+                bindProgress(holder, item)
+            }
             else bindProgress(holder, items[position])
         }
 
@@ -387,6 +399,13 @@ class DiscourseFragment : BaseFragment() {
                     else -> DiscourseDownloadState.MISSING
                 }
             ), active > 0)
+        }
+
+        private fun bindDiscourseDownloadIndicator(holder: Holder, item: Discourse) {
+            val completed = downloads.downloadedCount(item.id)
+            holder.downloadIcon.setColorFilter(ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500))
+            holder.downloadedCount.isVisible = completed > 0
+            holder.downloadedCount.text = completed.toString()
         }
     }
 
