@@ -1,4 +1,5 @@
 package org.videolan.vlc.viewmodels
+import org.videolan.tools.ErrorReporter
 
 import android.app.Application
 import android.content.Context
@@ -256,7 +257,7 @@ class SubtitlesModel(context: Context, private val mediaUri: Uri, private val na
                 }
                 observableError.set(false)
             } catch (e: Exception) {
-                Log.e("SubtitlesModel", e.message, e)
+                ErrorReporter.error("SubtitlesModel", e.message, e)
                 observableError.set(true)
                 if (e is NoConnectivityException)
                     observableMessage.set(getContext().getString(R.string.no_internet_connection))

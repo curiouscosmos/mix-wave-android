@@ -21,6 +21,7 @@
  */
 
 package org.videolan.vlc.gui.browser
+import org.videolan.tools.ErrorReporter
 
 import android.os.Bundle
 import android.util.Log
@@ -152,7 +153,7 @@ abstract class MediaBrowserFragment<T : SortableModel> : BaseFragment(), Filtera
                             MedialibraryUtils.banDir(strippedPath)
                         }
 
-                    } ?: Log.e(TAG, "banFolder: path is null")
+                    } ?: ErrorReporter.error(TAG, "banFolder: path is null")
                 }
             }
         }

@@ -1,4 +1,5 @@
 package org.videolan.vlc.util
+import org.videolan.tools.ErrorReporter
 
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
@@ -110,7 +111,7 @@ object VLCDownloadManager: BroadcastReceiver(), DefaultLifecycleObserver {
                     )
                 }
                 else {
-                    Log.e(TAG, "downloadSuccessful: Bad subtitle extension: $fileExtention")
+                    ErrorReporter.error(TAG, "downloadSuccessful: Bad subtitle extension: $fileExtention")
                     Toast.makeText(context, R.string.subtitles_download_failed, Toast.LENGTH_LONG)
                         .show()
                 }
@@ -118,7 +119,7 @@ object VLCDownloadManager: BroadcastReceiver(), DefaultLifecycleObserver {
 
             withContext(Dispatchers.IO) { FileUtils.deleteFile(localUri) }
         } ?: run {
-            Log.e(TAG, "downloadSuccessful: Failed to copy subtitle file")
+            ErrorReporter.error(TAG, "downloadSuccessful: Failed to copy subtitle file")
             ExternalSubRepository.getInstance(context).removeDownloadingItem(id)
             Toast.makeText(context, R.string.subtitles_download_failed, Toast.LENGTH_LONG).show()
         }

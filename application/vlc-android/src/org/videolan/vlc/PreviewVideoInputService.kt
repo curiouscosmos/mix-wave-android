@@ -1,4 +1,5 @@
 package org.videolan.vlc
+import org.videolan.tools.ErrorReporter
 
 
 import android.annotation.TargetApi
@@ -80,10 +81,10 @@ class PreviewVideoInputService : TvInputService(), CoroutineScope by MainScope()
                     player.startPlayback(media, this@PreviewSession, start)
                     notifyVideoAvailable()
                 } catch (e: IOException) {
-                    Log.e(TAG, "Could not prepare media player", e)
+                    ErrorReporter.error(TAG, "Could not prepare media player", e)
                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN)
                 } catch (e: IllegalStateException) {
-                    Log.e(TAG, "Could not prepare media player", e)
+                    ErrorReporter.error(TAG, "Could not prepare media player", e)
                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN)
                 }
             }

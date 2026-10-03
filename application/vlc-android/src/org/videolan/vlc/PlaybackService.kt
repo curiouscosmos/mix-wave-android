@@ -18,6 +18,7 @@
  */
 
 package org.videolan.vlc
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.TargetApi
 import android.app.KeyguardManager
@@ -1126,14 +1127,14 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                     }
                 } catch (e: IllegalArgumentException) {
                     // On somme crappy firmwares, shit can happen
-                    Log.e(TAG, "Failed to display notification", e)
+                    ErrorReporter.error(TAG, "Failed to display notification", e)
                 } catch (e: IllegalStateException) {
-                    Log.e(TAG, "Failed to display notification", e)
+                    ErrorReporter.error(TAG, "Failed to display notification", e)
                 } catch (e: RuntimeException) {
-                    Log.e(TAG, "Failed to display notification", e)
+                    ErrorReporter.error(TAG, "Failed to display notification", e)
                 } catch (e: ArrayIndexOutOfBoundsException) {
                     // Happens on Android 7.0 (Xperia L1 (G3312))
-                    Log.e(TAG, "Failed to display notification", e)
+                    ErrorReporter.error(TAG, "Failed to display notification", e)
                 }
             }
         }
@@ -1594,7 +1595,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                         it[key] = artworkUri
                     }
                 } catch (e: java.lang.NullPointerException) {
-                    Log.e("PlaybackService", "Caught NullPointerException", e)
+                    ErrorReporter.error("PlaybackService", "Caught NullPointerException", e)
                     VLCCrashHandler.saveLog(e, "NullPointerException in PlaybackService updateMediaQueue")
                 }
             }
@@ -2170,7 +2171,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                     result.sendResult(MediaSessionBrowser.browse(applicationContext, parentId, isShuffling, rootHints))
                     if (reload && !medialibrary.isWorking) applicationContext.reloadLibrary()
                 } catch (e: RuntimeException) {
-                    Log.e(TAG, "Failed to load children for $parentId", e)
+                    ErrorReporter.error(TAG, "Failed to load children for $parentId", e)
                 }
             }
         }
@@ -2185,7 +2186,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 try {
                     result.sendResult(MediaSessionBrowser.search(applicationContext, query, rootHints))
                 } catch (e: RuntimeException) {
-                    Log.e(TAG, "Failed to search for $query", e)
+                    ErrorReporter.error(TAG, "Failed to search for $query", e)
                 }
             }
         }

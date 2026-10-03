@@ -22,6 +22,7 @@
  *
  */
 package org.videolan.vlc.remoteaccessserver.ssl
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -118,9 +119,9 @@ object SecretGenerator {
                 // Bad to catch null pointer exception, but looks like Android 4.4.x
                 // pin switch to password Keystore bug.
                 // https://issuetracker.google.com/issues/36983155
-                Log.e(LOG_TAG, "Failed to get key store entry", e)
+                ErrorReporter.error(LOG_TAG, "Failed to get key store entry", e)
             } catch (e: UnrecoverableKeyException) {
-                Log.e(LOG_TAG, "Failed to get key store entry", e)
+                ErrorReporter.error(LOG_TAG, "Failed to get key store entry", e)
             }
             if (!keyValid) {
                 synchronized(s_keyInitLock) {
@@ -192,7 +193,7 @@ object SecretGenerator {
             edit.putString(ENCRYPTED_KEY_NAME, encryptedKeyBase64encoded)
             val successfullyWroteKey: Boolean = edit.commit()
             if (!successfullyWroteKey) {
-                Log.e(LOG_TAG, "Saved keys unsuccessfully")
+                ErrorReporter.error(LOG_TAG, "Saved keys unsuccessfully")
                 throw IOException("Could not save keys")
             }
         }

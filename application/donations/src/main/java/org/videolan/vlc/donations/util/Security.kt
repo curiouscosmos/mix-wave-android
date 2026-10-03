@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 package org.videolan.vlc.donations.util
+import org.videolan.tools.ErrorReporter
 
 import android.text.TextUtils
 import android.util.Base64
@@ -48,7 +49,7 @@ object Security {
     fun verifyPurchase(base64PublicKey: String?, signedData: String, signature: String?): Boolean {
         if (TextUtils.isEmpty(signedData) || TextUtils.isEmpty(base64PublicKey) ||
                 TextUtils.isEmpty(signature)) {
-            Log.e(TAG, "Purchase verification failed: missing data.")
+            ErrorReporter.error(TAG, "Purchase verification failed: missing data.")
             return false
         }
         val key = generatePublicKey(base64PublicKey)
@@ -70,7 +71,7 @@ object Security {
         } catch (e: NoSuchAlgorithmException) {
             throw RuntimeException(e)
         } catch (e: InvalidKeySpecException) {
-            Log.e(TAG, "Invalid key specification.")
+            ErrorReporter.error(TAG, "Invalid key specification.")
             throw IllegalArgumentException(e)
         }
     }
@@ -88,7 +89,7 @@ object Security {
         val signatureBytes: ByteArray = try {
             Base64.decode(signature, Base64.DEFAULT)
         } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "Base64 decoding failed.")
+            ErrorReporter.error(TAG, "Base64 decoding failed.")
             return false
         }
         try {
@@ -96,16 +97,16 @@ object Security {
             sig.initVerify(publicKey)
             sig.update(signedData.toByteArray())
             if (!sig.verify(signatureBytes)) {
-                Log.e(TAG, "Signature verification failed.")
+                ErrorReporter.error(TAG, "Signature verification failed.")
                 return false
             }
             return true
         } catch (e: NoSuchAlgorithmException) {
-            Log.e(TAG, "NoSuchAlgorithmException.")
+            ErrorReporter.error(TAG, "NoSuchAlgorithmException.")
         } catch (e: InvalidKeyException) {
-            Log.e(TAG, "Invalid key specification.")
+            ErrorReporter.error(TAG, "Invalid key specification.")
         } catch (e: SignatureException) {
-            Log.e(TAG, "Signature exception.")
+            ErrorReporter.error(TAG, "Signature exception.")
         }
         return false
     }

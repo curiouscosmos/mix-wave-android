@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.gui.video
+import org.videolan.tools.ErrorReporter
 
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -185,7 +186,7 @@ class PopupManager(private val service: PlaybackService) : PlaybackService.Callb
         {
             // sanity check
             if (displayW * displayH == 0) {
-                Log.e(TAG, "Invalid surface size")
+                ErrorReporter.error(TAG, "Invalid surface size")
                 return
             }
 

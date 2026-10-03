@@ -19,6 +19,7 @@
  */
 
 package org.videolan.vlc.gui.video
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
@@ -1165,7 +1166,7 @@ open class VideoPlayerActivity : AppCompatActivity(), PlaybackService.Callback, 
                                     UiTools.snacker(this@VideoPlayerActivity, R.string.screenshot_error)
                             }, Handler(Looper.getMainLooper()))
                         } catch (e: Exception) {
-                            Log.e(TAG, e.message, e)
+                            ErrorReporter.error(TAG, e.message, e)
                             UiTools.snacker(this@VideoPlayerActivity, R.string.screenshot_error)
                         }
                     }

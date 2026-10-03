@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 package org.videolan.vlc.donations.util
+import org.videolan.tools.ErrorReporter
 
 import android.app.Activity
 import android.app.PendingIntent
@@ -838,7 +839,7 @@ class IabHelper(ctx: Context, base64PublicKey: String?) {
     }
 
     fun logError(msg: String) {
-        Log.e(mDebugTag, "In-app billing error: $msg")
+        ErrorReporter.error(mDebugTag, "In-app billing error: $msg")
     }
 
     fun logWarn(msg: String) {

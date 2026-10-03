@@ -19,6 +19,7 @@
  */
 
 package org.videolan.vlc.util
+import org.videolan.tools.ErrorReporter
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -149,7 +150,7 @@ object AccessControl {
                 return genSigSha256(signatures[0].toByteArray())
             }
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.e(TAG, "Calling package name not found: $callingPackage", e)
+            ErrorReporter.error(TAG, "Calling package name not found: $callingPackage", e)
         }
         return null
     }
@@ -160,7 +161,7 @@ object AccessControl {
             md.update(certificate)
             return md.digest().joinToString(":") { String.format("%02x", it) }
         } catch (e: NoSuchAlgorithmException) {
-            Log.e(TAG, "Message digest algorithm SHA-256 not found", e)
+            ErrorReporter.error(TAG, "Message digest algorithm SHA-256 not found", e)
         }
         return null
     }

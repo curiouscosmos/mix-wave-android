@@ -20,6 +20,7 @@
  * ***************************************************************************
  */
 package org.videolan.vlc.gui.dialogs
+import org.videolan.tools.ErrorReporter
 
 import android.content.pm.PackageManager
 import android.content.res.Resources
@@ -128,7 +129,7 @@ class AboutVersionDialog : VLCBottomSheetDialogFragment() {
                 }
                 Log.i(this::class.java.simpleName, "Found signature. Fingerprint: $toRet")
             } catch (e: Exception) {
-                Log.e("Signature",e.message, e)
+                ErrorReporter.error("Signature",e.message, e)
             }
         }
         binding.signedBy.text = signer

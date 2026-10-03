@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.remoteaccessserver.websockets
+import org.videolan.tools.ErrorReporter
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -90,7 +91,7 @@ object RemoteAccessWebSockets {
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, e.message, e)
+                        ErrorReporter.error(TAG, e.message, e)
                     }
                 }
             } finally {

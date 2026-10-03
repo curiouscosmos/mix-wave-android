@@ -19,6 +19,7 @@
  *****************************************************************************/
 
 package org.videolan.vlc.providers
+import org.videolan.tools.ErrorReporter
 
 import android.content.Context
 import android.os.Handler
@@ -386,7 +387,7 @@ abstract class BrowserProvider(val context: Context, val dataset: LiveDataset<Me
         val mw: MediaWrapper = try {
             MLServiceLocator.getAbstractMediaWrapper(media)
         } catch (e: Exception) {
-            Log.e(TAG, "Unable to generate the media wrapper. It usually happen when the IMedia fields have some encoding issues", e)
+            ErrorReporter.error(TAG, "Unable to generate the media wrapper. It usually happen when the IMedia fields have some encoding issues", e)
             return null
         }
         media.release()

@@ -23,6 +23,7 @@
  */
 
 package org.videolan.tools
+import org.videolan.tools.ErrorReporter
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -75,10 +76,10 @@ object HttpImageLoader {
                     BitmapCache.addBitmapToMemCache(imageUrl, it)
                 }
             } catch (ignored: IOException) {
-                Log.e("", ignored.message, ignored)
+                ErrorReporter.error("", ignored.message, ignored)
                 null
             } catch (ignored: IllegalArgumentException) {
-                Log.e("", ignored.message, ignored)
+                ErrorReporter.error("", ignored.message, ignored)
                 null
             } finally {
                 CloseableUtils.close(inputStream)

@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.donations
+import org.videolan.tools.ErrorReporter
 
 import android.app.Application
 import android.content.IntentFilter
@@ -74,7 +75,7 @@ class VLCBilling private constructor(private val context: Application) : IabBroa
         iabHelper.startSetup { result ->
             status = BillingStatus.CONNECTING
             if (!result.isSuccess) {
-                Log.e("VLCBilling", "Problem setting up in-app billing: $result")
+                ErrorReporter.error("VLCBilling", "Problem setting up in-app billing: $result")
                 status = BillingStatus.FAILURE
                 return@startSetup
             }
@@ -97,7 +98,7 @@ class VLCBilling private constructor(private val context: Application) : IabBroa
 
         // Is it a failure?
         if (result!!.isFailure) {
-            Log.e("VLCBilling", "Failed to query inventory: $result")
+            ErrorReporter.error("VLCBilling", "Failed to query inventory: $result")
             status = BillingStatus.FAILURE
             return
         }

@@ -22,6 +22,7 @@
  */
 
 package org.videolan.television.ui.preferences
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.TargetApi
 import android.app.ActivityManager
@@ -253,7 +254,7 @@ class PreferencesAdvanced : BasePreferenceFragment(), SharedPreferences.OnShared
                                     }
                                     BitmapCache.clear()
                                 } catch (e: IOException) {
-                                    Log.e(this::class.java.simpleName, e.message, e)
+                                    ErrorReporter.error(this::class.java.simpleName, e.message, e)
                                 }
                             }
                             for (root in roots) {
@@ -344,7 +345,7 @@ class PreferencesAdvanced : BasePreferenceFragment(), SharedPreferences.OnShared
                         )
                         (activity as PreferencesActivity).setRestartApp()
                     } catch (e: Exception) {
-                        Log.e("EqualizerSettings", "onActivityResult: ${e.message}", e)
+                        ErrorReporter.error("EqualizerSettings", "onActivityResult: ${e.message}", e)
                         Toast.makeText(activity, R.string.invalid_settings_file, Toast.LENGTH_LONG).show()
                     }
                 }

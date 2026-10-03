@@ -21,6 +21,7 @@
  * ***************************************************************************
  */
 package org.videolan.vlc
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -347,7 +348,7 @@ internal class MediaSessionCallback(private val playbackService: PlaybackService
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Could not play media: $mediaId", e)
+                ErrorReporter.error(TAG, "Could not play media: $mediaId", e)
                 when {
                     playbackService.hasMedia() -> playbackService.play()
                     else -> playbackService.displayPlaybackError(R.string.search_no_result)

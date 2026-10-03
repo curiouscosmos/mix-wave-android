@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 package org.videolan.vlc.util
+import org.videolan.tools.ErrorReporter
 
 import android.content.ComponentName
 import android.content.Context
@@ -115,7 +116,7 @@ suspend fun insertWatchNext(context: Context, mw: MediaWrapper) {
     val cn = ComponentName(context, PreviewVideoInputService::class.java)
     val program = buildWatchNextProgram(cn, desc)
     val watchNextProgramUri = context.contentResolver.insert(TvContractCompat.WatchNextPrograms.CONTENT_URI, program.toContentValues())
-    if (watchNextProgramUri == null || watchNextProgramUri == Uri.EMPTY) Log.e(TAG, "Insert watch next program failed")
+    if (watchNextProgramUri == null || watchNextProgramUri == Uri.EMPTY) ErrorReporter.error(TAG, "Insert watch next program failed")
 }
 
 fun updateNextProgramAfterThumbnailGeneration(lifecycleOwner: LifecycleOwner, context: Context, mw: MediaWrapper) {
@@ -169,7 +170,7 @@ suspend fun setResumeProgram(context: Context, media: MediaWrapper) {
                         (mw.time != 0L &&  mw.time.toDouble() / mw.length.toDouble() >= 0.95) ||
                             mw.length < 20000) { //Row removed by user or progress null
                         if (deleteWatchNext(context, watchNextProgramId) < 1) {
-                            Log.e(TAG, "Delete program failed")
+                            ErrorReporter.error(TAG, "Delete program failed")
                             return
                         }
                     } else { // Update the program
@@ -208,7 +209,7 @@ suspend fun cleanupWatchNextList(context: Context) {
                 val contentId = content.getAsString(TvContractCompat.PreviewPrograms.COLUMN_CONTENT_ID)
                 if (contentId != null && contentId == "") {
                     if (deleteWatchNext(context, watchNextProgramId) < 1) {
-                        Log.e(TAG, "Delete program failed")
+                        ErrorReporter.error(TAG, "Delete program failed")
                         continue
                     }
                     val mw = context.getFromMl { getMedia(mediaId) }
@@ -217,7 +218,7 @@ suspend fun cleanupWatchNextList(context: Context) {
                     var mw = context.getFromMl { getMedia(contentId.toUri()) }
                     if (mw == null) {
                         if (deleteWatchNext(context, watchNextProgramId) < 1) {
-                            Log.e(TAG, "Delete program failed")
+                            ErrorReporter.error(TAG, "Delete program failed")
                             continue
                         }
                     } else {
@@ -229,7 +230,7 @@ suspend fun cleanupWatchNextList(context: Context) {
                             // program, then return the valid id for that path. A valid
                             // program will be recreated later if needed.
                             if (deleteWatchNext(context, watchNextProgramId) < 1) {
-                                Log.e(TAG, "checkWatchNextId: Delete program failed")
+                                ErrorReporter.error(TAG, "checkWatchNextId: Delete program failed")
                                 continue
                             }
                             mw = context.getFromMl { getMedia(contentId.toUri()) }
@@ -242,7 +243,7 @@ suspend fun cleanupWatchNextList(context: Context) {
             cursor.close()
         }
     } catch (e: Exception) {
-        Log.e(TAG, "cleanupWatchNextList: $e")
+        ErrorReporter.error(TAG, "cleanupWatchNextList: $e")
     }
 }
 
@@ -260,7 +261,7 @@ fun deleteAllWatchNext(context: Context) {
             cursor.close()
         }
     } catch (e: Exception) {
-        Log.e(TAG, "deleteAllWatchNext: $e")
+        ErrorReporter.error(TAG, "deleteAllWatchNext: $e")
     }
 }
 
@@ -289,7 +290,7 @@ suspend fun checkWatchNextId(context: Context, id: Long): Long {
                         // media is played, then a new program with correct parameters will be
                         // created if playback is exited before the end.
                         if (deleteWatchNext(context, watchNextProgramId) < 1) {
-                            Log.e(TAG, "checkWatchNextId: Delete program failed")
+                            ErrorReporter.error(TAG, "checkWatchNextId: Delete program failed")
                         }
                         cursor.close()
                         return id
@@ -298,7 +299,7 @@ suspend fun checkWatchNextId(context: Context, id: Long): Long {
                         if (mw == null) {
                             // There is a content id but it points to a file that was removed
                             if (deleteWatchNext(context, watchNextProgramId) < 1) {
-                                Log.e(TAG, "checkWatchNextId: Delete program failed")
+                                ErrorReporter.error(TAG, "checkWatchNextId: Delete program failed")
                                 cursor.close()
                                 return id
                             }
@@ -312,7 +313,7 @@ suspend fun checkWatchNextId(context: Context, id: Long): Long {
                                 // program, then return the valid id for that path. A valid
                                 // program will be recreated later if needed.
                                 if (deleteWatchNext(context, watchNextProgramId) < 1) {
-                                    Log.e(TAG, "checkWatchNextId: Delete program failed")
+                                    ErrorReporter.error(TAG, "checkWatchNextId: Delete program failed")
                                 }
                                 mw = context.getFromMl { getMedia(contentId.toUri()) }
                                 newId = mw.id
@@ -326,7 +327,7 @@ suspend fun checkWatchNextId(context: Context, id: Long): Long {
             cursor.close()
         }
     } catch (e: Exception) {
-        Log.e(TAG, "checkWatchNextList: $e")
+        ErrorReporter.error(TAG, "checkWatchNextList: $e")
     }
     return id
 }

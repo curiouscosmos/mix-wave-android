@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import androidx.core.content.getSystemService
+import org.videolan.tools.ErrorReporter
 import org.videolan.tools.Settings
 import java.io.File
 import java.net.URI
@@ -46,14 +47,15 @@ class DiscourseDownloadStore(context: Context) {
     private val context = context.applicationContext
     private val manager = context.getSystemService<DownloadManager>()!!
     private val settings = Settings.getInstance(context)
+    private val reportedFailures = mutableSetOf<Long>()
 
     fun state(audio: DiscourseAudio): DiscourseDownloadState {
         if (verifiedFile(audio) != null) return DiscourseDownloadState.DOWNLOADED
         val id = downloads()[audio.id] ?: return DiscourseDownloadState.MISSING
-        return when (downloadInfo(id).status) {
+        val info = downloadInfo(id)
+        return when (info.status) {
             DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> DiscourseDownloadState.DOWNLOADING
-            DownloadManager.STATUS_SUCCESSFUL -> DiscourseDownloadState.FAILED
-            else -> DiscourseDownloadState.FAILED
+            else -> DiscourseDownloadState.FAILED.also { reportFailure(audio, id, info) }
         }
     }
 
@@ -63,7 +65,7 @@ class DiscourseDownloadStore(context: Context) {
         val info = downloadInfo(id)
         val state = when (info.status) {
             DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> DiscourseDownloadState.DOWNLOADING
-            else -> DiscourseDownloadState.FAILED
+            else -> DiscourseDownloadState.FAILED.also { reportFailure(audio, id, info) }
         }
         if (state != DiscourseDownloadState.DOWNLOADING) return DiscourseDownloadProgress(null, state)
         val percent = downloadPercent(info.downloadedBytes, info.totalBytes, audio.fileSize)
@@ -94,7 +96,9 @@ class DiscourseDownloadStore(context: Context) {
 
     fun download(audio: DiscourseAudio): Boolean {
         if (!shouldEnqueue(state(audio))) return true
-        val url = resolveDiscourseUrl(audio.audioUrl) ?: return false
+        val url = resolveDiscourseUrl(audio.audioUrl) ?: return false.also {
+            ErrorReporter.error(TAG, "Cannot resolve download URL for track ${audio.id} (${audio.title})")
+        }
         remove(audio)
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle(audio.title)
@@ -102,7 +106,9 @@ class DiscourseDownloadStore(context: Context) {
             .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE or DownloadManager.Request.NETWORK_WIFI)
             .setDestinationInExternalFilesDir(context, "discourses", fileName(audio))
         audio.mimeType?.let(request::setMimeType)
-        val id = runCatching { manager.enqueue(request) }.getOrNull() ?: return false
+        val id = runCatching { manager.enqueue(request) }
+            .onFailure { ErrorReporter.error(TAG, "Failed to enqueue track ${audio.id} (${audio.title})", it) }
+            .getOrNull() ?: return false
         save(downloads() + (audio.id to id))
         saveDownloadDiscourses(downloadDiscourses() + (audio.id to audio.discourseId))
         return true
@@ -123,14 +129,20 @@ class DiscourseDownloadStore(context: Context) {
     private fun file(audio: DiscourseAudio) = File(context.getExternalFilesDir("discourses") ?: context.filesDir, fileName(audio))
     private fun fileName(audio: DiscourseAudio) = "${audio.id}.audio"
 
-    private data class DownloadInfo(val status: Int, val downloadedBytes: Long?, val totalBytes: Long?)
+    private fun reportFailure(audio: DiscourseAudio, id: Long, info: DownloadInfo) {
+        if (!reportedFailures.add(id)) return
+        ErrorReporter.error(TAG, "Download failed for track ${audio.id} (${audio.title}); status=${info.status}, reason=${info.reason}")
+    }
+
+    private data class DownloadInfo(val status: Int, val downloadedBytes: Long?, val totalBytes: Long?, val reason: Int?)
 
     private fun downloadInfo(id: Long): DownloadInfo = manager.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
-        if (!cursor.moveToFirst()) return@use DownloadInfo(DownloadManager.STATUS_FAILED, null, null)
+        if (!cursor.moveToFirst()) return@use DownloadInfo(DownloadManager.STATUS_FAILED, null, null, null)
         DownloadInfo(
             cursor.int(DownloadManager.COLUMN_STATUS) ?: DownloadManager.STATUS_FAILED,
             cursor.long(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR),
-            cursor.long(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+            cursor.long(DownloadManager.COLUMN_TOTAL_SIZE_BYTES),
+            cursor.int(DownloadManager.COLUMN_REASON)
         )
     }
 
@@ -156,3 +168,5 @@ class DiscourseDownloadStore(context: Context) {
     private fun Cursor.long(column: String) = getColumnIndex(column).takeIf { it >= 0 }?.let(::getLong)
 
 }
+
+private const val TAG = "DiscourseDownloads"

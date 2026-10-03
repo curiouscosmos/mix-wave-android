@@ -19,6 +19,7 @@
  */
 
 package org.videolan.vlc.gui.video.benchmark
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.TargetApi
 import android.content.BroadcastReceiver
@@ -252,7 +253,7 @@ class BenchActivity : ShallowVideoPlayer() {
             if (::timeOut.isInitialized)
                 timeoutHandler.removeCallbacks(timeOut)
             timeOut = Runnable {
-                Log.e(TAG, "VLC Seek Froze")
+                ErrorReporter.error(TAG, "VLC Seek Froze")
                 errorFinish("VLC Seek Froze")
             }
             timeoutHandler.postDelayed(timeOut, 10000)
@@ -488,7 +489,7 @@ class BenchActivity : ShallowVideoPlayer() {
      * @param resultString error description for display in VLCBenchmark
      */
     private fun errorFinish(resultString: String) {
-        Log.e(TAG, "errorFinish: $resultString")
+        ErrorReporter.error(TAG, "errorFinish: $resultString")
         val sendIntent = Intent()
         sendIntent.putExtra("Error", resultString)
         AppScope.launch {
@@ -537,7 +538,7 @@ class BenchActivity : ShallowVideoPlayer() {
                 .start()
             return@withContext FileProvider.getUriForFile(this@BenchActivity, applicationContext.packageName + ".provider", outputFile)
         } catch (ex: IOException) {
-            Log.e(TAG, ex.toString())
+            ErrorReporter.error(TAG, ex.toString())
         }
         return@withContext null
     }
@@ -571,7 +572,7 @@ class BenchActivity : ShallowVideoPlayer() {
                     .redirectErrorStream(true)
                     .start()
         } catch (ex: IOException) {
-            Log.e(TAG, ex.toString())
+            ErrorReporter.error(TAG, ex.toString())
         }
         lateFrameCounter = counter
     }

@@ -1,4 +1,5 @@
 package org.videolan.vlc.gui
+import org.videolan.tools.ErrorReporter
 
 import android.content.Context
 import android.content.Intent
@@ -191,7 +192,7 @@ class EqualizerSettingsActivity : BaseActivity() {
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e("EqualizerSettings", "onActivityResult: ${e.message}", e)
+                        ErrorReporter.error("EqualizerSettings", "onActivityResult: ${e.message}", e)
                         UiTools.snacker(this@EqualizerSettingsActivity, getString(R.string.invalid_equalizer_file))
                     }
                 }
@@ -208,7 +209,7 @@ class EqualizerSettingsActivity : BaseActivity() {
                             adapter.notifyDataSetChanged()
                         }
                     } catch (e: Exception) {
-                        Log.e("EqualizerSettings", "onActivityResult: ${e.message}", e)
+                        ErrorReporter.error("EqualizerSettings", "onActivityResult: ${e.message}", e)
                         UiTools.snacker(this@EqualizerSettingsActivity, getString(R.string.invalid_equalizer_file))
                     }
                 }

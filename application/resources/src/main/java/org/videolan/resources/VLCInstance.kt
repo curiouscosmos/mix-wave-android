@@ -19,6 +19,7 @@
  */
 
 package org.videolan.resources
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -50,7 +51,7 @@ object VLCInstance : SingletonHolder<ILibVLC, Context>({ init(it.applicationCont
         Thread.setDefaultUncaughtExceptionHandler(VLCCrashHandler())
 
         if (!VLCUtil.hasCompatibleCPU(ctx)) {
-            Log.e(TAG, VLCUtil.getErrorMsg())
+            ErrorReporter.error(TAG, VLCUtil.getErrorMsg())
             throw IllegalStateException("LibVLC initialisation failed: " + VLCUtil.getErrorMsg())
         }
 

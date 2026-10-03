@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 package videolan.org.commontools
+import org.videolan.tools.ErrorReporter
 
 import android.content.ComponentName
 import android.content.ContentUris
@@ -76,7 +77,7 @@ fun createOrUpdateChannel(prefs: SharedPreferences, context: Context, name: Stri
 @WorkerThread
 fun deleteChannel(context: Context, id: Long) = try {
     context.contentResolver.delete(TvContractCompat.buildChannelUri(id), null, null)
-} catch (exception: Exception) {Log.e(TAG, "faild to delete channel $id", exception)}
+} catch (exception: Exception) {ErrorReporter.error(TAG, "faild to delete channel $id", exception)}
 
 @WorkerThread
 fun existingPrograms(context: Context, channelId: Long) : ProgramsList {
@@ -95,7 +96,7 @@ fun existingPrograms(context: Context, channelId: Long) : ProgramsList {
         }
         return list
     } catch (e: Exception) {
-        Log.e(TAG, "fail", e)
+        ErrorReporter.error(TAG, "fail", e)
         return list
     } finally {
         cursor?.close()
@@ -170,13 +171,13 @@ fun updateWatchNext(context: Context, program: WatchNextProgram, pDesc: ProgramD
             .build().toContentValues()
     val watchNextProgramUri = TvContractCompat.buildWatchNextProgramUri(watchNextProgramId)
     val rowsUpdated = context.contentResolver.update(watchNextProgramUri,values, null, null)
-    if (rowsUpdated < 1) Log.e(TAG, "Update program failed")
+    if (rowsUpdated < 1) ErrorReporter.error(TAG, "Update program failed")
 }
 
 fun deleteWatchNext(context: Context, id: Long) = try {
     context.contentResolver.delete(TvContractCompat.buildWatchNextProgramUri(id), null, null)
 } catch (exception: Exception) {
-    Log.e(TAG, "faild to delete program $id", exception)
+    ErrorReporter.error(TAG, "faild to delete program $id", exception)
     -42
 }
 

@@ -1,4 +1,5 @@
 package org.videolan.vlc.gui.dialogs
+import org.videolan.tools.ErrorReporter
 
 import android.graphics.Color
 import android.graphics.Typeface
@@ -97,7 +98,7 @@ class DuplicationWarningDialog : VLCBottomSheetDialogFragment(), View.OnClickLis
             styledText.setSpan(StyleSpan(Typeface.BOLD), startIndex, endIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             styledText.setSpan(ForegroundColorSpan(MaterialColors.getColor(requireContext(), R.attr.font_default, Color.BLACK)), startIndex, endIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         } catch (e: Exception) {
-            Log.e("DupWarningDialog", "setupSecondaryText: $e")
+            ErrorReporter.error("DupWarningDialog", "setupSecondaryText: $e")
         }
 
         finalMessage = SpannableString.valueOf(finalMessage.toString() + styledText.toString()+"\n")

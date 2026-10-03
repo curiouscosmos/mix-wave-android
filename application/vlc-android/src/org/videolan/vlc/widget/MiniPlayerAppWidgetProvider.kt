@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.widget
+import org.videolan.tools.ErrorReporter
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -604,7 +605,7 @@ class MiniPlayerAppWidgetProvider : AppWidgetProvider() {
             else
                 manager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
-            Log.e(TAG, "Unable to update widget $appWidgetId", e)
+            ErrorReporter.error(TAG, "Unable to update widget $appWidgetId", e)
         }
     }
 

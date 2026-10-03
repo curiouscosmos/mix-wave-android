@@ -21,6 +21,7 @@
  * ***************************************************************************
  */
 package org.videolan.vlc
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
@@ -465,7 +466,7 @@ class MediaParsingService : LifecycleService(), DevicesDiscoveryCb {
     }
 
     override fun onDiscoveryFailed(entryPoint: String) {
-        Log.e(TAG, "onDiscoveryFailed")
+        ErrorReporter.error(TAG, "onDiscoveryFailed")
         notificationActor.trySend(Error(entryPoint))
     }
 

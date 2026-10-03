@@ -22,6 +22,7 @@
  */
 
 package org.videolan.vlc.util
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -224,7 +225,7 @@ object FileUtils {
             else
                 null
         }
-        Log.e(TAG, "Invalid destination path: $dst")
+        ErrorReporter.error(TAG, "Invalid destination path: $dst")
         return null
     }
 
@@ -252,7 +253,7 @@ object FileUtils {
                 }
                 return true
             } catch (exception: IOException) {
-                Log.e(TAG, exception.message, exception)
+                ErrorReporter.error(TAG, exception.message, exception)
             } finally {
                 CloseableUtils.close(inputStream)
                 CloseableUtils.close(out)
@@ -375,7 +376,7 @@ object FileUtils {
             val ctx = AppContextProvider.appContext
             val inputPFD = ctx.contentResolver.openFileDescriptor(data, "r")
             if (inputPFD == null) {
-                Log.e(TAG, "getFileDescriptorFromUri: Failed to get parcel file descriptor ")
+                ErrorReporter.error(TAG, "getFileDescriptorFromUri: Failed to get parcel file descriptor ")
                 return null
             }
             return AndroidUtil.LocationToUri("fd://" + inputPFD.fd)
@@ -428,7 +429,7 @@ object FileUtils {
                                 AndroidUtil.PathToUri(AndroidDevices.EXTERNAL_PUBLIC_DIRECTORY + "/Download/" + filename)
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Couldn't download file from mail URI: $data")
+                        ErrorReporter.error(TAG, "Couldn't download file from mail URI: $data")
                         return null
                     } finally {
                         CloseableUtils.close(inputStream)
@@ -454,19 +455,19 @@ object FileUtils {
                     uri = getFileDescriptorFromUri(data)
                 }
             } catch (e: FileNotFoundException) {
-                Log.e(TAG, "${e.message} for $data", e)
+                ErrorReporter.error(TAG, "${e.message} for $data", e)
                 return null
             } catch (e: IllegalArgumentException) {
-                Log.e(TAG, "${e.message} for $data", e)
+                ErrorReporter.error(TAG, "${e.message} for $data", e)
                 return null
             } catch (e: IllegalStateException) {
-                Log.e(TAG, "${e.message} for $data", e)
+                ErrorReporter.error(TAG, "${e.message} for $data", e)
                 return null
             } catch (e: NullPointerException) {
-                Log.e(TAG, "${e.message} for $data", e)
+                ErrorReporter.error(TAG, "${e.message} for $data", e)
                 return null
             } catch (e: SecurityException) {
-                Log.e(TAG, "${e.message} for $data", e)
+                ErrorReporter.error(TAG, "${e.message} for $data", e)
                 return null
             }
         // Media or MMS URI
@@ -550,7 +551,7 @@ object FileUtils {
             }
             true
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            ErrorReporter.error(TAG, e.message, e)
             false
         }
     }

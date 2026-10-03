@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.util
+import org.videolan.tools.ErrorReporter
 
 import android.app.Application
 import android.content.ActivityNotFoundException
@@ -174,7 +175,7 @@ object AutoUpdate {
         try {
             context.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            Log.e(TAG, e.message, e)
+            ErrorReporter.error(TAG, e.message, e)
         }
     }
 
@@ -183,7 +184,7 @@ object AutoUpdate {
             val downloadedFile = File(context.cacheDir, "update.apk")
             if (downloadedFile.exists()) downloadedFile.delete() else { }
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            ErrorReporter.error(TAG, e.message, e)
         }
     }
 

@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.remoteaccessserver
+import org.videolan.tools.ErrorReporter
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -211,7 +212,7 @@ class RemoteAccessServer(private val context: Context) : PlaybackService.Callbac
 
     private val scope =
             CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
-                Log.e(TAG, throwable.message, throwable)
+                ErrorReporter.error(TAG, throwable.message, throwable)
                 _serverStatus.postValue(ServerStatus.ERROR)
             })
 
@@ -274,7 +275,7 @@ class RemoteAccessServer(private val context: Context) : PlaybackService.Callbac
                     try {
                         MLServiceLocator.getAbstractMediaWrapper(media)
                     } catch (e: Exception) {
-                        Log.e(TAG, "Unable to generate the media wrapper. It usually happen when the IMedia fields have some encoding issues", e)
+                        ErrorReporter.error(TAG, "Unable to generate the media wrapper. It usually happen when the IMedia fields have some encoding issues", e)
                         null
                     }?.let {
                         scope.launch(Dispatchers.Main) {
@@ -390,7 +391,7 @@ class RemoteAccessServer(private val context: Context) : PlaybackService.Callbac
                         try {
                             _serverConnections.value = oldConnections!!.toMutableList().apply { add(connection) }
                         } catch (e: Exception) {
-                            Log.e("InterceptorPlugin", e.message, e)
+                            ErrorReporter.error("InterceptorPlugin", e.message, e)
                         }
                     }
                 }
@@ -411,7 +412,7 @@ class RemoteAccessServer(private val context: Context) : PlaybackService.Callbac
         val keyGen: KeyPairGenerator = try {
             KeyPairGenerator.getInstance("RSA", "BC")
         } catch (e: java.lang.Exception) {
-            Log.e(TAG, e.message, e)
+            ErrorReporter.error(TAG, e.message, e)
             return null
         }
         keyGen.initialize(2048, random)
@@ -462,7 +463,7 @@ class RemoteAccessServer(private val context: Context) : PlaybackService.Callbac
             // retrieve the password from the saved preferences
             return SecretGenerator.decryptData(context, settings.getString(KEYSTORE_PASSWORD, "")!!).toCharArray()
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            ErrorReporter.error(TAG, e.message, e)
             if (attempts > 2) throw RuntimeException("Cannot retrieve the keystore password", e)
         }
         if (attempts > 1) {
@@ -516,7 +517,7 @@ class RemoteAccessServer(private val context: Context) : PlaybackService.Callbac
         val key = try {
             store.getKey("vlc-android", password)
         } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
+            ErrorReporter.error(TAG, e.message, e)
             null
         }
         //try loading the certificate from the store. It will fail the first time, then reuse the stored one

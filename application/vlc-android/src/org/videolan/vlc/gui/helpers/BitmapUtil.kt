@@ -19,6 +19,7 @@
  */
 
 package org.videolan.vlc.gui.helpers
+import org.videolan.tools.ErrorReporter
 
 import android.content.ContentValues
 import android.content.Context
@@ -297,12 +298,12 @@ object BitmapUtil {
                         MediaStore.Images.Media.insertImage(context!!.contentResolver, destPath, File(destPath).name, File(destPath).name);
                     true
                 } catch (e: IOException) {
-                    Log.e(TAG, "Could not save image to disk", e)
+                    ErrorReporter.error(TAG, "Could not save image to disk", e)
                     false
                 }
             }
             else -> {
-                Log.e(TAG, "File path not writable: $destFile")
+                ErrorReporter.error(TAG, "File path not writable: $destFile")
                 false
             }
         }
@@ -397,7 +398,7 @@ fun bitmapFromView(view: View, width: Int, height: Int): Bitmap {
         view.layout(0, 0, view.measuredWidth, view.measuredHeight)
         view.draw(Canvas(bmp))
     } catch (e: OutOfMemoryError) {
-        Log.e("BitmapUtil", e.message, e)
+        ErrorReporter.error("BitmapUtil", e.message, e)
         bmp = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         bmp.setPixel(0, 0, Color.TRANSPARENT)
     }

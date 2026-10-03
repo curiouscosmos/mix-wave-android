@@ -1,4 +1,5 @@
 package org.videolan.vlc.media
+import org.videolan.tools.ErrorReporter
 
 import android.app.Activity
 import android.app.ProgressDialog
@@ -471,7 +472,7 @@ object MediaUtils {
             }
         }
     } catch (e: Exception) {
-        Log.e(TAG, "retrieveMediaTitle: e: $e")
+        ErrorReporter.error(TAG, "retrieveMediaTitle: e: $e")
     }
 
     fun deletePlaylist(playlist: Playlist) = AppScope.launch(Dispatchers.IO) { playlist.delete() }

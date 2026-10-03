@@ -18,6 +18,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  */
 package org.videolan.vlc.gui.helpers
+import org.videolan.tools.ErrorReporter
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -114,7 +115,7 @@ object AudioUtil {
                     )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "error setting ringtone", e)
+                ErrorReporter.error(TAG, "error setting ringtone", e)
                 Toast.makeText(applicationContext,
                         getString(R.string.ringtone_error),
                         Toast.LENGTH_SHORT).show()

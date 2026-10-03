@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.util
+import org.videolan.tools.ErrorReporter
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -234,7 +235,7 @@ object VersionMigration {
                     }
                 }
             } catch (e: IOException) {
-                Log.e(this::class.java.simpleName, e.message, e)
+                ErrorReporter.error(this::class.java.simpleName, e.message, e)
             }
         }
         val settings = Settings.getInstance(context)

@@ -24,6 +24,9 @@ android {
     dataBinding {
         enabled = true
     }
+    buildFeatures {
+        buildConfig = true
+    }
 
     flavorDimensions "abi"
 
@@ -31,6 +34,7 @@ android {
         applicationId rootProject.ext.appId
         versionCode rootProject.ext.versionCode
         versionName rootProject.ext.versionName
+        buildConfigField "String", "SENTRY_DSN", '"https://f359a4f074162776caf56c2d614fd673@o1279503.ingest.us.sentry.io/4512194240512000"'
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled = true
 

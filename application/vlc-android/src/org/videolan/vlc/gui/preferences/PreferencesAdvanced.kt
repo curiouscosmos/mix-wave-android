@@ -22,6 +22,7 @@
  */
 
 package org.videolan.vlc.gui.preferences
+import org.videolan.tools.ErrorReporter
 
 import android.app.ActivityManager
 import android.content.Context
@@ -183,7 +184,7 @@ class PreferencesAdvanced : BasePreferenceFragment(), SharedPreferences.OnShared
                                     }
                                     BitmapCache.clear()
                                 } catch (e: IOException) {
-                                    Log.e(this::class.java.simpleName, e.message, e)
+                                    ErrorReporter.error(this::class.java.simpleName, e.message, e)
                                 }
                             }
                             for (root in roots) {
@@ -400,7 +401,7 @@ class PreferencesAdvanced : BasePreferenceFragment(), SharedPreferences.OnShared
                             UiTools.restartDialog(requireActivity())
                         } else needToRestartOnResume = true
                     } catch (e: Exception) {
-                        Log.e("EqualizerSettings", "onActivityResult: ${e.message}", e)
+                        ErrorReporter.error("EqualizerSettings", "onActivityResult: ${e.message}", e)
                         UiTools.snacker(requireActivity(), getString(R.string.invalid_settings_file))
                     }
                 }

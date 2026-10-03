@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.remoteaccessserver
+import org.videolan.tools.ErrorReporter
 
 import android.content.Context
 import android.content.res.Resources
@@ -831,7 +832,7 @@ fun Route.setupRouting(appContext: Context, scope: CoroutineScope) {
             val list = try {
                 getProviderContent(appContext, provider, dataset, 1000L)
             } catch (e: Exception) {
-                Log.e(this::class.java.simpleName, e.message, e)
+                ErrorReporter.error(this::class.java.simpleName, e.message, e)
                 call.respond(HttpStatusCode.InternalServerError)
                 return@get
             }
@@ -851,7 +852,7 @@ fun Route.setupRouting(appContext: Context, scope: CoroutineScope) {
             val list = try {
                 getProviderContent(appContext, provider, dataset, 2000L)
             } catch (e: Exception) {
-                Log.e(this::class.java.simpleName, e.message, e)
+                ErrorReporter.error(this::class.java.simpleName, e.message, e)
                 call.respond(HttpStatusCode.InternalServerError)
                 return@get
             }
@@ -873,7 +874,7 @@ fun Route.setupRouting(appContext: Context, scope: CoroutineScope) {
                     }
                 }
             } catch (e: Exception) {
-                Log.e(this::class.java.simpleName, e.message, e)
+                ErrorReporter.error(this::class.java.simpleName, e.message, e)
                 call.respond(HttpStatusCode.InternalServerError)
                 return@get
             }
@@ -1116,7 +1117,7 @@ fun Route.setupRouting(appContext: Context, scope: CoroutineScope) {
                     try {
                         list = getMediaFromProvider( provider, dataset)
                     } catch (e: Exception) {
-                        Log.e(this::class.java.simpleName, e.message, e)
+                        ErrorReporter.error(this::class.java.simpleName, e.message, e)
                     }
                     list?.first?.map { it as MediaWrapper }?.toTypedArray()
                 } else appContext.getFromMl {
@@ -1501,7 +1502,7 @@ fun Route.setupRouting(appContext: Context, scope: CoroutineScope) {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("networkShareReplace", e.message, e)
+                ErrorReporter.error("networkShareReplace", e.message, e)
             }
             call.respond(HttpStatusCode.NotFound, "")
         }
@@ -1601,7 +1602,7 @@ private fun getProviderDescriptions(context: Context, scope: CoroutineScope, pro
                     }
                 }
             } catch (e: Exception) {
-                Log.e("RemoteAccess", e.message, e)
+                ErrorReporter.error("RemoteAccess", e.message, e)
             }
             descriptions.add(pair)
             //releasing once the number of descriptions is the same as the dataset
@@ -1646,7 +1647,7 @@ private suspend fun getProviderContent(context:Context, provider: BrowserProvide
                 } else mediaLibraryItem.description ?: ""
             }
         } catch (e: Exception) {
-            Log.e(RemoteAccessServer::class.java.simpleName, e.message, e)
+            ErrorReporter.error(RemoteAccessServer::class.java.simpleName, e.message, e)
             ""
         }
         val path = when (mediaLibraryItem) {

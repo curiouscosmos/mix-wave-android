@@ -19,6 +19,7 @@
  */
 
 package org.videolan.resources.util
+import org.videolan.tools.ErrorReporter
 
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
@@ -47,7 +48,7 @@ class VLCCrashHandler : UncaughtExceptionHandler {
     private val defaultUEH: UncaughtExceptionHandler? = Thread.getDefaultUncaughtExceptionHandler()
 
     override fun uncaughtException(thread: Thread, ex: Throwable) {
-        defaultUEH?.uncaughtException(thread, saveLog(ex))
+        defaultUEH?.uncaughtException(thread, saveLog(ex, reportToSentry = false))
     }
 
     companion object {
@@ -61,7 +62,7 @@ class VLCCrashHandler : UncaughtExceptionHandler {
          * @param ex: the [Throwable] to log
          * @return the [Throwable] with versions appended
          */
-        fun saveLog(ex: Throwable, watermark:String = ""):Throwable {
+        fun saveLog(ex: Throwable, watermark:String = "", reportToSentry: Boolean = true):Throwable {
             val result = StringWriter()
             val printWriter = PrintWriter(result)
 
@@ -78,7 +79,7 @@ class VLCCrashHandler : UncaughtExceptionHandler {
             ex.printStackTrace(printWriter)
             val stacktrace = result.toString()
             printWriter.close()
-            Log.e(TAG, stacktrace)
+            if (reportToSentry) ErrorReporter.error(TAG, stacktrace) else Log.e(TAG, stacktrace)
             Settings.getInstance(AppContextProvider.appContext).putSingle(KEY_LAST_SESSION_CRASHED, true)
 
             // Save the log on SD card if available
@@ -140,7 +141,7 @@ class VLCCrashHandler : UncaughtExceptionHandler {
             try {
                 Logcat.writeLogcat(filename)
             } catch (e: IOException) {
-                Log.e(TAG, "Cannot write logcat to disk")
+                ErrorReporter.error(TAG, "Cannot write logcat to disk")
             }
 
         }

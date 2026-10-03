@@ -18,6 +18,7 @@
  */
 
 package org.videolan.vlc
+import org.videolan.tools.ErrorReporter
 
 import android.content.ContentProvider
 import android.content.ContentResolver
@@ -504,9 +505,9 @@ class ArtworkProvider : ContentProvider() {
 
     private fun logError(e: Exception) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT)
-            Log.e(TAG, "Could not transfer cover art", e)
+            ErrorReporter.error(TAG, "Could not transfer cover art", e)
         else
-            Log.e(TAG, "Could not transfer cover art to caller: $callingPackage", e)
+            ErrorReporter.error(TAG, "Could not transfer cover art to caller: $callingPackage", e)
     }
 
     private val dateFormatter by lazy {

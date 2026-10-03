@@ -23,6 +23,7 @@
  */
 
 package org.videolan.vlc.gui.preferences.search
+import org.videolan.tools.ErrorReporter
 
 import android.app.Activity
 import android.content.Context
@@ -519,7 +520,7 @@ object PreferenceParser {
 
             //Delete the restore preferences
            if (!deleteSharedPreferences(activity, restorePrefsName))
-               Log.e("PreferenceParser", "Cannot delete restore preferences")
+               ErrorReporter.error("PreferenceParser", "Cannot delete restore preferences")
 
         }
     }

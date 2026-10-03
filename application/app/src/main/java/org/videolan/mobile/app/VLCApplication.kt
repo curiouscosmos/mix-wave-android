@@ -25,8 +25,10 @@ import android.os.Build
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.multidex.MultiDexApplication
+import io.sentry.android.core.SentryAndroid
 import org.videolan.libvlc.Dialog
 import org.videolan.tools.BitmapCache
+import org.videolan.vlc.BuildConfig
 import org.videolan.vlc.ArtworkProvider
 import org.videolan.vlc.util.DialogDelegate
 
@@ -40,6 +42,10 @@ class VLCApplication : MultiDexApplication(), Dialog.Callbacks by DialogDelegate
 
     @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
+        SentryAndroid.init(this) { options ->
+            options.dsn = BuildConfig.SENTRY_DSN
+            options.environment = if (BuildConfig.DEBUG) "debug" else "production"
+        }
         setupApplication()
         super.onCreate()
     }
