@@ -1493,4 +1493,5 @@
     <string name="feedback_email_warning_try_anyway">Try anyway</string>
     <string name="forum_url" translatable="false">https://sandalbar.online</string>
     <string name="doc_url" translatable="false">https://sandalbar.online</string>
+    <string name="discourse_listening_percentage">%1$d%% listened</string>
 </resources>

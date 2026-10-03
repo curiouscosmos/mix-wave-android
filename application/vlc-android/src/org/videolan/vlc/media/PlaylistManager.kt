@@ -90,6 +90,7 @@ import org.videolan.vlc.gui.browser.BaseBrowserFragment
 import org.videolan.vlc.gui.video.VideoPlayerActivity
 import org.videolan.vlc.discourse.DiscoursePlaybackStore
 import org.videolan.vlc.discourse.discoursePlaybackIds
+import org.videolan.vlc.discourse.discourseCheckpointDue
 import org.videolan.vlc.util.FileUtils
 import org.videolan.vlc.util.awaitMedialibraryStarted
 import org.videolan.vlc.util.isSchemeFD
@@ -133,6 +134,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
     private val settings by lazy(LazyThreadSafetyMode.NONE) { Settings.getInstance(service) }
     private val ctx by lazy(LazyThreadSafetyMode.NONE) { service.applicationContext }
     private val discoursePlaybackStore by lazy(LazyThreadSafetyMode.NONE) { DiscoursePlaybackStore(ctx) }
+    private var lastDiscourseCheckpoint = 0L
     var currentIndex = -1
         set(value) {
             field = value
@@ -379,6 +381,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
 
     @MainThread
     fun next(force : Boolean = false) {
+        savePosition()
         mediaList.getMedia(currentIndex)?.let {
             if (it.type == MediaWrapper.TYPE_VIDEO || it.isPodcast) saveMediaMeta()
         }
@@ -438,6 +441,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
 
     @MainThread
     fun previous(force: Boolean) {
+        savePosition()
         mediaList.getMedia(currentIndex)?.let { if (it.type == MediaWrapper.TYPE_VIDEO) saveMediaMeta() }
         if (hasPrevious() &&
                 ((force || !player.seekable || (player.getCurrentTime() < PREVIOUS_LIMIT_DELAY) || (lastPrevious != -1L && System.currentTimeMillis() - lastPrevious < PREVIOUS_LIMIT_DELAY)))) {
@@ -495,6 +499,9 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
     }
 
     suspend fun playIndex(index: Int, flags: Int = 0, forceResume:Boolean = false, forceRestart:Boolean = false) {
+        if (mediaList.getMedia(index)?.discoursePlaybackIds() != null) discoursePlaybackStore.initialize()
+        if (index != currentIndex) savePosition()
+        lastDiscourseCheckpoint = android.os.SystemClock.elapsedRealtime()
         videoBackground = videoBackground || (!player.isVideoPlaying() && player.canSwitchToVideo())
         if (mediaList.size() == 0) {
             Log.w(TAG, "Warning: empty media list, nothing to play !")
@@ -1044,9 +1051,11 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
     private fun savePosition(reset: Boolean = false, video: Boolean = false) {
         if (settings.getBoolean(KEY_INCOGNITO, false)) return
         if (!hasMedia()) return
-        getCurrentMedia()?.discoursePlaybackIds()?.audioId?.let { audioId ->
-            if (reset) discoursePlaybackStore.clear(audioId)
-            else discoursePlaybackStore.save(audioId, player.getCurrentTime())
+        getCurrentMedia()?.discoursePlaybackIds()?.let { ids ->
+            discoursePlaybackStore.register(ids.audioId, ids.discourseId, player.getLength())
+            if (reset || getCurrentMedia()?.hasFlag(MediaWrapper.MEDIA_FROM_START) == true) discoursePlaybackStore.clear(ids.audioId)
+            else discoursePlaybackStore.save(ids.audioId, player.getCurrentTime())
+            lastDiscourseCheckpoint = android.os.SystemClock.elapsedRealtime()
         }
         settings.edit {
             val audio = !video && isAudioList()
@@ -1242,7 +1251,10 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                     clearABRepeat()
                     getCurrentMedia()?.let { media ->
                         media.addFlags(MediaWrapper.MEDIA_FROM_START)
-                        media.discoursePlaybackIds()?.audioId?.let(discoursePlaybackStore::clear)
+                        if (!settings.getBoolean(KEY_INCOGNITO, false)) media.discoursePlaybackIds()?.audioId?.let {
+                            discoursePlaybackStore.complete(it)
+                            discoursePlaybackStore.clear(it)
+                        }
                     }
                     if (currentIndex != nextIndex) {
                         endReachedFor = getCurrentMedia()?.uri.toString()
@@ -1287,7 +1299,9 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                             || (!fastSeek && player.getCurrentTime() < it.start))
                             service.setTime(it.start, false)
                     }
-                    if (player.getCurrentTime() % 10 == 0L) savePosition()
+                    if (getCurrentMedia()?.discoursePlaybackIds() != null) {
+                        if (discourseCheckpointDue(lastDiscourseCheckpoint, android.os.SystemClock.elapsedRealtime())) savePosition()
+                    } else if (player.getCurrentTime() % 10 == 0L) savePosition()
                     val now = System.currentTimeMillis()
                     if (now - lastTimeMetaSaved > 5000L){
                         lastTimeMetaSaved = now

@@ -96,6 +96,8 @@
                 android:layout_weight="1" />
         </LinearLayout>
 
+        <include layout="@layout/discourse_listening_progress" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

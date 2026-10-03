@@ -8,71 +8,78 @@
     android:focusable="true"
     android:gravity="center_vertical"
     android:minHeight="64dp"
-    android:orientation="horizontal"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="8dp">
-
-    <TextView
-        android:id="@+id/discourse_track_number"
-        android:layout_width="40dp"
-        android:layout_height="wrap_content"
-        android:gravity="center" />
-
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/discourse_track_image"
-        android:layout_width="112dp"
-        android:layout_height="112dp"
-        android:layout_marginEnd="12dp"
-        android:contentDescription="@null"
-        android:scaleType="centerCrop"
-        app:shapeAppearanceOverlay="@style/OshoThumbnailShapeAppearanceOverlay" />
+    android:orientation="vertical">
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
-
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp">
         <TextView
-            android:id="@+id/discourse_track_title"
-            android:layout_width="match_parent"
+            android:id="@+id/discourse_track_number"
+            android:layout_width="40dp"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="2"
-            android:textAppearance="?attr/textAppearanceSubtitle1" />
+            android:gravity="center" />
 
-        <TextView
-            android:id="@+id/discourse_track_meta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="?attr/textAppearanceCaption" />
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/discourse_track_image"
+            android:layout_width="112dp"
+            android:layout_height="112dp"
+            android:layout_marginEnd="12dp"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop"
+            app:shapeAppearanceOverlay="@style/OshoThumbnailShapeAppearanceOverlay" />
 
-        <TextView
-            android:id="@+id/discourse_track_likes"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="?attr/textAppearanceCaption" />
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/discourse_track_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textAppearance="?attr/textAppearanceSubtitle1" />
+
+            <TextView
+                android:id="@+id/discourse_track_meta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <TextView
+                android:id="@+id/discourse_track_likes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="?attr/textAppearanceCaption" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/discourse_track_played"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/talkback_already_played"
+            android:padding="3dp"
+            android:src="@drawable/ic_mark_as_played"
+            android:tint="@color/red"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/discourse_track_download"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:minWidth="0dp"
+            android:text="@string/download" />
     </LinearLayout>
-
-    <ImageView
-        android:id="@+id/discourse_track_played"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:contentDescription="@string/talkback_already_played"
-        android:padding="3dp"
-        android:src="@drawable/ic_mark_as_played"
-        android:tint="@color/red"
-        android:visibility="gone" />
-
-    <Button
-        android:id="@+id/discourse_track_download"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:minWidth="0dp"
-        android:text="@string/download" />
+    <include layout="@layout/discourse_listening_progress" />
 </LinearLayout>

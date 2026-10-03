@@ -12,48 +12,54 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="top"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:id="@+id/discourse_image"
-            android:layout_width="160dp"
-            android:layout_height="160dp"
-            android:contentDescription="@null"
-            android:scaleType="centerCrop" />
-
+        android:orientation="vertical">
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:padding="12dp">
+            android:gravity="top"
+            android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/discourse_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textAppearance="?attr/textAppearanceSubtitle1"
-                android:textSize="19.2sp" />
+            <ImageView
+                android:id="@+id/discourse_image"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop" />
 
-            <TextView
-                android:id="@+id/discourse_language"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textAppearance="?attr/textAppearanceCaption"
-                android:textSize="14.4sp" />
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="12dp">
 
-            <TextView
-                android:id="@+id/discourse_counts"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textAppearance="?attr/textAppearanceCaption" />
+                <TextView
+                    android:id="@+id/discourse_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textAppearance="?attr/textAppearanceSubtitle1"
+                    android:textSize="19.2sp" />
+
+                <TextView
+                    android:id="@+id/discourse_language"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textSize="14.4sp" />
+
+                <TextView
+                    android:id="@+id/discourse_counts"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+            </LinearLayout>
         </LinearLayout>
+        <include layout="@layout/discourse_listening_progress" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -29,6 +29,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import org.videolan.tools.HttpImageLoader
 import org.videolan.medialibrary.Tools
 import org.videolan.vlc.R
@@ -132,12 +136,19 @@ class DiscourseFragment : BaseFragment() {
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
         model.state.observe(viewLifecycleOwner, ::render)
+        viewLifecycleOwner.lifecycleScope.launch {
+            playbackStore.initialize()
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                refreshProgress(null)
+                playbackStore.changes.collect { refreshProgress(it) }
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
         model.load()
-        tracks.adapter?.notifyDataSetChanged()
+        (tracks.adapter as? TrackAdapter)?.refreshDownloads()
     }
 
     override fun onStart() {
@@ -182,6 +193,13 @@ class DiscourseFragment : BaseFragment() {
                 catalogue.isVisible = false
                 grid.isVisible = false
                 detail.isVisible = true
+                value.tracks?.let { audios ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        withContext(Dispatchers.IO) { playbackStore.register(audios, value.discourse.id) }
+                        refreshProgress(null)
+                    }
+                }
+                refreshProgress(null)
                 val image = detail.findViewById<ImageView>(R.id.discourse_detail_image)
                 detail.findViewById<TextView>(R.id.discourse_detail_title).text = value.discourse.title
                 loadImage(image, value.discourse.thumbnailUrl)
@@ -216,6 +234,17 @@ class DiscourseFragment : BaseFragment() {
         }
     }
 
+    private fun refreshProgress(change: DiscoursePlaybackStore.Change?) {
+        (grid.adapter as? DiscourseAdapter)?.refreshProgress(change)
+        (tracks.adapter as? TrackAdapter)?.refreshProgress(change)
+        val value = model.state.value as? DiscourseViewModel.State.Detail ?: return
+        if (change != null && value.discourse.id !in change.discourseIds) return
+        val percent = playbackStore.discourseProgress(value.discourse.id, value.tracks?.size ?: value.discourse.totalTracks)
+        detail.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
+        detail.findViewById<TextView>(R.id.discourse_detail_title).contentDescription =
+            "${value.discourse.title}. ${getString(R.string.discourse_listening_percentage, percent)}"
+    }
+
     private fun showState(text: String?, loading: Boolean = false, action: (() -> Unit)? = null) {
         state.isVisible = true
         progress.isVisible = loading
@@ -247,6 +276,7 @@ class DiscourseFragment : BaseFragment() {
         private val click: (Discourse) -> Unit
     ) : RecyclerView.Adapter<DiscourseAdapter.Holder>() {
         private var items = items
+        private var positions = items.mapIndexed { index, item -> item.id to index }.toMap()
         inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
             val image: ImageView = view.findViewById(R.id.discourse_image)
             val title: TextView = view.findViewById(R.id.discourse_title)
@@ -266,12 +296,26 @@ class DiscourseFragment : BaseFragment() {
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text).filter(CharSequence::isNotBlank).joinToString(". ")
             holder.itemView.setOnClickListener { click(item) }
             loadImage(holder.image, item.thumbnailUrl)
+            bindProgress(holder, item)
         }
 
+        override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
+            if (payloads.isEmpty()) onBindViewHolder(holder, position) else bindProgress(holder, items[position])
+        }
+        private fun bindProgress(holder: Holder, item: Discourse) {
+            val percent = playbackStore.discourseProgress(item.id, item.totalTracks)
+            holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
+            holder.itemView.contentDescription = "${item.title}. ${holder.language.text}. ${holder.counts.text}. ${getString(R.string.discourse_listening_percentage, percent)}"
+        }
+        fun refreshProgress(change: DiscoursePlaybackStore.Change?) {
+            if (change == null) notifyItemRangeChanged(0, items.size, "progress")
+            else change.discourseIds.forEach { id -> positions[id]?.let { notifyItemChanged(it, "progress") } }
+        }
         override fun getItemCount() = items.size
 
         fun update(items: List<Discourse>) {
             this.items = items
+            positions = items.mapIndexed { index, item -> item.id to index }.toMap()
             notifyDataSetChanged()
         }
     }
@@ -280,6 +324,7 @@ class DiscourseFragment : BaseFragment() {
         private val items: List<DiscourseAudio>,
         private val click: (Int) -> Unit
     ) : RecyclerView.Adapter<DiscourseTrackHolder>() {
+        private val positions = items.mapIndexed { index, item -> item.id to index }.toMap()
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = DiscourseTrackHolder(
             LayoutInflater.from(parent.context).inflate(R.layout.discourse_track, parent, false)
         )
@@ -299,6 +344,7 @@ class DiscourseFragment : BaseFragment() {
                 DiscourseDownloadState.DOWNLOADING -> R.string.cancel
                 DiscourseDownloadState.DOWNLOADED -> R.string.discourse_remove_download
             })
+            bindProgress(holder, item)
             holder.download.setOnClickListener {
                 when (downloads.state(item)) {
                     DiscourseDownloadState.MISSING, DiscourseDownloadState.FAILED -> if (!downloads.download(item))
@@ -310,6 +356,28 @@ class DiscourseFragment : BaseFragment() {
             }
         }
 
+        override fun onBindViewHolder(holder: DiscourseTrackHolder, position: Int, payloads: MutableList<Any>) {
+            if (payloads.isEmpty()) onBindViewHolder(holder, position)
+            else {
+                bindProgress(holder, items[position])
+                if ("download" in payloads) holder.download.text = getString(when (downloads.state(items[position])) {
+                    DiscourseDownloadState.MISSING, DiscourseDownloadState.FAILED -> R.string.download
+                    DiscourseDownloadState.DOWNLOADING -> R.string.cancel
+                    DiscourseDownloadState.DOWNLOADED -> R.string.discourse_remove_download
+                })
+            }
+        }
+        fun refreshDownloads() = notifyItemRangeChanged(0, items.size, "download")
+        private fun bindProgress(holder: DiscourseTrackHolder, item: DiscourseAudio) {
+            holder.played.isVisible = playbackStore.isPlayed(item.id)
+            val percent = playbackStore.audioProgress(item.id)
+            holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
+            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}. ${holder.likes.text}. ${getString(R.string.discourse_listening_percentage, percent)}"
+        }
+        fun refreshProgress(change: DiscoursePlaybackStore.Change?) {
+            if (change == null) notifyItemRangeChanged(0, items.size, "progress")
+            else positions[change.audioId]?.let { notifyItemChanged(it, "progress") }
+        }
         override fun getItemCount() = items.size
     }
 

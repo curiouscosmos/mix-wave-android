@@ -5,11 +5,17 @@ import android.net.Uri
 import org.videolan.medialibrary.MLServiceLocator
 import org.videolan.medialibrary.interfaces.media.MediaWrapper
 import org.videolan.vlc.media.MediaUtils
+import org.videolan.tools.AppScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val DISCOURSE_TAG_PREFIX = "osho_discourse:"
 private const val DISCOURSE_TAG_SEPARATOR = "|"
 
 data class DiscoursePlaybackIds(val discourseId: String, val audioId: String)
+
+internal fun discourseCheckpointDue(lastCheckpoint: Long, elapsedTime: Long) = elapsedTime - lastCheckpoint >= 30_000L
 
 fun DiscourseAudio.toMediaWrapper(context: Context): MediaWrapper = MLServiceLocator.getAbstractMediaWrapper(
     DiscourseDownloadStore(context).playbackUri(this) ?: Uri.EMPTY,
@@ -49,11 +55,25 @@ fun MediaWrapper.discoursePlaybackIds(): DiscoursePlaybackIds? {
 }
 
 fun Context.playDiscourseAudio(audio: DiscourseAudio) {
-    DiscourseRepository(this).recordRecentlyPlayed(audio)
-    MediaUtils.openMedia(this, audio.toMediaWrapper(this))
+    val context = applicationContext
+    AppScope.launch {
+        val media = withContext(Dispatchers.IO) {
+            DiscoursePlaybackStore(context).register(listOf(audio))
+            DiscourseRepository(context).recordRecentlyPlayed(audio)
+            audio.toMediaWrapper(context)
+        }
+        MediaUtils.openMedia(context, media)
+    }
 }
 
 fun Context.playDiscourseAudios(audios: List<DiscourseAudio>, position: Int = 0) {
-    audios.getOrNull(position)?.let { DiscourseRepository(this).recordRecentlyPlayed(it) }
-    MediaUtils.openList(this, audios.map { it.toMediaWrapper(this) }, position)
+    val context = applicationContext
+    AppScope.launch {
+        val media = withContext(Dispatchers.IO) {
+            DiscoursePlaybackStore(context).register(audios)
+            audios.getOrNull(position)?.let { DiscourseRepository(context).recordRecentlyPlayed(it) }
+            audios.map { it.toMediaWrapper(context) }
+        }
+        MediaUtils.openList(context, media, position)
+    }
 }

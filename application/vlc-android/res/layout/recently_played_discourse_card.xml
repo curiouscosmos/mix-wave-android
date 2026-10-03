@@ -36,5 +36,6 @@
             android:paddingTop="4dp"
             android:paddingBottom="10dp"
             android:textAppearance="?attr/textAppearanceCaption" />
+        <include layout="@layout/discourse_listening_progress" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
