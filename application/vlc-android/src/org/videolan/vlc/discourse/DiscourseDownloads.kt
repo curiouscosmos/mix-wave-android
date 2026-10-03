@@ -33,7 +33,7 @@ data class DiscourseDownloadProgress(
 )
 
 internal fun isVerifiedDownload(actualSize: Long?, expectedSize: Long?) =
-    actualSize != null && (expectedSize == null || expectedSize <= 0L || actualSize == expectedSize)
+    actualSize != null && actualSize > 0L
 
 internal fun shouldEnqueue(state: DiscourseDownloadState) =
     state != DiscourseDownloadState.DOWNLOADED && state != DiscourseDownloadState.DOWNLOADING

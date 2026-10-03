@@ -15,11 +15,12 @@ class DiscourseUrlTest {
         assertNull(resolveDiscourseUrl("file:///tmp/a.mp3"))
     }
 
-    @Test fun validatesCompletedFilesAndDeduplicatesDownloads() {
+    @Test fun acceptsAnyNonEmptyCompletedFileAndDeduplicatesDownloads() {
         assertEquals(true, isVerifiedDownload(100L, 100L))
         assertEquals(true, isVerifiedDownload(100L, null))
-        assertEquals(false, isVerifiedDownload(99L, 100L))
+        assertEquals(true, isVerifiedDownload(99L, 100L))
         assertEquals(false, isVerifiedDownload(null, 100L))
+        assertEquals(false, isVerifiedDownload(0L, 100L))
         assertEquals(false, shouldEnqueue(DiscourseDownloadState.DOWNLOADED))
         assertEquals(false, shouldEnqueue(DiscourseDownloadState.DOWNLOADING))
         assertEquals(true, shouldEnqueue(DiscourseDownloadState.FAILED))
