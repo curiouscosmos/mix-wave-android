@@ -8,48 +8,49 @@ const db = createClient({
 	authToken: process.env.BUNNY_DATABASE_AUTH_TOKEN,
 });
 
-const PAGE_SIZE = 16;
+const PAGE_SIZE = 24;
 
+async function initializeSchema(): Promise<void> {
 /**
  * Schema
  */
 
 await db.execute(`
-  CREATE TABLE IF NOT EXISTS discourse (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    thumbnail_url TEXT,
-    is_audio_cleaned INTEGER NOT NULL DEFAULT 0,
-    language TEXT NOT NULL DEFAULT '',
-    total_tracks INTEGER NOT NULL DEFAULT 0,
-    total_likes INTEGER NOT NULL DEFAULT 0,
-    slug TEXT UNIQUE,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )
+    CREATE TABLE IF NOT EXISTS discourse (
+                                             id TEXT PRIMARY KEY,
+                                             title TEXT NOT NULL,
+                                             thumbnail_url TEXT,
+                                             is_audio_cleaned INTEGER NOT NULL DEFAULT 0,
+                                             language TEXT NOT NULL DEFAULT '',
+                                             total_tracks INTEGER NOT NULL DEFAULT 0,
+                                             total_likes INTEGER NOT NULL DEFAULT 0,
+                                             slug TEXT UNIQUE,
+                                             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
 `);
 
 await db.execute(`
-  CREATE TABLE IF NOT EXISTS discourse_audio (
-    id TEXT PRIMARY KEY,
-    discourse_id TEXT NOT NULL,
-    discourse_name TEXT NOT NULL,
-    discourse_thumbnail_url TEXT,
-    language TEXT NOT NULL,
-    title TEXT NOT NULL,
-    audio_url TEXT NOT NULL,
-    duration_seconds REAL,
-    file_size INTEGER,
-    mime_type TEXT,
-    track_number INTEGER,
-    total_likes INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CREATE TABLE IF NOT EXISTS discourse_audio (
+                                                   id TEXT PRIMARY KEY,
+                                                   discourse_id TEXT NOT NULL,
+                                                   discourse_name TEXT NOT NULL,
+                                                   discourse_thumbnail_url TEXT,
+                                                   language TEXT NOT NULL,
+                                                   title TEXT NOT NULL,
+                                                   audio_url TEXT NOT NULL,
+                                                   duration_seconds REAL,
+                                                   file_size INTEGER,
+                                                   mime_type TEXT,
+                                                   track_number INTEGER,
+                                                   total_likes INTEGER NOT NULL DEFAULT 0,
+                                                   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (discourse_id)
-      REFERENCES discourse(id)
-      ON DELETE CASCADE
-  )
+                                                   FOREIGN KEY (discourse_id)
+        REFERENCES discourse(id)
+        ON DELETE CASCADE
+        )
 `);
 
 for (const [table, column] of [
@@ -65,44 +66,44 @@ for (const [table, column] of [
 }
 
 await db.execute(`
-  CREATE TABLE IF NOT EXISTS discourse_likes (
-    discourse_id TEXT NOT NULL,
-    liked_by_user_id TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CREATE TABLE IF NOT EXISTS discourse_likes (
+                                                   discourse_id TEXT NOT NULL,
+                                                   liked_by_user_id TEXT NOT NULL,
+                                                   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (discourse_id, liked_by_user_id),
+                                                   PRIMARY KEY (discourse_id, liked_by_user_id),
 
-    FOREIGN KEY (discourse_id)
-      REFERENCES discourse(id)
-      ON DELETE CASCADE
-  )
+        FOREIGN KEY (discourse_id)
+        REFERENCES discourse(id)
+        ON DELETE CASCADE
+        )
 `);
 
 await db.execute(`
-  CREATE TABLE IF NOT EXISTS discourse_audio_likes (
-    discourse_audio_id TEXT NOT NULL,
-    liked_by_user_id TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CREATE TABLE IF NOT EXISTS discourse_audio_likes (
+                                                         discourse_audio_id TEXT NOT NULL,
+                                                         liked_by_user_id TEXT NOT NULL,
+                                                         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (discourse_audio_id, liked_by_user_id),
+                                                         PRIMARY KEY (discourse_audio_id, liked_by_user_id),
 
-    FOREIGN KEY (discourse_audio_id)
-      REFERENCES discourse_audio(id)
-      ON DELETE CASCADE
-  )
+        FOREIGN KEY (discourse_audio_id)
+        REFERENCES discourse_audio(id)
+        ON DELETE CASCADE
+        )
 `);
 
 await db.execute(`
-  CREATE TABLE IF NOT EXISTS stats (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    discourse_id TEXT,
-    discourse_audio_id TEXT,
-    user_id TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )
+    CREATE TABLE IF NOT EXISTS stats (
+                                         id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                         discourse_id TEXT,
+                                         discourse_audio_id TEXT,
+                                         user_id TEXT NOT NULL,
+                                         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
 `);
 
 const statsSchema = await db.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'stats'");
@@ -110,13 +111,13 @@ if (String(statsSchema.rows[0]?.sql ?? "").includes("discourse_id IS NOT NULL) !
 	await db.batch([
 		{ sql: "ALTER TABLE stats RENAME TO stats_legacy", args: [] },
 		{ sql: `CREATE TABLE stats (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			discourse_id TEXT,
-			discourse_audio_id TEXT,
-			user_id TEXT NOT NULL,
-			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`, args: [] },
+                                       id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                       discourse_id TEXT,
+                                       discourse_audio_id TEXT,
+                                       user_id TEXT NOT NULL,
+                                       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )`, args: [] },
 		{ sql: "INSERT INTO stats SELECT * FROM stats_legacy", args: [] },
 		{ sql: "DROP TABLE stats_legacy", args: [] },
 	], "write");
@@ -127,49 +128,61 @@ if (String(statsSchema.rows[0]?.sql ?? "").includes("discourse_id IS NOT NULL) !
  */
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_discourse_title
-  ON discourse(title)
+    CREATE INDEX IF NOT EXISTS idx_discourse_title
+        ON discourse(title)
 `);
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_discourse_audio_cleaned
-  ON discourse(is_audio_cleaned)
+    CREATE INDEX IF NOT EXISTS idx_discourse_audio_cleaned
+        ON discourse(is_audio_cleaned)
 `);
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_discourse_audio_discourse_id
-  ON discourse_audio(discourse_id)
+    CREATE INDEX IF NOT EXISTS idx_discourse_audio_discourse_id
+        ON discourse_audio(discourse_id)
 `);
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_discourse_audio_title
-  ON discourse_audio(title)
+    CREATE INDEX IF NOT EXISTS idx_discourse_audio_title
+        ON discourse_audio(title)
 `);
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_discourse_audio_discourse_name
-  ON discourse_audio(discourse_name)
+    CREATE INDEX IF NOT EXISTS idx_discourse_audio_discourse_name
+        ON discourse_audio(discourse_name)
 `);
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_discourse_audio_language
-  ON discourse_audio(language)
+    CREATE INDEX IF NOT EXISTS idx_discourse_audio_language
+        ON discourse_audio(language)
 `);
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_stats_discourse_created
-  ON stats(discourse_id, created_at)
+    CREATE INDEX IF NOT EXISTS idx_stats_discourse_created
+        ON stats(discourse_id, created_at)
 `);
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_stats_audio_created
-  ON stats(discourse_audio_id, created_at)
+    CREATE INDEX IF NOT EXISTS idx_stats_audio_created
+        ON stats(discourse_audio_id, created_at)
 `);
 
 await db.execute(`
-  CREATE INDEX IF NOT EXISTS idx_stats_user_entity_created
-  ON stats(user_id, discourse_id, discourse_audio_id, created_at)
+    CREATE INDEX IF NOT EXISTS idx_stats_user_entity_created
+        ON stats(user_id, discourse_id, discourse_audio_id, created_at)
 `);
+}
+
+let schemaReady: Promise<void> | undefined;
+const ensureSchema = () => {
+	if (!schemaReady) {
+		schemaReady = initializeSchema().catch((error) => {
+			schemaReady = undefined;
+			throw error;
+		});
+	}
+	return schemaReady;
+};
 
 /**
  * Helpers
@@ -206,7 +219,7 @@ async function recordListening(request: Request): Promise<Response> {
 
 	const insert = await db.execute({
 		sql: `INSERT INTO stats (discourse_id, discourse_audio_id, user_id)
-		SELECT ?, ?, ? WHERE NOT EXISTS (
+              SELECT ?, ?, ? WHERE NOT EXISTS (
 			SELECT 1 FROM stats WHERE user_id = ? AND created_at >= datetime('now', '-24 hours')
 			AND (discourse_id = ? OR discourse_audio_id = ?)
 		)`,
@@ -394,10 +407,10 @@ async function getDiscourses(
 	const countResult =
 		await db.execute({
 			sql: `
-        SELECT COUNT(*) AS total
-        FROM discourse
-        ${whereSql}
-      `,
+                SELECT COUNT(*) AS total
+                FROM discourse
+                         ${whereSql}
+			`,
 			args,
 		});
 
@@ -411,13 +424,13 @@ async function getDiscourses(
 	const result =
 		await db.execute({
 			sql: `
-        SELECT *
-        FROM discourse
-        ${whereSql}
-		ORDER BY ${sortByLikes ? "total_likes DESC, title COLLATE NOCASE ASC" : "title COLLATE NOCASE ASC"}
-        LIMIT ?
-        OFFSET ?
-      `,
+                SELECT *
+                FROM discourse
+                         ${whereSql}
+                ORDER BY ${sortByLikes ? "total_likes DESC, title COLLATE NOCASE ASC" : "title COLLATE NOCASE ASC"}
+                    LIMIT ?
+                OFFSET ?
+			`,
 			args: [
 				...args,
 				PAGE_SIZE,
@@ -474,13 +487,13 @@ async function getDiscourseAudios(
 		const result =
 			await db.execute({
 				sql: `
-          SELECT *
-          FROM discourse_audio
-          WHERE discourse_id = ?
-          ORDER BY
-            track_number ASC,
-            title COLLATE NOCASE ASC
-        `,
+                    SELECT *
+                    FROM discourse_audio
+                    WHERE discourse_id = ?
+                    ORDER BY
+                        track_number ASC,
+                        title COLLATE NOCASE ASC
+				`,
 				args: [discourseId],
 			});
 
@@ -568,10 +581,10 @@ async function getDiscourseAudios(
 	const countResult =
 		await db.execute({
 			sql: `
-        SELECT COUNT(*) AS total
-        FROM discourse_audio
-        ${whereSql}
-      `,
+                SELECT COUNT(*) AS total
+                FROM discourse_audio
+                         ${whereSql}
+			`,
 			args,
 		});
 
@@ -588,17 +601,17 @@ async function getDiscourseAudios(
 	const result =
 		await db.execute({
 			sql: `
-        SELECT *
-        FROM discourse_audio
-        ${whereSql}
+                SELECT *
+                FROM discourse_audio
+                         ${whereSql}
 
-		ORDER BY ${sortByLikes
-			? "total_likes DESC, discourse_name COLLATE NOCASE ASC, track_number ASC, title COLLATE NOCASE ASC"
-			: "discourse_name COLLATE NOCASE ASC, track_number ASC, title COLLATE NOCASE ASC"}
+                ORDER BY ${sortByLikes
+                        ? "total_likes DESC, discourse_name COLLATE NOCASE ASC, track_number ASC, title COLLATE NOCASE ASC"
+                        : "discourse_name COLLATE NOCASE ASC, track_number ASC, title COLLATE NOCASE ASC"}
 
-        LIMIT ?
-        OFFSET ?
-      `,
+                    LIMIT ?
+                OFFSET ?
+			`,
 			args: [
 				...args,
 				PAGE_SIZE,
@@ -654,11 +667,11 @@ async function likeDiscourse(
 	const discourse =
 		await db.execute({
 			sql: `
-        SELECT id
-        FROM discourse
-        WHERE id = ?
-        LIMIT 1
-      `,
+                SELECT id
+                FROM discourse
+                WHERE id = ?
+                    LIMIT 1
+			`,
 			args: [discourseId],
 		});
 
@@ -678,12 +691,12 @@ async function likeDiscourse(
 	 */
 	const likeResult = await db.execute({
 		sql: `
-      INSERT OR IGNORE INTO discourse_likes (
+            INSERT OR IGNORE INTO discourse_likes (
         discourse_id,
         liked_by_user_id
       )
       VALUES (?, ?)
-    `,
+		`,
 		args: [
 			discourseId,
 			userId,
@@ -697,10 +710,10 @@ async function likeDiscourse(
 	const countResult =
 		await db.execute({
 			sql: `
-		SELECT total_likes AS total
-		FROM discourse
-		WHERE id = ?
-      `,
+                SELECT total_likes AS total
+                FROM discourse
+                WHERE id = ?
+			`,
 			args: [discourseId],
 		});
 
@@ -760,11 +773,11 @@ async function likeDiscourseAudio(
 	const audio =
 		await db.execute({
 			sql: `
-        SELECT id
-        FROM discourse_audio
-        WHERE id = ?
-        LIMIT 1
-      `,
+                SELECT id
+                FROM discourse_audio
+                WHERE id = ?
+                    LIMIT 1
+			`,
 			args: [audioId],
 		});
 
@@ -780,12 +793,12 @@ async function likeDiscourseAudio(
 
 	const likeResult = await db.execute({
 		sql: `
-      INSERT OR IGNORE INTO discourse_audio_likes (
+            INSERT OR IGNORE INTO discourse_audio_likes (
         discourse_audio_id,
         liked_by_user_id
       )
       VALUES (?, ?)
-    `,
+		`,
 		args: [
 			audioId,
 			userId,
@@ -807,10 +820,10 @@ async function likeDiscourseAudio(
 	const countResult =
 		await db.execute({
 			sql: `
-		SELECT total_likes AS total
-		FROM discourse_audio
-		WHERE id = ?
-      `,
+                SELECT total_likes AS total
+                FROM discourse_audio
+                WHERE id = ?
+			`,
 			args: [audioId],
 		});
 
@@ -877,6 +890,10 @@ BunnySDK.net.http.serve(
 							"/stats",
 					},
 				});
+			}
+
+			if (["stats", "discourses", "discourse-audios"].includes(resource)) {
+				await ensureSchema();
 			}
 
 			if (resource === "stats") {
