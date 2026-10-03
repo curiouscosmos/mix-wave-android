@@ -28,6 +28,7 @@ import androidx.multidex.MultiDexApplication
 import io.sentry.android.core.SentryAndroid
 import org.videolan.libvlc.Dialog
 import org.videolan.tools.BitmapCache
+import org.videolan.tools.HttpImageLoader
 import org.videolan.vlc.ArtworkProvider
 import org.videolan.vlc.util.DialogDelegate
 
@@ -42,6 +43,7 @@ class VLCApplication : MultiDexApplication(), Dialog.Callbacks by DialogDelegate
     @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
+        HttpImageLoader.initialize(this)
         setupApplication()
         try {
             SentryAndroid.init(this) { options ->
