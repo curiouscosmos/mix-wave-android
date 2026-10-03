@@ -82,6 +82,7 @@ import org.videolan.tools.retrieveParent
 import org.videolan.vlc.PlaybackService
 import org.videolan.vlc.R
 import org.videolan.vlc.databinding.VideoGridBinding
+import org.videolan.vlc.gui.AudioPlayerContainerActivity
 import org.videolan.vlc.gui.SecondaryActivity
 import org.videolan.vlc.gui.browser.MediaBrowserFragment
 import org.videolan.vlc.gui.dialogs.AddToGroupDialog
@@ -451,6 +452,7 @@ class VideoGridFragment : MediaBrowserFragment<VideosViewModel>(), SwipeRefreshL
         }
         binding.videoGrid.setNumColumns(if (listMode) 1 else -1)
         videoListAdapter.isListMode = listMode
+        (activity as? AudioPlayerContainerActivity)?.setContentBottomPadding()
     }
 
     override fun onFabPlayClick(view: View) {

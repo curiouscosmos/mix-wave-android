@@ -35,6 +35,7 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
@@ -50,10 +51,13 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
@@ -104,6 +108,7 @@ import org.videolan.vlc.media.WaitConfirmation
 import org.videolan.vlc.util.LifecycleAwareScheduler
 import org.videolan.vlc.util.SchedulerCallback
 import org.videolan.vlc.util.isTalkbackIsEnabled
+import java.util.WeakHashMap
 import kotlin.math.max
 import kotlin.math.min
 
@@ -131,6 +136,8 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     lateinit var playerBehavior: PlayerBehavior<*>
     protected lateinit var fragmentContainer: View
     protected var originalBottomPadding: Int = 0
+    private val scrollingBottomPadding = WeakHashMap<View, Pair<Int, Int>>()
+    private val mixerControlsBottomMargin = WeakHashMap<View, Int>()
     private var scanProgressLayout: View? = null
     private var scanProgressText: TextView? = null
     private var scanProgressBar: ProgressBar? = null
@@ -200,6 +207,12 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
            restoreBookmarks =  savedInstanceState.getBoolean(BOOKMARK_VISIBLE, false)
         }
         super.onCreate(savedInstanceState)
+        supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+                // Fragment views may not be attached to the content container yet.
+                v.post { setContentBottomPadding() }
+            }
+        }, true)
         if (VlcMigrationHelper.isLolliPopOrLater && this is MainActivity) WindowCompat.setDecorFitsSystemWindows(window, false)
 
         volumeControlStream = AudioManager.STREAM_MUSIC
@@ -252,14 +265,43 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
      * Sets the content bottom padding depending on the bottom inset
      * and the presence of the bottom navigation and mini player
      */
-    private fun setContentBottomPadding() {
+    internal fun setContentBottomPadding() {
+        if (!::fragmentContainer.isInitialized) return
         // insets from soft nav buttons
         var bottomMargin = if (this is MainActivity && isTablet()) 0 else bottomInset
         // Bottom bar navigation
         bottomMargin += if (this is MainActivity && !isTablet()) (if (mixerControlsAtNavigation) 84.dp else 108.dp) else 0
         //mini player
-        bottomMargin += if (::playerBehavior.isInitialized && playerBehavior.state != STATE_HIDDEN) 72.dp else 0 + 4.dp
-        fragmentContainer.setPadding(fragmentContainer.paddingLeft, fragmentContainer.paddingTop, fragmentContainer.paddingRight, bottomMargin)
+        bottomMargin += if (::playerBehavior.isInitialized && playerBehavior.state != STATE_HIDDEN) 72.dp else 4.dp
+        if (fragmentContainer !is RecyclerView && fragmentContainer !is NestedScrollView && fragmentContainer !is ScrollView) {
+            fragmentContainer.setPadding(fragmentContainer.paddingLeft, fragmentContainer.paddingTop, fragmentContainer.paddingRight, originalBottomPadding)
+        }
+        applyScrollingBottomPadding(fragmentContainer, bottomMargin)
+    }
+
+    internal fun applyScrollingBottomPadding(view: View, clearance: Int) {
+        if (view is RecyclerView || view is NestedScrollView || view is ScrollView) {
+            val previous = scrollingBottomPadding[view]
+            val original = if (previous != null && view.paddingBottom == previous.second) previous.first else view.paddingBottom
+            (view as ViewGroup).clipToPadding = false
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, original + clearance)
+            scrollingBottomPadding[view] = original to view.paddingBottom
+            // An outer scrolling view owns the clearance for all of its content.
+            return
+        }
+        if (view is ViewGroup) {
+            // Keep the Mixer's fixed controls above the player; its list ends above the controls.
+            val mixerControls = (0 until view.childCount).map { view.getChildAt(it) }
+                .firstOrNull { it.id == R.id.audio_mixer_controls }
+            if (mixerControls != null) {
+                val params = mixerControls.layoutParams as ViewGroup.MarginLayoutParams
+                val original = mixerControlsBottomMargin.getOrPut(mixerControls) { params.bottomMargin }
+                mixerControls.updateLayoutParams<ViewGroup.MarginLayoutParams> { bottomMargin = original + clearance }
+                for (index in 0 until view.childCount) applyScrollingBottomPadding(view.getChildAt(index), 0)
+                return
+            }
+            for (index in 0 until view.childCount) applyScrollingBottomPadding(view.getChildAt(index), clearance)
+        }
     }
 
     fun setMixerControlsAtNavigation(enabled: Boolean) {
