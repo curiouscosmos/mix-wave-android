@@ -266,6 +266,8 @@ class DiscourseFragment : BaseFragment() {
         val audios = value.tracks ?: return
         val downloaded = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADED }
         val active = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADING }
+        detail.findViewById<Button>(R.id.discourse_download_all).isVisible = active == 0 && downloaded < audios.size
+        detail.findViewById<Button>(R.id.discourse_remove_all).isVisible = active == 0 && downloaded > 0
         val progress = detail.findViewById<ProgressBar>(R.id.discourse_download_progress)
         detail.findViewById<TextView>(R.id.discourse_download_count).apply {
             isVisible = downloaded in 1 until audios.size
@@ -288,8 +290,10 @@ class DiscourseFragment : BaseFragment() {
     }
 
     private fun bindDownloadProgress(view: ProgressBar, value: DiscourseDownloadProgress, visible: Boolean = true) {
-        view.isVisible = visible && value.state == DiscourseDownloadState.DOWNLOADING && value.percent != null
-        view.progress = if (view.isVisible) value.percent ?: 0 else 0
+        val downloading = visible && value.state == DiscourseDownloadState.DOWNLOADING
+        view.isVisible = downloading
+        view.isIndeterminate = downloading && value.percent == null
+        view.progress = if (downloading) value.percent ?: 0 else 0
     }
 
     private fun showState(text: String?, loading: Boolean = false, action: (() -> Unit)? = null) {
