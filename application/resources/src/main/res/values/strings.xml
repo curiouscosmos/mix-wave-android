@@ -44,6 +44,9 @@
     <string name="discourse_load_failed">Could not load discourses</string>
     <string name="discourse_tracks_failed">Could not load tracks</string>
     <string name="discourse_no_tracks">No tracks found</string>
+    <string name="discourse_search_hint">Search discourses</string>
+    <string name="discourse_search_prompt">Enter a discourse title to search</string>
+    <string name="discourse_search_failed">Could not search discourses</string>
     <string name="local">Local</string>
     <string name="music_player">Music Player</string>
     <string name="back">Back</string>

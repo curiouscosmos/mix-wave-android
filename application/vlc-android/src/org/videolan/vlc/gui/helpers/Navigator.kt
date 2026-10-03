@@ -52,6 +52,7 @@ import org.videolan.vlc.gui.MainActivity
 import org.videolan.vlc.gui.PlaylistFragment
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.gui.audio.HomeFragment
+import org.videolan.vlc.gui.audio.SearchFragment
 import org.videolan.vlc.gui.browser.BaseBrowserFragment
 import org.videolan.vlc.gui.browser.MainBrowserFragment
 import org.videolan.vlc.gui.helpers.UiTools.isTablet
@@ -105,6 +106,7 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
                 arguments = bundleOf(EXTRA_FOR_ESPRESSO to forExpresso)
             }
             R.id.nav_playlists -> PlaylistFragment()
+            R.id.nav_search -> SearchFragment()
             else -> VideoBrowserFragment()
         }
     }
@@ -181,6 +183,12 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
         return true
     }
 
+    override fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse) {
+        showFragment(R.id.nav_audio)
+        activity.supportFragmentManager.executePendingTransactions()
+        (currentFragment as? HomeFragment)?.openDiscourse(discourse)
+    }
+
 
     private fun updateCheckedItem(id: Int) {
         val currentId = currentFragmentId
@@ -206,4 +214,5 @@ interface INavigator {
     fun reloadPreferences()
     fun configurationChanged(size: Int)
     fun getFragmentWidth(activity: Activity): Int
+    fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse)
 }
