@@ -28,7 +28,6 @@ import androidx.multidex.MultiDexApplication
 import io.sentry.android.core.SentryAndroid
 import org.videolan.libvlc.Dialog
 import org.videolan.tools.BitmapCache
-import org.videolan.vlc.BuildConfig
 import org.videolan.vlc.ArtworkProvider
 import org.videolan.vlc.util.DialogDelegate
 
