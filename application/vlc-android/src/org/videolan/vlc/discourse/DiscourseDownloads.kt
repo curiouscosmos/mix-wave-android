@@ -37,6 +37,11 @@ internal fun isVerifiedDownload(actualSize: Long?, expectedSize: Long?) =
 internal fun shouldEnqueue(state: DiscourseDownloadState) =
     state != DiscourseDownloadState.DOWNLOADED && state != DiscourseDownloadState.DOWNLOADING
 
+internal fun downloadPercent(downloadedBytes: Long?, totalBytes: Long?, fallbackTotalBytes: Long?): Int? {
+    val total = totalBytes?.takeIf { it > 0L } ?: fallbackTotalBytes?.takeIf { it > 0L } ?: return null
+    return ((downloadedBytes ?: 0L) * 100L / total).toInt().coerceIn(0, 99)
+}
+
 class DiscourseDownloadStore(context: Context) {
     private val context = context.applicationContext
     private val manager = context.getSystemService<DownloadManager>()!!
@@ -61,8 +66,7 @@ class DiscourseDownloadStore(context: Context) {
             else -> DiscourseDownloadState.FAILED
         }
         if (state != DiscourseDownloadState.DOWNLOADING) return DiscourseDownloadProgress(null, state)
-        val total = info.totalBytes
-        val percent = if (total != null && total > 0L) ((info.downloadedBytes ?: 0L) * 100L / total).toInt().coerceIn(0, 99) else null
+        val percent = downloadPercent(info.downloadedBytes, info.totalBytes, audio.fileSize)
         return DiscourseDownloadProgress(percent, state)
     }
 

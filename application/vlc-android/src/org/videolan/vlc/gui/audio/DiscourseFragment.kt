@@ -289,7 +289,7 @@ class DiscourseFragment : BaseFragment() {
 
     private fun bindDownloadProgress(view: ProgressBar, value: DiscourseDownloadProgress, visible: Boolean = true) {
         view.isVisible = visible && value.state == DiscourseDownloadState.DOWNLOADING && value.percent != null
-        if (view.isVisible) view.progress = value.percent ?: 0
+        view.progress = if (view.isVisible) value.percent ?: 0 else 0
     }
 
     private fun showState(text: String?, loading: Boolean = false, action: (() -> Unit)? = null) {
