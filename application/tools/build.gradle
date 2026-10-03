@@ -27,7 +27,9 @@ android {
 }
 
 dependencies {
-    api "io.sentry:sentry-android:6.34.0"
+    // Use the Java/Kotlin Android integration without Sentry's native NDK libraries.
+    // The NDK artifacts are not 16 KB page-aligned and are unnecessary for our error reporting.
+    api "io.sentry:sentry-android-core:6.34.0"
     api "androidx.appcompat:appcompat:$rootProject.ext.appCompatVersion"
     implementation "androidx.lifecycle:lifecycle-process:$rootProject.ext.lifecycleVersion"
     implementation "androidx.preference:preference-ktx:$androidxPreferencesVersion"
