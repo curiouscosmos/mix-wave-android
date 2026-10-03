@@ -3,6 +3,16 @@ plugins {
     id 'kotlin-android'
 }
 
+def sentryDsn = System.getenv('SENTRY_DSN')?.trim()
+if (!sentryDsn) {
+    def productionEnv = rootProject.file('.env.production')
+    if (productionEnv.exists()) {
+        def env = new Properties()
+        productionEnv.withInputStream { env.load(it) }
+        sentryDsn = env.getProperty('SENTRY_DSN')?.trim()
+    }
+}
+
 android {
     compileOptions {
         coreLibraryDesugaringEnabled = true
@@ -34,7 +44,7 @@ android {
         applicationId rootProject.ext.appId
         versionCode rootProject.ext.versionCode
         versionName rootProject.ext.versionName
-        buildConfigField "String", "SENTRY_DSN", '"https://f359a4f074162776caf56c2d614fd673@o1279503.ingest.us.sentry.io/4512194240512000"'
+        buildConfigField 'String', 'SENTRY_DSN', groovy.json.JsonOutput.toJson(sentryDsn ?: '')
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled = true
 

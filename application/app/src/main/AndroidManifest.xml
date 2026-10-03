@@ -18,5 +18,9 @@
         android:theme="@style/Theme.VLC.Transparent"
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
-        tools:targetApi="q" />
+        tools:targetApi="q">
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+    </application>
 </manifest>
