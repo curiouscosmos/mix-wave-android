@@ -265,7 +265,7 @@ class DiscourseFragment : BaseFragment() {
         val value = model.state.value as? DiscourseViewModel.State.Detail ?: return
         val audios = value.tracks ?: return
         val downloaded = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADED }
-        val known = audios.count { downloads.state(it) in listOf(DiscourseDownloadState.DOWNLOADED, DiscourseDownloadState.DOWNLOADING) }
+        val active = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADING }
         val progress = detail.findViewById<ProgressBar>(R.id.discourse_downloaded)
         detail.findViewById<TextView>(R.id.discourse_download_count).apply {
             isVisible = downloaded in 1 until audios.size
@@ -275,10 +275,10 @@ class DiscourseFragment : BaseFragment() {
             DiscourseDownloadProgress((downloaded * 100 / audios.size).coerceAtMost(100), false,
                 when {
                     downloaded == audios.size -> DiscourseDownloadState.DOWNLOADED
-                    known > 0 -> DiscourseDownloadState.DOWNLOADING
+                    active > 0 -> DiscourseDownloadState.DOWNLOADING
                     else -> DiscourseDownloadState.MISSING
                 })
-        } else DiscourseDownloadProgress(null, false, DiscourseDownloadState.MISSING), known > 0)
+        } else DiscourseDownloadProgress(null, false, DiscourseDownloadState.MISSING), active > 0)
     }
 
     private fun refreshDownloadIndicators() {
@@ -288,8 +288,8 @@ class DiscourseFragment : BaseFragment() {
     }
 
     private fun bindDownloadProgress(view: ProgressBar, value: DiscourseDownloadProgress, visible: Boolean = true) {
-        view.isVisible = visible && value.state != DiscourseDownloadState.MISSING && value.state != DiscourseDownloadState.FAILED
-        view.isIndeterminate = view.isVisible && value.indeterminate
+        view.isVisible = visible && value.state == DiscourseDownloadState.DOWNLOADING && value.percent != null
+        view.isIndeterminate = false
         if (view.isVisible && !view.isIndeterminate) view.progress = value.percent ?: 0
     }
 
@@ -375,16 +375,16 @@ class DiscourseFragment : BaseFragment() {
 
         private fun bindDiscourseDownloadProgress(view: ProgressBar, item: Discourse) {
             val completed = downloads.downloadedCount(item.id)
-            val known = downloads.knownDownloadCount(item.id)
+            val active = downloads.activeDownloadCount(item.id)
             bindDownloadProgress(view, DiscourseDownloadProgress(
                 (completed * 100 / item.totalTracks.coerceAtLeast(1)).coerceAtMost(100),
                 false,
                 when {
                     item.totalTracks > 0 && completed >= item.totalTracks -> DiscourseDownloadState.DOWNLOADED
-                    known > 0 -> DiscourseDownloadState.DOWNLOADING
+                    active > 0 -> DiscourseDownloadState.DOWNLOADING
                     else -> DiscourseDownloadState.MISSING
                 }
-            ), known > 0)
+            ), active > 0)
         }
     }
 

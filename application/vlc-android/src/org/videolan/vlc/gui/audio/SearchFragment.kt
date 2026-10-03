@@ -126,8 +126,8 @@ class SearchFragment : BaseFragment() {
             holder.language.text = item.language.replaceFirstChar(Char::uppercase)
             holder.counts.text = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
             val completed = downloads.downloadedCount(item.id)
-            val known = downloads.knownDownloadCount(item.id)
-            holder.downloaded.isVisible = known > 0
+            val active = downloads.activeDownloadCount(item.id)
+            holder.downloaded.isVisible = active > 0 && item.totalTracks > 0
             holder.downloaded.isIndeterminate = false
             holder.downloaded.progress = (completed * 100 / item.totalTracks.coerceAtLeast(1)).coerceAtMost(100)
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text)

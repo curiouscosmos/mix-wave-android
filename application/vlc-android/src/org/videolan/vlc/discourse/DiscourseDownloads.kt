@@ -64,7 +64,7 @@ class DiscourseDownloadStore(context: Context) {
         if (state != DiscourseDownloadState.DOWNLOADING) return DiscourseDownloadProgress(null, false, state)
         val total = info.totalBytes
         val percent = if (total != null && total > 0L) ((info.downloadedBytes ?: 0L) * 100L / total).toInt().coerceIn(0, 99) else null
-        return DiscourseDownloadProgress(percent, percent == null, state)
+        return DiscourseDownloadProgress(percent, false, state)
     }
 
     fun playbackUri(audio: DiscourseAudio): Uri? = verifiedFile(audio)?.let(Uri::fromFile)
@@ -75,12 +75,11 @@ class DiscourseDownloadStore(context: Context) {
         .keys
         .count { File(context.getExternalFilesDir("discourses") ?: context.filesDir, "$it.audio").isFile }
 
-    fun knownDownloadCount(discourseId: String): Int = downloadDiscourses()
+    fun activeDownloadCount(discourseId: String): Int = downloadDiscourses()
         .filterValues { it == discourseId }
         .keys
         .count { id ->
-            val file = File(context.getExternalFilesDir("discourses") ?: context.filesDir, "$id.audio")
-            file.isFile || downloads()[id]?.let { downloadInfo(it).status } in listOf(
+            downloads()[id]?.let { downloadInfo(it).status } in listOf(
                 DownloadManager.STATUS_PENDING,
                 DownloadManager.STATUS_RUNNING,
                 DownloadManager.STATUS_PAUSED
