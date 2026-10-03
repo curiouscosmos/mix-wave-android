@@ -258,8 +258,7 @@ class DiscourseFragment : BaseFragment() {
         if (change != null && value.discourse.id !in change.discourseIds) return
         val percent = playbackStore.discourseProgress(value.discourse.id, value.tracks?.size ?: value.discourse.totalTracks)
         detail.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
-        detail.findViewById<TextView>(R.id.discourse_detail_title).contentDescription =
-            "${value.discourse.title}. ${getString(R.string.discourse_listening_percentage, percent)}"
+        updateDetailTitleContentDescription(value, percent)
     }
 
     private fun refreshDownloadSummary() {
@@ -269,6 +268,13 @@ class DiscourseFragment : BaseFragment() {
         val active = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADING }
         detail.findViewById<Button>(R.id.discourse_download_all).isVisible = active == 0 && downloaded < audios.size
         detail.findViewById<Button>(R.id.discourse_remove_all).isVisible = active == 0 && downloaded > 0
+        detail.findViewById<ImageView>(R.id.discourse_detail_download_icon).setColorFilter(
+            ContextCompat.getColor(requireContext(), if (downloaded > 0) R.color.green500 else R.color.grey500)
+        )
+        detail.findViewById<TextView>(R.id.discourse_detail_downloaded_count).apply {
+            isVisible = downloaded > 0
+            text = downloaded.toString()
+        }
         val progress = detail.findViewById<ProgressBar>(R.id.discourse_download_progress)
         detail.findViewById<TextView>(R.id.discourse_download_count).apply {
             isVisible = downloaded in 1 until audios.size
@@ -282,6 +288,16 @@ class DiscourseFragment : BaseFragment() {
                     else -> DiscourseDownloadState.MISSING
                 })
         } else DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING), active > 0)
+        updateDetailTitleContentDescription(value, playbackStore.discourseProgress(value.discourse.id, audios.size))
+    }
+
+    private fun updateDetailTitleContentDescription(value: DiscourseViewModel.State.Detail, percent: Int) {
+        val downloaded = value.tracks?.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADED } ?: 0
+        detail.findViewById<TextView>(R.id.discourse_detail_title).contentDescription = listOf(
+            value.discourse.title,
+            downloaded.takeIf { it > 0 }?.let { getString(R.string.discourse_download_count, it, value.tracks?.size ?: value.discourse.totalTracks) },
+            getString(R.string.discourse_listening_percentage, percent)
+        ).filterNotNull().joinToString(". ")
     }
 
     private fun refreshDownloadIndicators() {
@@ -428,11 +444,7 @@ class DiscourseFragment : BaseFragment() {
             holder.played.isVisible = playbackStore.isPlayed(item.id)
             holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}. ${holder.likes.text}"
             holder.itemView.setOnClickListener { click(holder.bindingAdapterPosition) }
-            holder.download.text = getString(when (downloads.state(item)) {
-                DiscourseDownloadState.MISSING, DiscourseDownloadState.FAILED -> R.string.download
-                DiscourseDownloadState.DOWNLOADING -> R.string.cancel
-                DiscourseDownloadState.DOWNLOADED -> R.string.discourse_remove_download
-            })
+            bindDownloadAction(holder, item)
             bindProgress(holder, item)
             bindDownloadProgress(holder.downloadProgress, downloads.progress(item))
             holder.download.setOnClickListener {
@@ -452,11 +464,7 @@ class DiscourseFragment : BaseFragment() {
             else {
                 bindProgress(holder, items[position])
                 bindDownloadProgress(holder.downloadProgress, downloads.progress(items[position]))
-                if ("download" in payloads) holder.download.text = getString(when (downloads.state(items[position])) {
-                    DiscourseDownloadState.MISSING, DiscourseDownloadState.FAILED -> R.string.download
-                    DiscourseDownloadState.DOWNLOADING -> R.string.cancel
-                    DiscourseDownloadState.DOWNLOADED -> R.string.discourse_remove_download
-                })
+                if ("download" in payloads) bindDownloadAction(holder, items[position])
             }
         }
         fun refreshDownloads() = notifyItemRangeChanged(0, items.size, "download")
@@ -464,7 +472,17 @@ class DiscourseFragment : BaseFragment() {
             holder.played.isVisible = playbackStore.isPlayed(item.id)
             val percent = playbackStore.audioProgress(item.id)
             holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
-            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}. ${holder.likes.text}. ${getString(R.string.discourse_listening_percentage, percent)}"
+            val downloadState = if (downloads.state(item) == DiscourseDownloadState.DOWNLOADED) R.string.discourse_downloaded else R.string.not_downloaded
+            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}. ${holder.likes.text}. ${getString(downloadState)}. ${getString(R.string.discourse_listening_percentage, percent)}"
+        }
+        private fun bindDownloadAction(holder: DiscourseTrackHolder, item: DiscourseAudio) {
+            val state = downloads.state(item)
+            holder.download.setColorFilter(ContextCompat.getColor(requireContext(), if (state == DiscourseDownloadState.DOWNLOADED) R.color.green500 else R.color.grey500))
+            holder.download.contentDescription = getString(when (state) {
+                DiscourseDownloadState.MISSING, DiscourseDownloadState.FAILED -> R.string.download
+                DiscourseDownloadState.DOWNLOADING -> R.string.cancel
+                DiscourseDownloadState.DOWNLOADED -> R.string.discourse_remove_download
+            })
         }
         fun refreshProgress(change: DiscoursePlaybackStore.Change?) {
             if (change == null) notifyItemRangeChanged(0, items.size, "progress")
@@ -482,6 +500,6 @@ private class DiscourseTrackHolder(view: View) : RecyclerView.ViewHolder(view) {
     val meta: TextView = view.findViewById(R.id.discourse_track_meta)
     val likes: TextView = view.findViewById(R.id.discourse_track_likes)
     val played: ImageView = view.findViewById(R.id.discourse_track_played)
-    val download: Button = view.findViewById(R.id.discourse_track_download)
+    val download: ImageButton = view.findViewById(R.id.discourse_track_download)
     val downloadProgress: ProgressBar = view.findViewById(R.id.discourse_download_progress)
 }

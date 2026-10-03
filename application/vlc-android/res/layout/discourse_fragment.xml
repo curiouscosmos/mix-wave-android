@@ -87,13 +87,44 @@
                 android:scaleType="centerCrop"
                 app:shapeAppearanceOverlay="@style/OshoThumbnailShapeAppearanceOverlay" />
 
-            <TextView
-                android:id="@+id/discourse_detail_title"
-                style="?attr/textAppearanceHeadline6"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_weight="1" />
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/discourse_detail_title"
+                    style="?attr/textAppearanceHeadline6"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/discourse_detail_download_icon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_download"
+                        android:tint="@color/grey500" />
+
+                    <TextView
+                        android:id="@+id/discourse_detail_downloaded_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="@color/green500"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
 
         <include layout="@layout/discourse_listening_progress" />
