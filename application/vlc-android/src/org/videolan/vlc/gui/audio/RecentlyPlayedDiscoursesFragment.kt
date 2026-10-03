@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.ProgressBar
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import org.videolan.vlc.discourse.DiscoursePlaybackStore
@@ -25,6 +26,7 @@ import org.videolan.tools.Settings
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.Discourse
 import org.videolan.vlc.discourse.DiscourseAudio
+import org.videolan.vlc.discourse.DiscourseDownloadStore
 import org.videolan.vlc.discourse.DiscourseRepository
 import org.videolan.vlc.discourse.playDiscourseAudio
 import org.videolan.vlc.discourse.resolveDiscourseUrl
@@ -41,6 +43,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private val audioCards = HashMap<String, MutableSet<View>>()
     private val discourseCards = HashMap<String, MutableSet<View>>()
     private val playbackStore by lazy { DiscoursePlaybackStore(requireContext()) }
+    private val downloads by lazy { DiscourseDownloadStore(requireContext()) }
     private fun bindProgress(card: View, id: String, count: Int?) {
         progressCards[card] = id to count
         (if (count == null) audioCards else discourseCards).getOrPut(id) { HashSet() }.add(card)
@@ -49,7 +52,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun updateProgress(card: View, id: String, count: Int?) {
         val percent = if (count == null) playbackStore.audioProgress(id) else playbackStore.discourseProgress(id, count)
         card.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
-        val titleId = if (count == null) R.id.recently_played_track_title else R.id.recently_played_discourse_title
+        val titleId = if (count == null) R.id.recently_played_track_title else R.id.discourse_title
         card.contentDescription = "${card.findViewById<TextView>(titleId).text}. ${getString(R.string.discourse_listening_percentage, percent)}"
     }
     private fun clearCards(container: ViewGroup) {
@@ -100,19 +103,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             section.isVisible = false
         } else {
             section.isVisible = true
-            list.forEach { discourse ->
-                val card = layoutInflater.inflate(R.layout.recently_played_discourse_card, container, false)
-                card.findViewById<TextView>(R.id.recently_played_discourse_title).text = discourse.title
-                card.findViewById<TextView>(R.id.recently_played_discourse_meta).text = getString(
-                    R.string.discourse_counts,
-                    discourse.totalTracks,
-                    discourse.totalLikes
-                )
-                loadImage(card.findViewById(R.id.recently_played_discourse_image), discourse)
-                card.setOnClickListener { (parentFragment as? HomeFragment)?.openDiscourse(discourse) }
-                bindProgress(card, discourse.id, discourse.totalTracks)
-                container.addView(card)
-            }
+            list.forEach { discourse -> addDiscourseCard(container, discourse, getString(R.string.discourse_counts, discourse.totalTracks, discourse.totalLikes)) }
         }
     }
 
@@ -165,15 +156,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         val discourseContainer = root.findViewById<ViewGroup>(R.id.weekly_discourses_list)
         clearCards(discourseContainer)
         discourseSection.isVisible = discourses.isNotEmpty()
-        discourses.forEach { discourse ->
-            val card = layoutInflater.inflate(R.layout.recently_played_discourse_card, discourseContainer, false)
-            card.findViewById<TextView>(R.id.recently_played_discourse_title).text = discourse.title
-            card.findViewById<TextView>(R.id.recently_played_discourse_meta).text = getString(R.string.weekly_plays, discourse.plays)
-            loadImage(card.findViewById(R.id.recently_played_discourse_image), discourse)
-            card.setOnClickListener { (parentFragment as? HomeFragment)?.openDiscourse(discourse) }
-            bindProgress(card, discourse.id, discourse.totalTracks)
-            discourseContainer.addView(card)
-        }
+        discourses.forEach { discourse -> addDiscourseCard(discourseContainer, discourse, getString(R.string.weekly_plays, discourse.plays)) }
 
         val audioSection = root.findViewById<View>(R.id.weekly_tracks_section)
         val audioContainer = root.findViewById<ViewGroup>(R.id.weekly_tracks_list)
@@ -202,6 +185,31 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         card.setOnClickListener { MediaUtils.openMedia(requireContext(), track) }
         track.discoursePlaybackIds()?.let { bindProgress(card, it.audioId, null) }
         if (track.discoursePlaybackIds() == null) card.findViewById<ProgressBar>(R.id.listening_progress).isVisible = false
+        container.addView(card)
+    }
+
+    private fun addDiscourseCard(container: ViewGroup, discourse: Discourse, metadata: String) {
+        val card = layoutInflater.inflate(R.layout.discourse_card, container, false)
+        card.findViewById<TextView>(R.id.discourse_title).text = discourse.title
+        card.findViewById<TextView>(R.id.discourse_language).text = discourse.language.replaceFirstChar(Char::uppercase)
+        card.findViewById<TextView>(R.id.discourse_counts).text = metadata
+        val completed = downloads.downloadedCount(discourse.id)
+        card.findViewById<ImageView>(R.id.discourse_download_icon).setColorFilter(
+            ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500)
+        )
+        card.findViewById<TextView>(R.id.discourse_downloaded_count).apply {
+            isVisible = completed > 0
+            text = completed.toString()
+        }
+        val active = downloads.activeDownloadCount(discourse.id)
+        card.findViewById<ProgressBar>(R.id.discourse_download_progress).apply {
+            isVisible = active > 0
+            isIndeterminate = false
+            progress = (completed * 100 / discourse.totalTracks.coerceAtLeast(1)).coerceAtMost(100)
+        }
+        loadImage(card.findViewById(R.id.discourse_image), discourse)
+        card.setOnClickListener { (parentFragment as? HomeFragment)?.openDiscourse(discourse) }
+        bindProgress(card, discourse.id, discourse.totalTracks)
         container.addView(card)
     }
 
