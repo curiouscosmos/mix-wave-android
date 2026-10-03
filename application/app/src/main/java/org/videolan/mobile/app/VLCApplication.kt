@@ -41,12 +41,16 @@ class VLCApplication : MultiDexApplication(), Dialog.Callbacks by DialogDelegate
 
     @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
-        SentryAndroid.init(this) { options ->
-            options.dsn = BuildConfig.SENTRY_DSN
-            options.environment = if (BuildConfig.DEBUG) "debug" else "production"
-        }
-        setupApplication()
         super.onCreate()
+        setupApplication()
+        try {
+            SentryAndroid.init(this) { options ->
+                options.dsn = BuildConfig.SENTRY_DSN
+                options.environment = if (BuildConfig.DEBUG) "debug" else "production"
+            }
+        } catch (error: Throwable) {
+            Log.e(TAG, "Unable to initialize Sentry; continuing without error reporting", error)
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
