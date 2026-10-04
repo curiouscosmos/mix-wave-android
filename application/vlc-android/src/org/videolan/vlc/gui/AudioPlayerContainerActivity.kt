@@ -477,6 +477,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         if (!::audioPlayerContainer.isInitialized) return
         val margin = 0
         val navigationClearance = if (this is MainActivity && !isTablet()) (if (mixerControlsAtNavigation) 94.dp else 118.dp) else 0
+        audioPlayerContainer.translationY = if (::playerBehavior.isInitialized && playerBehavior.state == STATE_COLLAPSED) -10.dp.toFloat() else 0f
         audioPlayerContainer.updateLayoutParams<CoordinatorLayout.LayoutParams> {
             val targetBottomMargin = bottomInset + navigationClearance
             if (leftMargin == margin && rightMargin == margin && bottomMargin == targetBottomMargin) return@updateLayoutParams
