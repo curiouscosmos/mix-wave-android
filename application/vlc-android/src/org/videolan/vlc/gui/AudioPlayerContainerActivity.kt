@@ -234,6 +234,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
                     topInset = insets.top
                     bottomInset = insets.bottom
                     if (::audioPlayer.isInitialized) audioPlayer.setBottomMargin()
+                    updateMiniPlayerLayout()
                 }
                 setContentBottomPadding()
             }
@@ -310,6 +311,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     fun setMixerControlsAtNavigation(enabled: Boolean) {
         if (mixerControlsAtNavigation == enabled) return
         mixerControlsAtNavigation = enabled
+        updateMiniPlayerLayout()
         if (::fragmentContainer.isInitialized) setContentBottomPadding()
     }
 
@@ -474,11 +476,13 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     private fun updateMiniPlayerLayout() {
         if (!::audioPlayerContainer.isInitialized) return
         val margin = 0
+        val navigationClearance = if (this is MainActivity && !isTablet()) (if (mixerControlsAtNavigation) 84.dp else 108.dp) else 0
         audioPlayerContainer.updateLayoutParams<CoordinatorLayout.LayoutParams> {
-            if (leftMargin == margin && rightMargin == margin && bottomMargin == bottomInset) return@updateLayoutParams
+            val targetBottomMargin = bottomInset + navigationClearance
+            if (leftMargin == margin && rightMargin == margin && bottomMargin == targetBottomMargin) return@updateLayoutParams
             leftMargin = margin
             rightMargin = margin
-            bottomMargin = bottomInset
+            bottomMargin = targetBottomMargin
         }
     }
 
