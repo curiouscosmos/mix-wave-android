@@ -1383,6 +1383,7 @@
     <string name="ra_file">File</string>
     <string name="ra_upload_remaining">Uploading %s files</string>
     <string name="ra_upload_all">Upload all</string>
+    <string name="ra_upload_subtitle">Upload subtitle</string>
     <string name="ra_drop_files_tip">Drop files anywhere to send to your device</string>
     <string name="ra_prepare_download">Preparing your download</string>
     <string name="ra_forbidden">Content disabled in the settings</string>
