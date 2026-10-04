@@ -135,9 +135,6 @@ import org.videolan.resources.util.launchForeground
 import org.videolan.tools.BitmapCache
 import org.videolan.tools.KEY_APP_THEME
 import org.videolan.tools.KEY_INCLUDE_MISSING
-import org.videolan.tools.KEY_INCOGNITO
-import org.videolan.tools.KEY_INCOGNITO_PLAYBACK_SPEED_AUDIO_GLOBAL_VALUE
-import org.videolan.tools.KEY_INCOGNITO_PLAYBACK_SPEED_VIDEO_GLOBAL_VALUE
 import org.videolan.tools.MultiSelectHelper
 import org.videolan.tools.Settings
 import org.videolan.tools.dp
@@ -567,27 +564,6 @@ object UiTools {
 //        if (VLCBilling.getInstance(activity.application).status == BillingStatus.FAILURE ||  VLCBilling.getInstance(activity.application).skuDetails.isEmpty()) donationsButton.setGone() else donationsButton.setVisible()
 //    }
 
-
-    /**
-     * Update the incognito mode setting
-     *
-     * @param activity the activity that launched the change
-     * @param item the menu item that was clicked
-     * @return true if the change has been applied, false otherwise
-     */
-    fun updateIncognitoMode(activity: FragmentActivity, item: MenuItem): Boolean {
-        if (activity.showPinIfNeeded()) return false
-        val settings = Settings.getInstance(activity)
-        settings.putSingle(KEY_INCOGNITO, !settings.getBoolean(KEY_INCOGNITO, false))
-        item.isChecked = !item.isChecked
-        if (!item.isChecked) {
-            settings.edit {
-                remove(KEY_INCOGNITO_PLAYBACK_SPEED_VIDEO_GLOBAL_VALUE)
-                remove(KEY_INCOGNITO_PLAYBACK_SPEED_AUDIO_GLOBAL_VALUE)
-            }
-        }
-        return true
-    }
 
     fun setKeyboardVisibility(v: View?, show: Boolean) {
         if (v == null) return

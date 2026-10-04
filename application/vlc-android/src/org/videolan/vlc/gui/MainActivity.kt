@@ -280,7 +280,6 @@ class MainActivity : ContentActivity(),
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.findItem(R.id.ml_menu_refresh)?.isVisible = Permissions.canReadStorage(this)
-        menu?.findItem(R.id.incognito_mode)?.isChecked = Settings.getInstance(this).getBoolean(KEY_INCOGNITO, false)
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -295,13 +294,6 @@ class MainActivity : ContentActivity(),
             // Refresh
             R.id.ml_menu_refresh -> {
                 if (Permissions.canReadStorage(this)) forceRefresh()
-                true
-            }
-            R.id.incognito_mode -> {
-                lifecycleScope.launch {
-                    if (!UiTools.updateIncognitoMode(this@MainActivity, item)) return@launch
-                    updateIncognitoModeIcon()
-                }
                 true
             }
             android.R.id.home ->

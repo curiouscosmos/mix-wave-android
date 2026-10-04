@@ -38,7 +38,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.AppBarLayout
 import kotlinx.coroutines.launch
 import org.videolan.libvlc.Dialog
@@ -50,10 +49,8 @@ import org.videolan.resources.KEY_FOLDER
 import org.videolan.resources.KEY_GROUP
 import org.videolan.resources.util.applyOverscanMargin
 import org.videolan.resources.util.parcelable
-import org.videolan.tools.KEY_INCOGNITO
 import org.videolan.tools.RESULT_RESCAN
 import org.videolan.tools.RESULT_RESTART
-import org.videolan.tools.Settings
 import org.videolan.vlc.R
 import org.videolan.vlc.gui.audio.AudioAlbumsSongsFragment
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
@@ -165,7 +162,6 @@ class SecondaryActivity : ContentActivity(), IDialogManager {
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.findItem(R.id.ml_menu_refresh)?.isVisible = Permissions.canReadStorage(this)
-        menu?.findItem(R.id.incognito_mode)?.isChecked = Settings.getInstance(this).getBoolean(KEY_INCOGNITO, false)
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -176,12 +172,6 @@ class SecondaryActivity : ContentActivity(), IDialogManager {
                 if (Permissions.canReadStorage(this)) {
                     val ml = Medialibrary.getInstance()
                     if (!ml.isWorking) reloadLibrary()
-                }
-                return true
-            }
-            R.id.incognito_mode -> {
-                lifecycleScope.launch {
-                    if (!UiTools.updateIncognitoMode(this@SecondaryActivity, item)) return@launch
                 }
                 return true
             }
