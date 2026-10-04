@@ -535,13 +535,6 @@ object UiTools {
         v.findViewById<View>(R.id.about_website_container).setOnClickListener {
             activity.openLinkIfPossible("https://sandalbar.online")
         }
-        v.findViewById<View>(R.id.about_report_container).setOnClickListener {
-            activity.startActivity(Intent(activity, FeedbackActivity::class.java))
-        }
-        v.findViewById<View>(R.id.about_sources_container).setOnClickListener {
-            activity.openLinkIfPossible("https://github.com/curiouscosmos/mix-wave-android")
-        }
-
         v.findViewById<View>(R.id.about_authors_container).setOnClickListener {
             activity.startActivity(Intent(activity, AuthorsActivity::class.java))
         }

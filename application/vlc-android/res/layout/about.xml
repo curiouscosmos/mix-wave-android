@@ -223,108 +223,6 @@
 
 
         <androidx.cardview.widget.CardView
-                android:id="@+id/about_report_container"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?android:attr/selectableItemBackground"
-                app:cardBackgroundColor="@color/transparent"
-                app:cardCornerRadius="4dp"
-                app:cardElevation="0dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/about_website_container"
-                app:layout_constraintWidth_max="600dp">
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:orientation="horizontal">
-
-                <androidx.appcompat.widget.AppCompatImageView
-                        android:id="@+id/report_icon"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_vertical"
-                        android:layout_marginStart="16dp"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:srcCompat="@drawable/ic_feedback" />
-
-                <TextView
-                        android:id="@+id/report_text"
-                        style="@style/About.Title"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_vertical"
-                        android:layout_marginStart="24dp"
-                        android:layout_marginEnd="16dp"
-                        android:layout_weight="1"
-                        android:text="@string/send_feedback"
-                        app:layout_constraintBottom_toBottomOf="@+id/report_icon"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintHorizontal_bias="0.0"
-                        app:layout_constraintStart_toEndOf="@+id/report_icon"
-                        app:layout_constraintTop_toTopOf="@+id/report_icon" />
-            </androidx.constraintlayout.widget.ConstraintLayout>
-        </androidx.cardview.widget.CardView>
-
-
-        <androidx.cardview.widget.CardView
-                android:id="@+id/about_sources_container"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?android:attr/selectableItemBackground"
-                app:cardBackgroundColor="@color/transparent"
-                app:cardCornerRadius="4dp"
-                app:cardElevation="0dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/about_report_container"
-                app:layout_constraintWidth_max="600dp">
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:orientation="horizontal">
-
-                <androidx.appcompat.widget.AppCompatImageView
-                        android:id="@+id/sources_icon"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_vertical"
-                        android:layout_marginStart="16dp"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:srcCompat="@drawable/ic_sourcecode" />
-
-                <TextView
-                        android:id="@+id/sources_text"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_vertical"
-                        android:layout_marginStart="24dp"
-                        android:layout_marginEnd="16dp"
-                        android:layout_weight="1"
-                        android:text="@string/sources"
-                        style="@style/About.Title"
-                        app:layout_constraintBottom_toBottomOf="@+id/sources_icon"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toEndOf="@+id/sources_icon"
-                        app:layout_constraintTop_toTopOf="@+id/sources_icon" />
-            </androidx.constraintlayout.widget.ConstraintLayout>
-        </androidx.cardview.widget.CardView>
-
-        <androidx.cardview.widget.CardView
                 android:id="@+id/about_libraries_container"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -338,7 +236,7 @@
                 app:cardElevation="0dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/about_sources_container"
+                app:layout_constraintTop_toBottomOf="@+id/about_website_container"
                 app:layout_constraintWidth_max="600dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
