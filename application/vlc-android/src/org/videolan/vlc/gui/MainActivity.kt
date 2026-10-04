@@ -267,12 +267,6 @@ class MainActivity : ContentActivity(),
         super.onSaveInstanceState(outState)
     }
 
-    override fun onRestart() {
-        super.onRestart()
-        /* Reload the latest preferences */
-        reloadPreferences()
-    }
-
     override fun startSupportActionMode(callback: ActionMode.Callback): ActionMode? {
         appBarLayout.setExpanded(true)
         return super.startSupportActionMode(callback)

@@ -133,10 +133,6 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
 
     private fun idIsExtension(id: Int) = id in 1..100
 
-    override fun reloadPreferences() {
-        currentFragmentId = defaultFragmentId
-    }
-
     override fun configurationChanged(size: Int) {
         navigationView.forEach {
             when (it) {
@@ -211,7 +207,6 @@ interface INavigator {
 
     fun MainActivity.setupNavigation(state: Bundle?)
     fun currentIdIsExtension(): Boolean
-    fun reloadPreferences()
     fun configurationChanged(size: Int)
     fun getFragmentWidth(activity: Activity): Int
     fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse)
