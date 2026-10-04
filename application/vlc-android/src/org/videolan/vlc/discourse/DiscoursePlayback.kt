@@ -15,6 +15,12 @@ private const val DISCOURSE_TAG_SEPARATOR = "|"
 
 data class DiscoursePlaybackIds(val discourseId: String, val audioId: String)
 
+internal fun discourseContinuation(audios: List<DiscourseAudio>, ids: DiscoursePlaybackIds): List<DiscourseAudio> {
+    val tracks = audios.filter { it.discourseId == ids.discourseId }.distinctBy { it.id }
+    val selected = tracks.indexOfFirst { it.id == ids.audioId }
+    return if (selected < 0) emptyList() else tracks.drop(selected + 1)
+}
+
 internal fun discourseCheckpointDue(lastCheckpoint: Long, elapsedTime: Long) = elapsedTime - lastCheckpoint >= 30_000L
 
 fun DiscourseAudio.toMediaWrapper(context: Context): MediaWrapper = MLServiceLocator.getAbstractMediaWrapper(

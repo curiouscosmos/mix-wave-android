@@ -10,6 +10,9 @@ import androidx.core.net.toUri
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -89,6 +92,10 @@ import org.videolan.vlc.R
 import org.videolan.vlc.gui.browser.BaseBrowserFragment
 import org.videolan.vlc.gui.video.VideoPlayerActivity
 import org.videolan.vlc.discourse.DiscoursePlaybackStore
+import org.videolan.vlc.discourse.DiscoursePlaybackIds
+import org.videolan.vlc.discourse.DiscourseRepository
+import org.videolan.vlc.discourse.discourseContinuation
+import org.videolan.vlc.discourse.toMediaWrapper
 import org.videolan.vlc.discourse.discoursePlaybackIds
 import org.videolan.vlc.discourse.discourseCheckpointDue
 import org.videolan.vlc.util.FileUtils
@@ -136,6 +143,8 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
     private val ctx by lazy(LazyThreadSafetyMode.NONE) { service.applicationContext }
     private val discoursePlaybackStore by lazy(LazyThreadSafetyMode.NONE) { DiscoursePlaybackStore(ctx) }
     private var lastDiscourseCheckpoint = 0L
+    private var discourseContinuationJob: Job? = null
+    private var playbackSession = Any()
     var currentIndex = -1
         set(value) {
             field = value
@@ -248,6 +257,10 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
 
     @MainThread
     suspend fun load(list: List<MediaWrapper>, position: Int, mlUpdate: Boolean = false, avoidErasingStop:Boolean = false) {
+        discourseContinuationJob?.cancel()
+        playbackSession = Any()
+        val session = playbackSession
+        val continuationIds = list.singleOrNull()?.discoursePlaybackIds()
         saveMediaList()
         savePosition()
         mediaList.removeEventListener(this@PlaylistManager)
@@ -300,6 +313,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             service.showNotification()
         }
         if (settings.getBoolean(KEY_AUDIO_FORCE_SHUFFLE, false) && getCurrentMedia()?.type == MediaWrapper.TYPE_AUDIO && !shuffling && canShuffle()) shuffle()
+        if (playbackSession === session && continuationIds != null) loadDiscourseContinuation(session, continuationIds)
         if (settings.getLong(SLEEP_TIMER_DEFAULT_INTERVAL, -1L) != -1L) {
             service.waitForMediaEnd = settings.getBoolean(SLEEP_TIMER_DEFAULT_WAIT, false)
             service.resetOnInteraction = settings.getBoolean(SLEEP_TIMER_DEFAULT_RESET_INTERACTION, false)
@@ -307,6 +321,31 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             sleepTime.timeInMillis += settings.getLong(SLEEP_TIMER_DEFAULT_INTERVAL, -1L)
             sleepTime.set(Calendar.SECOND, 0)
             service.setSleepTimer(sleepTime)
+        }
+    }
+
+    private fun loadDiscourseContinuation(session: Any, ids: DiscoursePlaybackIds) {
+        if (getCurrentMedia()?.discoursePlaybackIds() != ids ||
+            mediaList.copy.singleOrNull()?.discoursePlaybackIds() != ids) return
+        discourseContinuationJob = launch {
+            try {
+                val tracks = discourseContinuation(DiscourseRepository(ctx).getDiscourseAudios(ids.discourseId).data, ids)
+                if (tracks.isEmpty()) return@launch
+                val media = withContext(Dispatchers.IO) {
+                    discoursePlaybackStore.register(tracks)
+                    tracks.map { it.toMediaWrapper(ctx) }
+                }
+                ensureActive()
+                if (playbackSession === session && getCurrentMedia()?.discoursePlaybackIds() == ids &&
+                    mediaList.copy.singleOrNull()?.discoursePlaybackIds() == ids) {
+                    discourseContinuationJob = null
+                    insertNext(media)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Unable to load discourse continuation", e)
+            }
         }
     }
 
@@ -407,6 +446,8 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
     }
 
     fun stop(systemExit: Boolean = false, video: Boolean = false) {
+        discourseContinuationJob?.cancel()
+        playbackSession = Any()
         clearABRepeat()
         if (stopAfter != -1) Settings.getInstance(AppContextProvider.appContext).putSingle(AUDIO_STOP_AFTER, stopAfter)
         stopAfter = -1
@@ -618,6 +659,8 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
     }
 
     fun onServiceDestroyed() {
+        discourseContinuationJob?.cancel()
+        playbackSession = Any()
         player.release()
     }
 
@@ -666,6 +709,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
 
     @MainThread
     override fun onItemAdded(index: Int, mrl: String) {
+        discourseContinuationJob?.cancel()
         if (BuildConfig.DEBUG) Log.i(TAG, "CustomMediaListItemAdded")
         if (currentIndex >= index && !expanding) ++currentIndex
         addUpdateActor.trySend(Unit)
@@ -1257,6 +1301,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                     playingState.value = true
                 }
                 MediaPlayer.Event.EndReached -> {
+                    discourseContinuationJob?.cancel()
                     clearABRepeat()
                     getCurrentMedia()?.let { media ->
                         media.addFlags(MediaWrapper.MEDIA_FROM_START)
