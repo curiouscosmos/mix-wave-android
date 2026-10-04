@@ -630,7 +630,9 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     private fun updateProgress(progress: PlaybackProgress) {
         if (playlistModel.currentMediaPosition == -1) return
         binding.length.text = if (showRemainingTime) Tools.millisToString(progress.time - progress.length) else progress.lengthText
+        binding.headerLength.text = progress.lengthText
         binding.timeline.max = progress.length.toInt()
+        binding.headerProgress.max = progress.length.toInt()
         binding.progressBar.max = progress.length.toInt()
 
         if (!previewingSeek) {
@@ -638,6 +640,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
             binding.headerTime.text = if (showRemainingTime) Tools.millisToString(progress.time - progress.length) else displayTime
             binding.time.text = displayTime
             if (!isDragging) binding.timeline.progress = progress.time.toInt()
+            binding.headerProgress.progress = progress.time.toInt()
             binding.progressBar.progress = progress.time.toInt()
         }
 

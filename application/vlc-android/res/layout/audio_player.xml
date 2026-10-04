@@ -253,7 +253,9 @@
                     android:layout_width="0dp"
                     android:layout_height="0dp"
                     android:background="@drawable/audio_mini_player_background"
-                    android:minHeight="76dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:minHeight="92dp"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintLeft_toLeftOf="parent"
                     app:layout_constraintRight_toRightOf="parent"
@@ -272,7 +274,7 @@
             <org.videolan.vlc.gui.view.HeaderMediaSwitcher
                     android:id="@+id/audio_media_switcher"
                     android:layout_width="0dp"
-                    android:layout_height="76dp"
+                    android:layout_height="92dp"
                     android:background="#00000000"
                     app:layout_constraintEnd_toStartOf="@+id/barrier"
                     app:layout_constraintStart_toStartOf="parent"
@@ -343,6 +345,32 @@
                     android:orientation="horizontal"
                     app:layout_constraintGuide_begin="68dp" />
 
+            <ProgressBar
+                    android:id="@+id/header_progress"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="3dp"
+                    android:indeterminate="false"
+                    android:maxHeight="3dp"
+                    android:minHeight="3dp"
+                    android:padding="0dp"
+                    android:progressDrawable="@drawable/audio_player_seekbar_mixwave"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/header_time"
+                    app:layout_constraintStart_toStartOf="@id/audio_media_switcher" />
+
+            <TextView
+                    android:id="@+id/header_length"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/time_0"
+                    android:textColor="@color/white_transparent_60"
+                    android:textSize="11sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/header_play_pause"
+                    app:layout_constraintTop_toTopOf="@id/header_progress" />
+
             <ImageView
                     android:id="@+id/playlist_search"
                     android:layout_width="@dimen/audio_player_button_size"
@@ -388,30 +416,31 @@
                     android:id="@+id/header_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/default_margin"
-                    android:layout_marginRight="@dimen/default_margin"
+                    android:layout_marginEnd="8dp"
                     android:clickable="true"
                     android:onClick="@{fragment::onTimeLabelClick}"
                     android:text="@string/time_0"
                     android:textColor="?attr/font_default"
                     android:textSize="@dimen/audio_player_header_time_text_size"
-                    app:layout_constraintBottom_toBottomOf="@id/guideline_header_bottom"
-                    app:layout_constraintEnd_toStartOf="@+id/header_play_pause"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/header_length"
+                    app:layout_constraintTop_toTopOf="@id/header_progress" />
 
             <ImageView
                     android:id="@+id/header_play_pause"
                     android:layout_width="@dimen/audio_player_header_play_button_size"
                     android:layout_height="@dimen/audio_player_header_play_button_size"
                     android:layout_marginEnd="@dimen/default_margin"
+                    android:background="@drawable/audio_mini_player_play_background"
                     android:contentDescription="@string/play"
                     android:focusable="true"
                     android:onClick="@{fragment::onPlayPauseClick}"
                     android:onLongClick="@{fragment::onStopClick}"
                     android:scaleType="fitXY"
-                    app:layout_constraintBottom_toBottomOf="@id/guideline_header_bottom"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0.5" />
 
             <androidx.constraintlayout.widget.Barrier
                     android:id="@+id/barrier"

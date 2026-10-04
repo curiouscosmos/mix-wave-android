@@ -294,7 +294,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.expandedTitle?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
         binding.expandedMore?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
         //views disappearing in full player
-        val disappearingViews = arrayOf(binding.headerPlayPause, binding.headerTime, binding.headerShuffle, binding.headerPrevious, binding.headerLargePlayPause, binding.headerNext, binding.headerRepeat)
+        val disappearingViews = arrayOf(binding.headerPlayPause, binding.headerTime, binding.headerLength, binding.headerProgress, binding.headerShuffle, binding.headerPrevious, binding.headerLargePlayPause, binding.headerNext, binding.headerRepeat)
         disappearingViews.forEach {
             it.alpha = 1 - slideOffset
         }
