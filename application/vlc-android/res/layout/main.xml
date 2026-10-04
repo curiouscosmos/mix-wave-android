@@ -69,7 +69,6 @@
             android:layout_gravity="bottom"
             android:layout_marginHorizontal="16dp"
             android:layout_marginBottom="12dp"
-            android:alpha="0.7"
             android:background="@drawable/bottom_navigation_capsule_background"
             android:backgroundTint="@null"
             android:paddingTop="0dp"
