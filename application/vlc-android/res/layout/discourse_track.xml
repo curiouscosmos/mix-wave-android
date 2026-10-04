@@ -77,7 +77,7 @@
             android:tint="@color/red"
             android:visibility="gone" />
 
-        <ImageView android:id="@+id/discourse_track_downloaded" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_check" android:tint="#FF5269" android:contentDescription="@string/discourse_downloaded" android:visibility="gone" />
+        <ImageView android:id="@+id/discourse_track_downloaded" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_download" android:tint="@color/green500" android:contentDescription="@string/discourse_downloaded" android:visibility="gone" />
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/discourse_track_spinner"
             android:layout_width="24dp" android:layout_height="24dp"
