@@ -340,6 +340,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                     mediaList.copy.singleOrNull()?.discoursePlaybackIds() == ids) {
                     discourseContinuationJob = null
                     insertNext(media)
+                    service.onMediaListChanged()
                 }
             } catch (e: CancellationException) {
                 throw e
