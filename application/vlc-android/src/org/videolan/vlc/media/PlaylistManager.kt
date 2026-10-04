@@ -92,7 +92,6 @@ import org.videolan.vlc.discourse.DiscoursePlaybackStore
 import org.videolan.vlc.discourse.discoursePlaybackIds
 import org.videolan.vlc.discourse.discourseCheckpointDue
 import org.videolan.vlc.util.FileUtils
-import org.videolan.vlc.util.FontCache
 import org.videolan.vlc.util.awaitMedialibraryStarted
 import org.videolan.vlc.util.isSchemeFD
 import org.videolan.vlc.util.isSchemeHttpOrHttps
@@ -500,10 +499,6 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
     }
 
     suspend fun playIndex(index: Int, flags: Int = 0, forceResume:Boolean = false, forceRestart:Boolean = false) {
-        FontCache.await(service) {
-            service.showToast(service.getString(R.string.font_cache_building), Toast.LENGTH_LONG)
-        }
-
         if (mediaList.getMedia(index)?.discoursePlaybackIds() != null) discoursePlaybackStore.initialize()
         if (index != currentIndex) savePosition()
         lastDiscourseCheckpoint = android.os.SystemClock.elapsedRealtime()

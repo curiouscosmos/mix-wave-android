@@ -292,7 +292,6 @@
     <string name="load_3_period" translatable="false">...</string>
 
     <string name="invalid_location">The media at %1$s cannot be played.</string>
-    <string name="font_cache_building">Preparing the fonts for the first playback, this can take a few seconds</string>
     <string name="missing_location">This media is on an unavailable storage device and cannot be played.</string>
 
     <string name="search">Search</string>
@@ -359,7 +358,7 @@
     <string name="about_copyright" translatable="false">Copyleft &#169; 1996&#8211;2026 by VideoLAN</string>
     <string name="about_license" translatable="false">GNU General Public License v2.0</string>
     <string name="about_license_text" translatable="false"></string>
-    <string name="vlc_authors">and VLC Authors.</string>
+    <string name="vlc_authors">and upstream open-source contributors.</string>
     <string name="is_compiled_by">Compiled by</string>
     <string name="is_signed_by">Signed by</string>
     <string name="sources">Source code</string>
@@ -824,7 +823,7 @@
     <string name="apply_to_bt">Apply to bluetooth device</string>
     <string name="episodes">episodes</string>
     <string name="movies">movies</string>
-    <string name="videos">videos</string>
+    <string name="videos">Videos</string>
     <string name="default_action_videos">Videos</string>
     <string name="videos_all">All videos</string>
     <string name="clear_playback_history">Clear playback history</string>
