@@ -476,7 +476,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     private fun updateMiniPlayerLayout() {
         if (!::audioPlayerContainer.isInitialized) return
         val margin = 0
-        val navigationClearance = if (this is MainActivity && !isTablet()) (if (mixerControlsAtNavigation) 84.dp else 108.dp) else 0
+        val navigationClearance = if (this is MainActivity && !isTablet()) (if (mixerControlsAtNavigation) 94.dp else 118.dp) else 0
         audioPlayerContainer.updateLayoutParams<CoordinatorLayout.LayoutParams> {
             val targetBottomMargin = bottomInset + navigationClearance
             if (leftMargin == margin && rightMargin == margin && bottomMargin == targetBottomMargin) return@updateLayoutParams
