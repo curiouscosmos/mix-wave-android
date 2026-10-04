@@ -132,7 +132,6 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
     private fun setupTabLayout() {
         tabLayout?.apply {
             removeAllTabs()
-            addTab(newTab().setText(R.string.all))
             addTab(newTab().setText(R.string.local))
             addOnTabSelectedListener(this@VideoBrowserFragment)
             selectTab(getTabAt(viewPager.currentItem))
@@ -155,7 +154,7 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
      */
     inner class VideoPagerAdapter(fa: VideoBrowserFragment) : FragmentStateAdapter(fa) {
 
-        override fun getItemCount() = 2
+        override fun getItemCount() = 1
 
         // Returns the fragment to display for that page
         override fun createFragment(position: Int): Fragment {
@@ -196,7 +195,7 @@ class VideoBrowserFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Fi
     override fun allowedToExpand() = (getCurrentFragment() as? Filterable)?.allowedToExpand() == true
 
     private companion object {
-        const val LOCAL_TAB = 1
+        const val LOCAL_TAB = 0
     }
 
 }
