@@ -23,12 +23,10 @@ class HomeFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Filterable
     override val hasTabs = true
     private var tabLayout: TabLayout? = null
     private lateinit var viewPager: ViewPager2
-    private var pendingDiscourse: Discourse? = null
     private val settings by lazy(LazyThreadSafetyMode.NONE) { Settings.getInstance(requireContext()) }
     private val pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
         override fun onPageSelected(position: Int) {
             if (position in 0 until TAB_COUNT) settings.putSingle(KEY_HOME_TAB, position)
-            showPendingDiscourse()
         }
     }
 
@@ -56,18 +54,7 @@ class HomeFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Filterable
     }
 
     fun openDiscourse(discourse: Discourse) {
-        pendingDiscourse = discourse
-        viewPager.setCurrentItem(DISCOURSE_TAB, false)
-        tabLayout?.getTabAt(DISCOURSE_TAB)?.let { tabLayout?.selectTab(it) }
-        viewPager.post { showPendingDiscourse() }
-    }
-
-    private fun showPendingDiscourse() {
-        val discourse = pendingDiscourse ?: return
-        if (viewPager.currentItem != DISCOURSE_TAB) return
-        val fragment = currentFragment<DiscourseFragment>() ?: return
-        pendingDiscourse = null
-        fragment.openDiscourse(discourse)
+        DiscourseDetailActivity.open(requireContext(), discourse)
     }
 
     override fun onStart() {
@@ -90,7 +77,6 @@ class HomeFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Filterable
 
     override fun onDestroyView() {
         viewPager.unregisterOnPageChangeCallback(pageChangeCallback)
-        pendingDiscourse = null
         super.onDestroyView()
     }
 

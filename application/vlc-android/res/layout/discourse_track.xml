@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
+    android:background="@drawable/discourse_track_card"
+    android:layout_marginHorizontal="12dp" android:layout_marginVertical="4dp"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
@@ -15,18 +16,18 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="16dp"
+        android:paddingHorizontal="8dp"
         android:paddingVertical="8dp">
         <TextView
             android:id="@+id/discourse_track_number"
-            android:layout_width="40dp"
+            android:layout_width="24dp"
             android:layout_height="wrap_content"
             android:gravity="center" />
 
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/discourse_track_image"
-            android:layout_width="112dp"
-            android:layout_height="112dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginEnd="12dp"
             android:contentDescription="@null"
             android:scaleType="centerCrop"
@@ -39,6 +40,7 @@
             android:orientation="vertical">
 
             <TextView
+                android:textColor="#FFFFFF"
                 android:id="@+id/discourse_track_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -47,40 +49,49 @@
                 android:textAppearance="?attr/textAppearanceSubtitle1" />
 
             <TextView
+                android:textColor="#BEA8AA"
                 android:id="@+id/discourse_track_meta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:maxLines="1"
+                android:maxLines="2"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <TextView
+                android:visibility="gone" android:textColor="#BEA8AA"
                 android:id="@+id/discourse_track_likes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:maxLines="1"
+                android:maxLines="2"
                 android:textAppearance="?attr/textAppearanceCaption" />
         </LinearLayout>
 
         <ImageView
             android:id="@+id/discourse_track_played"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:contentDescription="@string/talkback_already_played"
             android:padding="3dp"
             android:src="@drawable/ic_mark_as_played"
             android:tint="@color/red"
             android:visibility="gone" />
 
+        <ImageView android:id="@+id/discourse_track_downloaded" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_check" android:tint="#FF5269" android:contentDescription="@string/discourse_downloaded" android:visibility="gone" />
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/discourse_track_spinner"
+            android:layout_width="24dp" android:layout_height="24dp"
+            android:indeterminate="false" android:visibility="gone"
+            app:indicatorSize="24dp" app:indicatorInset="0dp"
+            app:trackThickness="2dp" app:indicatorColor="#FF5269" app:trackColor="#4D2A33" />
         <ImageButton
             android:id="@+id/discourse_track_download"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="0dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/download"
-            android:src="@drawable/ic_download"
+            android:contentDescription="@string/more_actions"
+            android:src="@drawable/ic_player_more"
             android:tint="@color/grey500" />
 
     </LinearLayout>

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <ImageButton
+                android:visibility="gone"
+                android:id="@+id/discourse_back"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/back"
+                android:src="@drawable/ic_arrow_back" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="0dp"
+                android:layout_weight="0.4"
+                android:layout_height="wrap_content">
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/discourse_detail_image"
+                android:layout_width="0dp" android:layout_height="0dp"
+                app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintDimensionRatio="1:1"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/OshoThumbnailShapeAppearanceOverlay" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="0.6"
+                android:orientation="vertical">
+
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/discourse_detail_label" android:textColor="#BEA8AA" android:textSize="11sp" />
+                <TextView
+                    android:textColor="#FFFFFF" android:textSize="24sp" android:textStyle="bold"
+                    android:id="@+id/discourse_detail_title"
+                    style="?attr/textAppearanceHeadline6"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <TextView android:id="@+id/discourse_detail_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#BEA8AA" android:layout_marginTop="8dp" />
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/discourse_detail_download_icon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_download"
+                        android:tint="@color/grey500" />
+
+                    <TextView
+                        android:id="@+id/discourse_detail_downloaded_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="#FF5269"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/discourse_cancel_downloads"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/discourse_cancel_download"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <include layout="@layout/discourse_listening_progress" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp">
+
+            <com.google.android.material.button.MaterialButton android:id="@+id/discourse_play_all" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/play_all" android:textColor="#FFFFFF" app:backgroundTint="#CD263D" app:icon="@drawable/ic_play_all" app:iconSize="20dp" app:iconTint="#FFFFFF" />
+            <com.google.android.material.button.MaterialButton
+                app:strokeColor="#CD263D" app:strokeWidth="1dp" app:backgroundTint="#210C10" android:textColor="#FFFFFF"
+                android:id="@+id/discourse_download_all"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_marginStart="8dp"
+                android:layout_height="wrap_content"
+                android:text="@string/discourse_download_all" />
+
+        </LinearLayout>
+
+        <include layout="@layout/discourse_download_progress" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingHorizontal="12dp" android:orientation="horizontal">
+            <TextView
+                android:id="@+id/discourse_download_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="8dp"
+                android:textColor="#BEA8AA" android:textAppearance="?attr/textAppearanceCaption"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/discourse_remove_all"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="#FF5269" android:backgroundTint="#210C10" android:text="@string/discourse_remove_all" />
+        </LinearLayout>
+        <TextView android:id="@+id/discourse_tracks_heading" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:textColor="#FFFFFF" android:textStyle="bold" />
+</LinearLayout>

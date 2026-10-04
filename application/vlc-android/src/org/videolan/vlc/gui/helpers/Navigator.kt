@@ -180,9 +180,7 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
     }
 
     override fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse) {
-        showFragment(R.id.nav_audio)
-        activity.supportFragmentManager.executePendingTransactions()
-        (currentFragment as? HomeFragment)?.openDiscourse(discourse)
+        org.videolan.vlc.gui.audio.DiscourseDetailActivity.open(activity, discourse)
     }
 
 

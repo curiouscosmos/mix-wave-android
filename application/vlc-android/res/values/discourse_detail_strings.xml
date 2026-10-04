@@ -1,0 +1,8 @@
+<resources>
+    <string name="discourse_detail_label">DISCOURSE</string>
+    <string name="discourse_tracks_heading">TRACKS (%1$d)</string>
+    <string name="discourse_track_count">%1$d tracks</string>
+    <string name="discourse_known_total">%1$s known</string>
+    <string name="discourse_downloading_percent">Downloading · %1$d%%</string>
+    <string name="discourse_downloading">Downloading</string>
+</resources>

@@ -1,6 +1,8 @@
 package org.videolan.vlc.discourse
 
 import com.squareup.moshi.Json
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
 data class PaginationMeta(
     val page: Int,
@@ -9,6 +11,7 @@ data class PaginationMeta(
     @Json(name = "total_pages") val totalPages: Int
 )
 
+@Parcelize
 data class Discourse(
     val id: String,
     val title: String,
@@ -21,7 +24,7 @@ data class Discourse(
     @Json(name = "total_tracks") val totalTracks: Int = 0,
     @Json(name = "total_likes") val totalLikes: Int = 0,
     val plays: Int = 0
-)
+) : Parcelable
 
 data class DiscourseAudio(
     val id: String,

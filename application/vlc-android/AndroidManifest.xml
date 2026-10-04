@@ -978,6 +978,8 @@
         <activity
             android:name=".gui.onboarding.OnboardingActivity"
             android:theme="@style/Theme.VLC.Onboarding"/>
+        <activity android:name=".gui.audio.DiscourseDetailActivity"
+            android:exported="false" android:theme="@style/Theme.VLC" />
         <activity
             android:name=".gui.SecondaryActivity"
             android:theme="@style/Theme.VLC"
