@@ -179,6 +179,15 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         hidePlaylistConstraint.setVisibility(R.id.audio_forward_text, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.audio_forward_bookmark, View.GONE)
         hidePlaylistConstraint.setVisibility(R.id.audio_rewind_bookmark, View.GONE)
+        if (binding.expandedActions != null) {
+            hidePlaylistConstraint.setVisibility(R.id.expanded_actions, View.VISIBLE)
+            hidePlaylistConstraint.setVisibility(R.id.previous, View.GONE)
+            hidePlaylistConstraint.setVisibility(R.id.next, View.GONE)
+            showPlaylistConstraint.setVisibility(R.id.audio_rewind_10, View.VISIBLE)
+            showPlaylistConstraint.setVisibility(R.id.audio_forward_10, View.VISIBLE)
+            showPlaylistConstraint.setVisibility(R.id.audio_rewind_text, View.VISIBLE)
+            showPlaylistConstraint.setVisibility(R.id.audio_forward_text, View.VISIBLE)
+        }
         headerHidePlaylistConstraint.clear(R.id.playback_chips, ConstraintSet.BOTTOM)
         headerHidePlaylistConstraint.clear(R.id.playback_chips, ConstraintSet.TOP)
         headerHidePlaylistConstraint.connect(R.id.playback_chips, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP)
@@ -272,7 +281,8 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
     override fun onSlide(slideOffset: Float) {
         if (inSearch) return
         binding.contentLayout.setBackgroundResource(if (slideOffset == 0f) android.R.color.transparent else R.drawable.audio_player_screen_background)
-        binding.backgroundView.alpha = slideOffset
+        binding.backgroundView.alpha = slideOffset * if (binding.expandedActions != null) 0.55f else 1f
+        binding.expandedActions?.alpha = slideOffset
         binding.topGradient.alpha = slideOffset
         binding.bottomGradient.alpha = slideOffset
         binding.progressBar.alpha = 1 - slideOffset

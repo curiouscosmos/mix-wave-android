@@ -20,6 +20,8 @@
 
 package org.videolan.vlc.gui.audio
 
+import org.videolan.vlc.discourse.discoursePlaybackIds
+
 import android.Manifest
 import android.annotation.TargetApi
 import android.content.Intent
@@ -326,6 +328,54 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
 
         binding.songTitle?.setOnClickListener { coverMediaSwitcherListener.onTextClicked() }
         binding.songSubtitle?.setOnClickListener { coverMediaSwitcherListener.onTextClicked() }
+        binding.playerAddPlaylist?.setOnClickListener {
+            playlistModel.currentMediaWrapper?.let { requireActivity().addToPlaylist(listOf(it)) }
+        }
+        binding.playerSleep?.setOnClickListener { binding.sleepQuickAction.performClick() }
+        binding.playerDiscourse?.setOnClickListener {
+            val media = playlistModel.currentMediaWrapper ?: return@setOnClickListener
+            val ids = media.discoursePlaybackIds() ?: return@setOnClickListener
+            lifecycleScope.launch {
+                try {
+                    val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
+                    val discourse = repository.recentlyPlayedDiscourses.firstOrNull { it.id == ids.discourseId }
+                        ?: repository.getDiscourses(search = playlistModel.album).data.firstOrNull { it.id == ids.discourseId }
+                    if (discourse != null) DiscourseDetailActivity.open(requireContext(), discourse)
+                    else UiTools.snacker(requireActivity(), R.string.player_discourse_unavailable)
+                } catch (error: Exception) {
+                    if (error is kotlinx.coroutines.CancellationException) throw error
+                    UiTools.snacker(requireActivity(), R.string.player_action_failed)
+                }
+            }
+        }
+        binding.playerLike?.setOnClickListener { button ->
+            val media = playlistModel.currentMediaWrapper ?: return@setOnClickListener
+            val ids = media.discoursePlaybackIds()
+            if (ids == null) {
+                media.isFavorite = !media.isFavorite
+                updatePlayerActions()
+            } else {
+                button.isEnabled = false
+                lifecycleScope.launch {
+                    try {
+                        val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
+                        val result = repository.likeDiscourseAudio(ids.audioId)
+                        repository.recentlyPlayedAudios.firstOrNull { it.id == ids.audioId }?.let {
+                            repository.recordRecentlyPlayed(it.copy(totalLikes = result.totalLikes))
+                        }
+                        if (playlistModel.currentMediaWrapper?.discoursePlaybackIds()?.audioId == ids.audioId) {
+                            binding.playerLike?.text = result.totalLikes.toString()
+                            binding.playerLike?.compoundDrawableTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#EF3831"))
+                        }
+                    } catch (error: Exception) {
+                        if (error is kotlinx.coroutines.CancellationException) throw error
+                        UiTools.snacker(requireActivity(), R.string.player_action_failed)
+                    } finally {
+                        updatePlayerActions()
+                    }
+                }
+            }
+        }
 
         binding.hingeGoLeft.setOnClickListener {
             Settings.getInstance(requireActivity()).putSingle(AUDIO_HINGE_ON_RIGHT, false)
@@ -554,7 +604,22 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     }
 
     private var wasPlaying = true
+    private fun updatePlayerActions() {
+        val media = playlistModel.currentMediaWrapper ?: return
+        val ids = media.discoursePlaybackIds()
+        val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
+        val liked = if (ids == null) media.isFavorite else ids.audioId in repository.likedAudios
+        binding.playerLike?.isEnabled = !liked || ids == null
+        binding.playerLike?.compoundDrawableTintList = android.content.res.ColorStateList.valueOf(
+            android.graphics.Color.parseColor(if (liked) "#EF3831" else "#FFFFFF"))
+        binding.playerLike?.text = repository.recentlyPlayedAudios.firstOrNull { it.id == ids?.audioId }
+            ?.totalLikes?.toString() ?: getString(R.string.player_like_label)
+        binding.playerDiscourse?.isEnabled = ids != null
+        binding.playerDiscourse?.alpha = if (ids != null) 1f else 0.4f
+    }
+
     private fun updatePlayPause() {
+        updatePlayerActions()
         val ctx = context ?: return
         val playing = playlistModel.playing
         val text = ctx.getString(if (playing) R.string.pause else R.string.play)
@@ -563,6 +628,9 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         val drawableSmall = if (playing) playToPauseSmall else pauseToPlaySmall
         val drawableHeaderLarge = if (playing) playToPauseHeader else pauseToPlayHeader
         binding.playPause.setImageDrawable(drawable)
+        if (binding.expandedActions != null) {
+            binding.playPause.setImageResource(if (playing) R.drawable.ic_player_pause_solid else R.drawable.ic_player_play_solid)
+        }
         binding.headerLargePlayPause.setImageDrawable(drawableHeaderLarge)
         binding.headerPlayPause.setImageDrawable(drawableSmall)
         if (playing != wasPlaying) {

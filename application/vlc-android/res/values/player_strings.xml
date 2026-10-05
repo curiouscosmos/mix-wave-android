@@ -1,0 +1,7 @@
+<resources>
+    <string name="player_like_label">Like</string>
+    <string name="player_view_discourse">View Discourse</string>
+    <string name="player_sleep_timer">Sleep Timer</string>
+    <string name="player_discourse_unavailable">Discourse details are unavailable.</string>
+    <string name="player_action_failed">Could not complete this action. Please try again.</string>
+</resources>
