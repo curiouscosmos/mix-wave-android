@@ -61,7 +61,7 @@ allprojects {
 
 ext {
     appId = "com.oshodiscourse"
-    versionCode = (project.findProperty('versionCode') ?: 3070121).toInteger()
+    versionCode = (project.findProperty('versionCode') ?: 3070122).toInteger()
     vlcMajorVersion = project.hasProperty('forceVlc4') && project.getProperty('forceVlc4') ? 4 : 3
     versionName = project.findProperty('versionName') ?: '1.0.0'
     remoteAccessVersion = '0.23.0'
