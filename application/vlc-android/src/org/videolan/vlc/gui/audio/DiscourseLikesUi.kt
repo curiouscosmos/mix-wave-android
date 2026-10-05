@@ -17,12 +17,13 @@ import kotlinx.coroutines.launch
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.DiscourseLikesStore
 import org.videolan.vlc.discourse.DiscourseRepository
+import org.videolan.vlc.discourse.formatDiscourseLikes
 import java.util.WeakHashMap
 
 /** One binding path for catalogue cards, home rows and the detail header. */
 internal class DiscourseLikesUi(private val context: Context, private val owner: LifecycleOwner) {
     private val repository = DiscourseRepository(context)
-    private data class Binding(val target: DiscourseLikesStore.Target, val title: String, val count: Int, val showCount: Boolean)
+    private data class Binding(val target: DiscourseLikesStore.Target, val title: String, val count: Int)
     private val bindings = WeakHashMap<TextView, Binding>()
 
     init {
@@ -44,16 +45,17 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         }
     }
 
-    fun bind(root: View, id: String, audio: Boolean, title: String, count: Int = 0) {
+    fun bind(root: View, id: String, audio: Boolean, title: String, count: Int = 0, discourseId: String? = null) {
         val view = root.findViewById<TextView>(R.id.discourse_like)
-        val binding = Binding(DiscourseLikesStore.Target(id, audio), title, count, !audio)
+        val binding = Binding(DiscourseLikesStore.Target(id, audio), title, count)
         bindings[view] = binding
         view.isVisible = true
         render(view, binding, repository.likes.value)
         view.setOnClickListener {
             owner.lifecycleScope.launch {
                 try {
-                    if (audio) repository.likeDiscourseAudio(id, count) else repository.likeDiscourse(id, count)
+                    if (audio) repository.toggleDiscourseAudioLike(id, count, discourseId)
+                    else repository.toggleDiscourseLike(id, count)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
@@ -73,7 +75,7 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
 
     private fun render(view: TextView, binding: Binding, state: DiscourseLikesStore.State) {
         val liked = state.liked(binding.target)
-        val count = maxOf(state.counts[binding.target] ?: binding.count, binding.count)
+        val count = (state.counts[binding.target] ?: binding.count).coerceAtLeast(0)
         val color = Color.parseColor(if (liked) "#FF5269" else "#BEA8AA")
         val drawable = AppCompatResources.getDrawable(context,
             if (liked) R.drawable.ic_header_media_favorite else R.drawable.ic_header_media_favorite_outline)!!.mutate()
@@ -81,12 +83,12 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         val size = (24 * context.resources.displayMetrics.density).toInt()
         drawable.setBounds(0, 0, size, size)
         view.setCompoundDrawablesRelative(drawable, null, null, null)
-        view.text = if (binding.showCount) count.toString() else ""
+        view.text = formatDiscourseLikes(count)
         view.setTextColor(color)
         view.isSelected = liked
-        view.isEnabled = !liked
+        view.isEnabled = binding.target !in state.pending
         view.contentDescription = context.getString(
-            if (liked) R.string.discourse_liked_description else R.string.discourse_like_description,
+            if (liked) R.string.discourse_unlike_description else R.string.discourse_like_description,
             binding.title, count
         )
     }

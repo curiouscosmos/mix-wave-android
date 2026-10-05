@@ -13,6 +13,7 @@ import org.videolan.vlc.BuildConfig
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PUT
@@ -24,6 +25,13 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 interface DiscourseApi {
+    @DELETE("likes")
+    suspend fun unlike(
+        @Query("user_id") userId: String,
+        @Query("discourse_id") discourseId: String? = null,
+        @Query("discourse_audio_id") audioId: String? = null
+    ): UnlikeResponse
+
     @GET("likes")
     suspend fun likes(
         @Query("user_id") userId: String,

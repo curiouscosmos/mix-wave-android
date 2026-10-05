@@ -83,6 +83,17 @@ data class StatsData(
 
 data class LikeResponse(val data: LikeData)
 
+data class UnlikeResponse(val data: UnlikeData)
+
+data class UnlikeData(
+    @Json(name = "discourse_id") val discourseId: String? = null,
+    @Json(name = "discourse_audio_id") val discourseAudioId: String? = null,
+    @Json(name = "liked_by_user_id") val likedByUserId: String,
+    val unliked: Boolean,
+    @Json(name = "total_likes") val totalLikes: Int,
+    @Json(name = "discourse_total_likes") val discourseTotalLikes: Int? = null
+)
+
 data class LikeData(
     @Json(name = "discourse_id") val discourseId: String? = null,
     @Json(name = "discourse_audio_id") val discourseAudioId: String? = null,

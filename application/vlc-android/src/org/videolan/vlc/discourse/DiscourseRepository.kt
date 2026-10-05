@@ -86,9 +86,54 @@ class DiscourseRepository(
 
     suspend fun likeDiscourse(id: String, totalLikes: Int = 0): LikeData? =
         likesStore.like(id, audio = false, totalLikes = totalLikes) { api.likeDiscourse(id, LikeRequest(userId)).data }
+            .also { it?.let { result -> updateCachedLikeCounts(discourseId = id, discourseCount = result.totalLikes) } }
 
     suspend fun likeDiscourseAudio(id: String, totalLikes: Int = 0): LikeData? =
         likesStore.like(id, audio = true, totalLikes = totalLikes) { api.likeDiscourseAudio(id, LikeRequest(userId)).data }
+            .also { it?.let { result -> updateCachedLikeCounts(audioId = id, audioCount = result.totalLikes) } }
+
+    suspend fun unlikeDiscourse(id: String, totalLikes: Int = 0): UnlikeData? =
+        likesStore.unlike(id, audio = false, totalLikes = totalLikes) { api.unlike(userId, discourseId = id).data }
+            .also { it?.let { result -> updateCachedLikeCounts(discourseId = id, discourseCount = result.totalLikes) } }
+
+    suspend fun unlikeDiscourseAudio(id: String, totalLikes: Int = 0, discourseId: String? = null): UnlikeData? =
+        likesStore.unlike(id, audio = true, totalLikes = totalLikes, discourseId = discourseId) {
+            api.unlike(userId, audioId = id).data
+        }.also { it?.let { result ->
+            updateCachedLikeCounts(discourseId, result.discourseTotalLikes, id, result.totalLikes)
+        } }
+
+    suspend fun toggleDiscourseLike(id: String, totalLikes: Int = 0) {
+        if (id in likedDiscourses) unlikeDiscourse(id, totalLikes) else likeDiscourse(id, totalLikes)
+    }
+
+    suspend fun toggleDiscourseAudioLike(id: String, totalLikes: Int = 0, discourseId: String? = null) {
+        if (id in likedAudios) unlikeDiscourseAudio(id, totalLikes, discourseId) else likeDiscourseAudio(id, totalLikes)
+    }
+
+    private fun updateCachedLikeCounts(
+        discourseId: String? = null, discourseCount: Int? = null, audioId: String? = null, audioCount: Int? = null
+    ) {
+        if (discourseId != null && discourseCount != null) {
+            val update: (Discourse) -> Discourse = { if (it.id == discourseId) it.copy(totalLikes = discourseCount) else it }
+            updateCachedRecords(KEY_RECENTLY_PLAYED_DISCOURSES, recentlyPlayedAdapter, update)
+            updateCachedRecords(KEY_STATS_DISCOURSES, statsDiscoursesAdapter, update)
+        }
+        if (audioId != null && audioCount != null) {
+            val update: (DiscourseAudio) -> DiscourseAudio = { if (it.id == audioId) it.copy(totalLikes = audioCount) else it }
+            updateCachedRecords(KEY_RECENTLY_PLAYED_AUDIOS, recentlyPlayedAudiosAdapter, update)
+            updateCachedRecords(KEY_STATS_AUDIOS, statsAudiosAdapter, update)
+        }
+    }
+
+    private fun <T> updateCachedRecords(key: String, adapter: com.squareup.moshi.JsonAdapter<List<T>>, update: (T) -> T) {
+        synchronized(settings) {
+            val json = settings.getString(key, null) ?: return
+            val records = runCatching { adapter.fromJson(json) }.getOrNull() ?: return
+            val updated = records.map(update)
+            if (records != updated) settings.edit().putString(key, adapter.toJson(updated)).apply()
+        }
+    }
 
     suspend fun recordListeningStats(discourseId: String, audioId: String) {
         if (!statsStore.shouldSend(discourseId, audioId)) return
@@ -109,8 +154,11 @@ class DiscourseRepository(
 
     fun recordRecentlyPlayed(discourse: Discourse) {
         val recent = recentlyPlayedDiscourses.filterNot { it.id == discourse.id }
+        val target = DiscourseLikesStore.Target(discourse.id, false)
+        val count = likes.value.counts[target]?.takeIf { target !in likes.value.pending }
+        val updated = count?.let { discourse.copy(totalLikes = it) } ?: discourse
         settings.edit()
-            .putString(KEY_RECENTLY_PLAYED_DISCOURSES, recentlyPlayedAdapter.toJson((listOf(discourse) + recent).take(MAX_RECENTLY_PLAYED)))
+            .putString(KEY_RECENTLY_PLAYED_DISCOURSES, recentlyPlayedAdapter.toJson((listOf(updated) + recent).take(MAX_RECENTLY_PLAYED)))
             .apply()
     }
 
@@ -121,8 +169,11 @@ class DiscourseRepository(
 
     fun recordRecentlyPlayed(audio: DiscourseAudio) {
         val recent = recentlyPlayedAudios.filterNot { it.id == audio.id }
+        val target = DiscourseLikesStore.Target(audio.id, true)
+        val count = likes.value.counts[target]?.takeIf { target !in likes.value.pending }
+        val updated = count?.let { audio.copy(totalLikes = it) } ?: audio
         settings.edit()
-            .putString(KEY_RECENTLY_PLAYED_AUDIOS, recentlyPlayedAudiosAdapter.toJson((listOf(audio) + recent).take(MAX_RECENTLY_PLAYED)))
+            .putString(KEY_RECENTLY_PLAYED_AUDIOS, recentlyPlayedAudiosAdapter.toJson((listOf(updated) + recent).take(MAX_RECENTLY_PLAYED)))
             .apply()
     }
 

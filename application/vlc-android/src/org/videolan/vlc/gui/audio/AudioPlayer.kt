@@ -244,6 +244,21 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val likesRepository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    try {
+                        likesRepository.refreshLikes()
+                    } catch (error: kotlinx.coroutines.CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        // Keep the cached state if the network is unavailable.
+                    }
+                }
+                likesRepository.likes.collect { updatePlayerActions() }
+            }
+        }
         binding.songsList.layoutManager = LinearLayoutManager(view.context)
         binding.songsList.adapter = playlistAdapter
         binding.audioMediaSwitcher.setAudioMediaSwitcherListener(headerMediaSwitcherListener)
@@ -356,19 +371,12 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
                 updatePlayerActions()
             } else {
                 button.isEnabled = false
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
-                        val result = repository.likeDiscourseAudio(ids.audioId,
-                            repository.recentlyPlayedAudios.firstOrNull { it.id == ids.audioId }?.totalLikes ?: 0)
-                            ?: return@launch
-                        repository.recentlyPlayedAudios.firstOrNull { it.id == ids.audioId }?.let {
-                            repository.recordRecentlyPlayed(it.copy(totalLikes = result.totalLikes))
-                        }
-                        if (playlistModel.currentMediaWrapper?.discoursePlaybackIds()?.audioId == ids.audioId) {
-                            binding.playerLike?.text = result.totalLikes.toString()
-                            binding.playerLike?.compoundDrawableTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#EF3831"))
-                        }
+                        repository.toggleDiscourseAudioLike(ids.audioId,
+                            repository.recentlyPlayedAudios.firstOrNull { it.id == ids.audioId }?.totalLikes ?: 0,
+                            ids.discourseId)
                     } catch (error: Exception) {
                         if (error is kotlinx.coroutines.CancellationException) throw error
                         UiTools.snacker(requireActivity(), R.string.player_action_failed)
@@ -610,12 +618,18 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         val media = playlistModel.currentMediaWrapper ?: return
         val ids = media.discoursePlaybackIds()
         val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
+        val target = ids?.let { org.videolan.vlc.discourse.DiscourseLikesStore.Target(it.audioId, true) }
         val liked = if (ids == null) media.isFavorite else ids.audioId in repository.likedAudios
-        binding.playerLike?.isEnabled = !liked || ids == null
+        binding.playerLike?.isEnabled = target !in repository.likes.value.pending
         binding.playerLike?.compoundDrawableTintList = android.content.res.ColorStateList.valueOf(
             android.graphics.Color.parseColor(if (liked) "#EF3831" else "#FFFFFF"))
-        binding.playerLike?.text = repository.recentlyPlayedAudios.firstOrNull { it.id == ids?.audioId }
-            ?.totalLikes?.toString() ?: getString(R.string.player_like_label)
+        val count = repository.likes.value.counts[target]
+            ?: repository.recentlyPlayedAudios.firstOrNull { it.id == ids?.audioId }?.totalLikes ?: 0
+        binding.playerLike?.text = if (ids == null) getString(R.string.player_like_label)
+            else org.videolan.vlc.discourse.formatDiscourseLikes(count)
+        binding.playerLike?.contentDescription = if (ids == null) getString(R.string.player_like_label) else getString(
+            if (liked) R.string.discourse_unlike_description else R.string.discourse_like_description,
+            media.title.orEmpty(), count)
         binding.playerDiscourse?.isEnabled = ids != null
         binding.playerDiscourse?.alpha = if (ids != null) 1f else 0.4f
     }
