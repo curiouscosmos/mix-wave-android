@@ -52,7 +52,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun updateProgress(card: View, id: String, count: Int?) {
         val percent = if (count == null) playbackStore.audioProgress(id) else playbackStore.discourseProgress(id, count)
         card.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
-        val titleId = if (count == null) R.id.recently_played_track_title else R.id.discourse_title
+        val titleId = if (count == null) R.id.discourse_track_title else R.id.discourse_title
+        if (count == null) card.findViewById<View>(R.id.discourse_track_played).isVisible = playbackStore.isPlayed(id)
         card.contentDescription = "${card.findViewById<TextView>(titleId).text}. ${getString(R.string.discourse_listening_percentage, percent)}"
     }
     private fun clearCards(container: ViewGroup) {
@@ -126,7 +127,6 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 playbackStore.register(audios)
                 (audios.map { it.toMediaWrapper(requireContext()) } + localTracks)
                     .distinctBy { it.tag ?: it.uri }
-                    .take(MAX_TRACKS)
             }
             if (!isAdded || view !== this@RecentlyPlayedDiscoursesFragment.view) return@launch
             clearCards(container)
@@ -163,10 +163,10 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         clearCards(audioContainer)
         audioSection.isVisible = audios.isNotEmpty()
         audios.forEach { audio ->
-            val card = layoutInflater.inflate(R.layout.recently_played_track_card, audioContainer, false)
-            loadStatsImage(card.findViewById(R.id.recently_played_track_image), audio.discourseThumbnailUrl)
-            card.findViewById<TextView>(R.id.recently_played_track_title).text = audio.title
-            card.findViewById<TextView>(R.id.recently_played_track_meta).text =
+            val card = createTrackRow(audioContainer, audio.trackNumber ?: audioContainer.childCount + 1)
+            loadStatsImage(card.findViewById(R.id.discourse_track_image), audio.discourseThumbnailUrl)
+            card.findViewById<TextView>(R.id.discourse_track_title).text = audio.title
+            card.findViewById<TextView>(R.id.discourse_track_meta).text =
                 getString(R.string.weekly_plays, audio.plays)
             card.setOnClickListener { requireContext().playDiscourseAudio(audio) }
             bindProgress(card, audio.id, null)
@@ -175,17 +175,24 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     }
 
     private fun addTrackCard(container: ViewGroup, track: MediaWrapper) {
-        val card = layoutInflater.inflate(R.layout.recently_played_track_card, container, false)
-        val image = card.findViewById<ImageView>(R.id.recently_played_track_image)
+        val card = createTrackRow(container, track.trackNumber.takeIf { it > 0 } ?: container.childCount + 1)
+        val image = card.findViewById<ImageView>(R.id.discourse_track_image)
         image.setImageDrawable(getAudioIconDrawable(requireContext(), MediaLibraryItem.TYPE_MEDIA, true))
         loadImage(image, track, card = true)
-        card.findViewById<TextView>(R.id.recently_played_track_title).text = track.title
-        card.findViewById<TextView>(R.id.recently_played_track_meta).text =
+        card.findViewById<TextView>(R.id.discourse_track_title).text = track.title
+        card.findViewById<TextView>(R.id.discourse_track_meta).text =
             MediaUtils.getDisplaySubtitle(requireContext(), track) ?: track.albumName ?: track.artistName.orEmpty()
         card.setOnClickListener { MediaUtils.openMedia(requireContext(), track) }
         track.discoursePlaybackIds()?.let { bindProgress(card, it.audioId, null) }
         if (track.discoursePlaybackIds() == null) card.findViewById<ProgressBar>(R.id.listening_progress).isVisible = false
         container.addView(card)
+    }
+
+    private fun createTrackRow(container: ViewGroup, number: Int): View {
+        val row = layoutInflater.inflate(R.layout.discourse_track, container, false)
+        row.findViewById<TextView>(R.id.discourse_track_number).text = number.toString()
+        row.findViewById<View>(R.id.discourse_track_download).isVisible = false
+        return row
     }
 
     private fun addDiscourseCard(container: ViewGroup, discourse: Discourse, metadata: String) {
@@ -242,7 +249,4 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         loadStats()
     }
 
-    private companion object {
-        const val MAX_TRACKS = 24
-    }
 }

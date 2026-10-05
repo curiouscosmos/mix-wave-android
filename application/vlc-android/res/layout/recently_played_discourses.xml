@@ -50,21 +50,12 @@
             android:text="@string/recently_played_tracks"
             android:textAppearance="?attr/textAppearanceHeadline6" />
 
-        <HorizontalScrollView
+        <LinearLayout
+            android:id="@+id/recently_played_tracks_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:clipToPadding="false"
-            android:fillViewport="false"
-            android:scrollbars="none"
-            android:paddingHorizontal="10dp">
-
-            <LinearLayout
-                android:id="@+id/recently_played_tracks_list"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal" />
-        </HorizontalScrollView>
+            android:orientation="vertical" />
     </LinearLayout>
 
     <LinearLayout
@@ -105,21 +96,12 @@
             android:text="@string/top_tracks_week"
             android:textAppearance="?attr/textAppearanceHeadline6" />
 
-        <HorizontalScrollView
+        <LinearLayout
+            android:id="@+id/weekly_tracks_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:clipToPadding="false"
-            android:fillViewport="false"
-            android:scrollbars="none"
-            android:paddingHorizontal="10dp">
-
-            <LinearLayout
-                android:id="@+id/weekly_tracks_list"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal" />
-        </HorizontalScrollView>
+            android:orientation="vertical" />
     </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
