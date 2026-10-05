@@ -8,6 +8,7 @@
         android:id="@+id/discourse_catalogue"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@drawable/discourse_catalogue_background"
         android:orientation="vertical"
         android:visibility="gone">
 
@@ -15,21 +16,72 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="14dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp">
 
-            <Spinner
-                android:id="@+id/discourse_language_filter"
+            <FrameLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:contentDescription="@string/discourse_language_filter" />
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/discourse_catalogue_filter_background">
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="start|center_vertical"
+                    android:layout_marginStart="14dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_language"
+                    android:tint="@color/discourse_catalogue_secondary" />
+                <Spinner
+                    android:id="@+id/discourse_language_filter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:background="@null"
+                    android:paddingStart="46dp"
+                    android:paddingEnd="30dp"
+                    android:contentDescription="@string/discourse_language_filter" />
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="12dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/discourse_catalogue_chevron_down" />
+            </FrameLayout>
 
-            <Spinner
-                android:id="@+id/discourse_sort_filter"
+            <FrameLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:contentDescription="@string/discourse_sort_filter" />
+                android:background="@drawable/discourse_catalogue_filter_background">
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="start|center_vertical"
+                    android:layout_marginStart="14dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_sort"
+                    android:tint="@color/discourse_catalogue_secondary" />
+                <Spinner
+                    android:id="@+id/discourse_sort_filter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:background="@null"
+                    android:paddingStart="46dp"
+                    android:paddingEnd="30dp"
+                    android:contentDescription="@string/discourse_sort_filter" />
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="12dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/discourse_catalogue_chevron_down" />
+            </FrameLayout>
         </LinearLayout>
 
         <TextView
@@ -39,6 +91,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="@string/discourse_empty"
+            android:textColor="@color/discourse_catalogue_secondary"
             android:visibility="gone" />
 
         <org.videolan.vlc.gui.view.SwipeRefreshLayout
@@ -52,7 +105,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:padding="8dp"
+            android:paddingHorizontal="10dp"
+            android:paddingBottom="10dp"
             android:scrollbars="none" />
         </org.videolan.vlc.gui.view.SwipeRefreshLayout>
     </LinearLayout>

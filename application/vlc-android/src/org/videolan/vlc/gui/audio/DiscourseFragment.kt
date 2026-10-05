@@ -108,10 +108,10 @@ class DiscourseFragment : BaseFragment() {
         catalogueEmpty = view.findViewById(R.id.discourse_catalogue_empty)
         languageFilter = view.findViewById(R.id.discourse_language_filter)
         sortFilter = view.findViewById(R.id.discourse_sort_filter)
-        languageFilter.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, resources.getStringArray(R.array.discourse_languages)).also {
+        languageFilter.adapter = ArrayAdapter(requireContext(), R.layout.discourse_catalogue_filter_item, resources.getStringArray(R.array.discourse_languages)).also {
             it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-        sortFilter.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, resources.getStringArray(R.array.discourse_sorts)).also {
+        sortFilter.adapter = ArrayAdapter(requireContext(), R.layout.discourse_catalogue_filter_item, resources.getStringArray(R.array.discourse_sorts)).also {
             it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
         languageFilter.setSelection(model.languageFilter.ordinal)
@@ -406,6 +406,9 @@ class DiscourseFragment : BaseFragment() {
         private var items = items
         private var positions = items.mapIndexed { index, item -> item.id to index }.toMap()
         inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
+            val card: View = view.findViewById(R.id.discourse_catalogue_card)
+            val heading: View = view.findViewById(R.id.discourse_letter_heading)
+            val letter: TextView = view.findViewById(R.id.discourse_letter)
             val image: ImageView = view.findViewById(R.id.discourse_image)
             val title: TextView = view.findViewById(R.id.discourse_title)
             val language: TextView = view.findViewById(R.id.discourse_language)
@@ -416,17 +419,21 @@ class DiscourseFragment : BaseFragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Holder(
-            layoutInflater.inflate(R.layout.discourse_card, parent, false)
+            layoutInflater.inflate(R.layout.discourse_catalogue_card, parent, false)
         )
 
         override fun onBindViewHolder(holder: Holder, position: Int) {
             val item = items[position]
+            val heading = discourseCatalogueHeading(item.title, items.getOrNull(position - 1)?.title,
+                model.sortFilter == DiscourseViewModel.SortFilter.DEFAULT)
+            holder.heading.isVisible = heading != null
+            holder.letter.text = heading
             holder.title.text = item.title
             holder.language.text = item.language.replaceFirstChar(Char::uppercase)
             holder.counts.text = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
             bindDiscourseDownloadIndicator(holder, item)
             bindDiscourseDownloadProgress(holder.downloaded, item)
-            holder.itemView.setOnClickListener { click(item) }
+            holder.card.setOnClickListener { click(item) }
             loadImage(holder.image, item.thumbnailUrl)
             bindProgress(holder, item)
         }
@@ -435,7 +442,7 @@ class DiscourseFragment : BaseFragment() {
             val percent = playbackStore.discourseProgress(item.id, item.totalTracks)
             holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
             val completed = downloads.downloadedCount(item.id)
-            holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text,
+            holder.card.contentDescription = listOf(item.title, holder.language.text, holder.counts.text,
                 completed.takeIf { it > 0 }?.let { getString(R.string.discourse_download_count, it, item.totalTracks) },
                 getString(R.string.discourse_listening_percentage, percent)
             ).filterNotNull().filter(CharSequence::isNotBlank).joinToString(". ")
@@ -587,6 +594,13 @@ class DiscourseFragment : BaseFragment() {
         override fun getItemCount() = items.size
     }
 
+}
+
+internal fun discourseCatalogueHeading(title: String, previousTitle: String?, enabled: Boolean): String? {
+    fun initial(value: String) = value.trimStart().firstOrNull()?.takeIf(Char::isLetter)?.uppercaseChar()?.toString() ?: "#"
+    if (!enabled) return null
+    val letter = initial(title)
+    return letter.takeIf { previousTitle == null || initial(previousTitle) != letter }
 }
 
 private class DiscourseTrackHolder(view: View) : RecyclerView.ViewHolder(view) {
