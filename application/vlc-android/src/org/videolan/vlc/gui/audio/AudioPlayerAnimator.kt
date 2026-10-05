@@ -307,6 +307,8 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         val disappearingViews = arrayOf(binding.headerPlayPause, binding.headerTime, binding.headerShuffle, binding.headerPrevious, binding.headerLargePlayPause, binding.headerNext, binding.headerRepeat)
         disappearingViews.forEach {
             it.alpha = 1 - slideOffset
+            // Transparent mini-player controls must not intercept expanded-player taps.
+            if (it.visibility != View.GONE) it.visibility = if (slideOffset == 1F) View.INVISIBLE else View.VISIBLE
         }
 
         val translationOffset = min(1f, max(0f, (slideOffset * 1.4f) - 0.2f))
