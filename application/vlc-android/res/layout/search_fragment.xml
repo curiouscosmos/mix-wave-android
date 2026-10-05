@@ -2,24 +2,45 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#111111"
+    android:background="@drawable/discourse_catalogue_background"
     android:orientation="vertical"
     android:padding="12dp">
 
-    <EditText
+    <com.google.android.material.textfield.TextInputLayout
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        app:boxBackgroundMode="outline"
+        app:boxBackgroundColor="#281515"
+        app:boxStrokeColor="@color/discourse_search_stroke"
+        app:boxStrokeWidth="1dp"
+        app:boxCornerRadiusTopStart="28dp"
+        app:boxCornerRadiusTopEnd="28dp"
+        app:boxCornerRadiusBottomStart="28dp"
+        app:boxCornerRadiusBottomEnd="28dp"
+        app:hintEnabled="false"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/discourse_catalogue_text"
+        app:endIconMode="clear_text"
+        app:endIconDrawable="@drawable/ic_search_clear"
+        app:endIconTint="@null">
+    <com.google.android.material.textfield.TextInputEditText
         android:id="@+id/search_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="48dp"
-        android:backgroundTint="#B3B3B3"
+        android:minHeight="56dp"
+        android:paddingVertical="12dp"
         android:hint="@string/discourse_search_hint"
         android:imeOptions="actionSearch"
         android:inputType="text"
         android:maxLines="1"
         android:singleLine="true"
-        android:textColor="#B3B3B3"
+        android:textColor="@color/discourse_catalogue_text"
+        android:textCursorDrawable="@drawable/discourse_search_cursor"
         android:textColorHint="#B3B3B3"
         android:textSize="18sp" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <FrameLayout
         android:layout_width="match_parent"

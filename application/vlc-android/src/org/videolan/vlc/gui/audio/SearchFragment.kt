@@ -1,6 +1,10 @@
 package org.videolan.vlc.gui.audio
 
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.ImageSpan
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.Menu
@@ -120,19 +124,41 @@ class SearchFragment : BaseFragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Holder(
-            layoutInflater.inflate(R.layout.discourse_card, parent, false)
+            layoutInflater.inflate(R.layout.discourse_search_card, parent, false)
         )
 
         override fun onBindViewHolder(holder: Holder, position: Int) {
             val item = items[position]
-            holder.title.text = item.title
+            val query = (model.state.value as? SearchViewModel.State.Results)?.query.orEmpty()
+            holder.title.text = SpannableString(item.title).apply {
+                if (query.isNotEmpty()) {
+                    var start = item.title.indexOf(query, ignoreCase = true)
+                    while (start >= 0) {
+                        setSpan(ForegroundColorSpan(ContextCompat.getColor(requireContext(), R.color.discourse_catalogue_accent)),
+                            start, start + query.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        start = item.title.indexOf(query, start + query.length, ignoreCase = true)
+                    }
+                }
+            }
             holder.language.text = item.language.replaceFirstChar(Char::uppercase)
-            holder.counts.text = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
+            val counts = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
+            val separator = counts.indexOf('·')
+            holder.counts.text = SpannableString("  " + counts.substring(0, separator + 1) + "   " + counts.substring(separator + 1)).apply {
+                listOf(0 to R.drawable.ic_search_headphones, separator + 4 to R.drawable.ic_header_media_favorite_outline).forEach { (position, icon) ->
+                    ContextCompat.getDrawable(requireContext(), icon)?.mutate()?.let { drawable ->
+                        val size = (18 * resources.displayMetrics.density).toInt()
+                        drawable.setBounds(0, 0, size, size)
+                        drawable.setTint(ContextCompat.getColor(requireContext(), R.color.discourse_catalogue_secondary))
+                        setSpan(ImageSpan(drawable, ImageSpan.ALIGN_BASELINE), position, position + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                }
+            }
             val completed = downloads.downloadedCount(item.id)
             holder.downloadIcon.setColorFilter(ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500))
             holder.downloadedCount.isVisible = completed > 0
             holder.downloadedCount.text = completed.toString()
             val active = downloads.activeDownloadCount(item.id)
+            holder.downloadIcon.isVisible = completed > 0 || active > 0
             holder.downloaded.isVisible = active > 0 && item.totalTracks > 0
             holder.downloaded.progress = (completed * 100 / item.totalTracks.coerceAtLeast(1)).coerceAtMost(100)
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text,
