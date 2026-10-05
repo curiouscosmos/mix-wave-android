@@ -67,6 +67,8 @@
                 android:textAppearance="?attr/textAppearanceCaption" />
         </LinearLayout>
 
+        <include layout="@layout/discourse_like_button" />
+
         <ImageView
             android:id="@+id/discourse_track_played"
             android:layout_width="20dp"

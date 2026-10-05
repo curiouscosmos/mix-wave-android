@@ -82,6 +82,7 @@ class DiscourseFragment : BaseFragment() {
     private lateinit var backCallback: OnBackPressedCallback
     private lateinit var downloads: DiscourseDownloadStore
     private lateinit var playbackStore: DiscoursePlaybackStore
+    private lateinit var likesUi: DiscourseLikesUi
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             refreshDownloadIndicators()
@@ -102,6 +103,7 @@ class DiscourseFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        likesUi = DiscourseLikesUi(requireContext(), viewLifecycleOwner)
         downloads = DiscourseDownloadStore(requireContext())
         playbackStore = DiscoursePlaybackStore(requireContext())
         grid = view.findViewById(R.id.discourse_grid)
@@ -241,6 +243,7 @@ class DiscourseFragment : BaseFragment() {
                 }
                 val image = header.findViewById<ImageView>(R.id.discourse_detail_image)
                 header.findViewById<TextView>(R.id.discourse_detail_title).text = value.discourse.title
+                likesUi.bind(header, value.discourse.id, false, value.discourse.title, value.discourse.totalLikes)
                 header.findViewById<TextView>(R.id.discourse_download_count).isVisible = false
                 header.findViewById<Button>(R.id.discourse_cancel_downloads).isVisible = false
                 header.findViewById<ProgressBar>(R.id.discourse_download_progress).isVisible = false
@@ -432,7 +435,8 @@ class DiscourseFragment : BaseFragment() {
             holder.letter.text = heading
             holder.title.text = item.title
             holder.language.text = item.language.replaceFirstChar(Char::uppercase)
-            holder.counts.text = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
+            holder.counts.text = getString(R.string.discourse_track_count, item.totalTracks)
+            likesUi.bind(holder.itemView, item.id, false, item.title, item.totalLikes)
             bindDiscourseDownloadIndicator(holder, item)
             bindDiscourseDownloadProgress(holder.downloaded, item)
             holder.card.setOnClickListener { click(item) }
@@ -514,6 +518,7 @@ class DiscourseFragment : BaseFragment() {
                 item.fileSize?.takeIf { it > 0 }?.let { Formatter.formatFileSize(requireContext(), it) }
             ).joinToString(" · ")
             holder.likes.isVisible = false
+            likesUi.bind(holder.itemView, item.id, true, item.title, item.totalLikes)
             holder.played.isVisible = playbackStore.isPlayed(item.id)
             holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}"
             holder.itemView.setOnClickListener { holder.bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION }?.let(click) }

@@ -57,6 +57,11 @@ data class ApiIndex(val message: String, val endpoints: Map<String, String>)
 
 data class LikeRequest(@Json(name = "user_id") val userId: String)
 
+data class UserLikesResponse(
+    @Json(name = "discourse") val discourseIds: Set<String>,
+    @Json(name = "discourse_audio") val audioIds: Set<String>
+)
+
 data class StatsRequest(
     @Json(name = "user_id") val userId: String,
     @Json(name = "discourse_id") val discourseId: String,

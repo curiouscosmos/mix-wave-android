@@ -14,6 +14,24 @@ import java.io.IOException
 
 class DiscourseCachePolicyTest {
     @Test
+    fun likesAreNeverHttpCachedOrServedFromStaleFallback() {
+        val request = Request.Builder().url("https://example.test/likes?user_id=user")
+            .header("Cache-Control", "no-cache, no-store").build()
+        val chain = mockk<Interceptor.Chain>()
+        every { chain.request() } returns request
+        every { chain.proceed(request) } returns response(request)
+        assertEquals("no-store", CacheResponseInterceptor().intercept(chain).header("Cache-Control"))
+        every { chain.proceed(request) } throws IOException("offline")
+        try {
+            StaleCacheInterceptor().intercept(chain)
+            org.junit.Assert.fail("Expected network failure, not a cached response")
+        } catch (_: IOException) { }
+        io.mockk.verify(exactly = 2) { chain.proceed(request) }
+        io.mockk.verify(exactly = 2) { chain.request() }
+        io.mockk.confirmVerified(chain)
+    }
+
+    @Test
     fun appliesGetOnlyPolicyAndFallsBackToStaleCache() {
         assertEquals(FORCE_REFRESH, cacheControl(true))
         assertEquals(null, cacheControl(false))
@@ -33,8 +51,8 @@ class DiscourseCachePolicyTest {
         val fallbackChain = mockk<Interceptor.Chain>()
         val fallbackRequest = slot<Request>()
         every { fallbackChain.request() } returns get
-        every { fallbackChain.proceed(get) } throws IOException("offline")
         every { fallbackChain.proceed(capture(fallbackRequest)) } returns stale
+        every { fallbackChain.proceed(get) } throws IOException("offline")
         assertSame(stale, StaleCacheInterceptor().intercept(fallbackChain))
         assertEquals("only-if-cached, max-stale=2147483647", fallbackRequest.captured.header("Cache-Control"))
     }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/discourse_like"
+    android:layout_width="wrap_content"
+    android:layout_height="48dp"
+    android:layout_gravity="end"
+    android:minWidth="48dp"
+    android:gravity="center"
+    android:paddingHorizontal="12dp"
+    android:drawablePadding="4dp"
+    android:textSize="13sp"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:clickable="true"
+    android:focusable="true"
+    android:visibility="gone" />

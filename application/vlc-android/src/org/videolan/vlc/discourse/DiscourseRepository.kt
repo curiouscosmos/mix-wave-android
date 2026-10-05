@@ -12,6 +12,10 @@ class DiscourseRepository(
 ) {
     private val appContext = context.applicationContext
     private val settings = Settings.getInstance(context)
+    private val likesStore = DiscourseLikesStore.shared(settings)
+    internal val likes get() = likesStore.state
+
+    suspend fun refreshLikes() = likesStore.refresh { api.likes(userId) }
     private val statsStore = DiscourseStatsStore(appContext)
     private val recentlyPlayedAdapter = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
@@ -80,13 +84,11 @@ class DiscourseRepository(
             api.discourseAudioStats(cacheControl = cacheControl(forceRefresh)).data
         }
 
-    suspend fun likeDiscourse(id: String): LikeData = api.likeDiscourse(id, LikeRequest(userId)).data.also {
-        settings.edit().putStringSet(KEY_LIKED_DISCOURSES, likedDiscourses + id).apply()
-    }
+    suspend fun likeDiscourse(id: String, totalLikes: Int = 0): LikeData? =
+        likesStore.like(id, audio = false, totalLikes = totalLikes) { api.likeDiscourse(id, LikeRequest(userId)).data }
 
-    suspend fun likeDiscourseAudio(id: String): LikeData = api.likeDiscourseAudio(id, LikeRequest(userId)).data.also {
-        settings.edit().putStringSet(KEY_LIKED_AUDIOS, likedAudios + id).apply()
-    }
+    suspend fun likeDiscourseAudio(id: String, totalLikes: Int = 0): LikeData? =
+        likesStore.like(id, audio = true, totalLikes = totalLikes) { api.likeDiscourseAudio(id, LikeRequest(userId)).data }
 
     suspend fun recordListeningStats(discourseId: String, audioId: String) {
         if (!statsStore.shouldSend(discourseId, audioId)) return
@@ -95,10 +97,10 @@ class DiscourseRepository(
     }
 
     val likedDiscourses: Set<String>
-        get() = settings.getStringSet(KEY_LIKED_DISCOURSES, emptySet()).orEmpty()
+        get() = likesStore.state.value.discourseIds
 
     val likedAudios: Set<String>
-        get() = settings.getStringSet(KEY_LIKED_AUDIOS, emptySet()).orEmpty()
+        get() = likesStore.state.value.audioIds
 
     val recentlyPlayedDiscourses: List<Discourse>
         get() = settings.getString(KEY_RECENTLY_PLAYED_DISCOURSES, null)?.let { json ->
@@ -155,8 +157,6 @@ class DiscourseRepository(
     private fun String?.cleanQuery() = this?.trim()?.takeIf(String::isNotEmpty)
 
     private companion object {
-        const val KEY_LIKED_DISCOURSES = "osho_api_liked_discourses"
-        const val KEY_LIKED_AUDIOS = "osho_api_liked_audios"
         const val KEY_RECENTLY_PLAYED_DISCOURSES = "osho_api_recently_played_discourses"
         const val KEY_RECENTLY_PLAYED_AUDIOS = "osho_api_recently_played_audios"
         const val KEY_CATALOGUE_LANGUAGE = "osho_api_catalogue_language"

@@ -24,6 +24,12 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 interface DiscourseApi {
+    @GET("likes")
+    suspend fun likes(
+        @Query("user_id") userId: String,
+        @Header("Cache-Control") cacheControl: String = "no-cache, no-store"
+    ): UserLikesResponse
+
     @GET(".")
     suspend fun index(@Header("Cache-Control") cacheControl: String? = null): ApiIndex
 
@@ -107,7 +113,9 @@ object DiscourseApiClient {
 
 internal class CacheResponseInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response = chain.proceed(chain.request()).let { response ->
-        if (response.request.method == "GET" && response.isSuccessful && !response.cacheControl.noStore)
+        if (response.request.url.pathSegments.lastOrNull() == "likes")
+            response.newBuilder().header("Cache-Control", "no-store").build()
+        else if (response.request.method == "GET" && response.isSuccessful && !response.cacheControl.noStore)
             response.newBuilder().header("Cache-Control", "public, max-age=$CACHE_SECONDS").build()
         else response
     }
@@ -116,7 +124,7 @@ internal class CacheResponseInterceptor : Interceptor {
 internal class StaleCacheInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        if (request.method != "GET") return chain.proceed(request)
+        if (request.method != "GET" || request.url.pathSegments.lastOrNull() == "likes") return chain.proceed(request)
         return try {
             val response = chain.proceed(request)
             if (response.code < 500) response else cached(chain, request)?.also { response.close() } ?: response

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="discourse_like_description">Like %1$s. %2$d likes</string>
+    <string name="discourse_liked_description">Liked %1$s. %2$d likes</string>
+    <string name="discourse_like_failed">Could not save your like. Tap the heart to try again.</string>
+</resources>

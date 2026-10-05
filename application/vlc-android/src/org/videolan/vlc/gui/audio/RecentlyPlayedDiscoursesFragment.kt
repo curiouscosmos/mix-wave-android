@@ -39,6 +39,7 @@ import org.videolan.vlc.media.MediaUtils
 
 class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_discourses) {
     private var statsJob: Job? = null
+    private lateinit var likesUi: DiscourseLikesUi
     private val progressCards = HashMap<View, Pair<String, Int?>>()
     private val audioCards = HashMap<String, MutableSet<View>>()
     private val discourseCards = HashMap<String, MutableSet<View>>()
@@ -59,6 +60,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun clearCards(container: ViewGroup) {
         for (i in 0 until container.childCount) {
             val card = container.getChildAt(i)
+            likesUi.unbind(card)
             progressCards.remove(card)?.let { (id, count) ->
                 val index = if (count == null) audioCards else discourseCards
                 index[id]?.let { cards -> if (cards.remove(card) && cards.isEmpty()) index.remove(id) }
@@ -75,6 +77,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
 
     override fun onViewCreated(view: View, savedInstanceState: android.os.Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        likesUi = DiscourseLikesUi(requireContext(), viewLifecycleOwner)
         view.findViewById<org.videolan.vlc.gui.view.SwipeRefreshLayout>(R.id.all_stats_swipe)
             .setOnRefreshListener { loadStats(true) }
         loadStats()
@@ -104,7 +107,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             section.isVisible = false
         } else {
             section.isVisible = true
-            list.forEach { discourse -> addDiscourseCard(container, discourse, getString(R.string.discourse_counts, discourse.totalTracks, discourse.totalLikes)) }
+            list.forEach { discourse -> addDiscourseCard(container, discourse, getString(R.string.discourse_track_count, discourse.totalTracks)) }
         }
     }
 
@@ -169,6 +172,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             card.findViewById<TextView>(R.id.discourse_track_meta).text =
                 getString(R.string.weekly_plays, audio.plays)
             card.setOnClickListener { requireContext().playDiscourseAudio(audio) }
+            likesUi.bind(card, audio.id, true, audio.title, audio.totalLikes)
             bindProgress(card, audio.id, null)
             audioContainer.addView(card)
         }
@@ -183,7 +187,11 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         card.findViewById<TextView>(R.id.discourse_track_meta).text =
             MediaUtils.getDisplaySubtitle(requireContext(), track) ?: track.albumName ?: track.artistName.orEmpty()
         card.setOnClickListener { MediaUtils.openMedia(requireContext(), track) }
-        track.discoursePlaybackIds()?.let { bindProgress(card, it.audioId, null) }
+        track.discoursePlaybackIds()?.let {
+            bindProgress(card, it.audioId, null)
+            val audio = DiscourseRepository(requireContext()).recentlyPlayedAudios.firstOrNull { audio -> audio.id == it.audioId }
+            likesUi.bind(card, it.audioId, true, track.title.orEmpty(), audio?.totalLikes ?: 0)
+        }
         if (track.discoursePlaybackIds() == null) card.findViewById<ProgressBar>(R.id.listening_progress).isVisible = false
         container.addView(card)
     }
@@ -200,6 +208,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         card.findViewById<TextView>(R.id.discourse_title).text = discourse.title
         card.findViewById<TextView>(R.id.discourse_language).text = discourse.language.replaceFirstChar(Char::uppercase)
         card.findViewById<TextView>(R.id.discourse_counts).text = metadata
+        likesUi.bind(card, discourse.id, false, discourse.title, discourse.totalLikes)
         val completed = downloads.downloadedCount(discourse.id)
         card.findViewById<ImageView>(R.id.discourse_download_icon).setColorFilter(
             ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500)

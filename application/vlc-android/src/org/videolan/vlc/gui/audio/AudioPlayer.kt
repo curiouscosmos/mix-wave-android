@@ -359,7 +359,9 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
                 lifecycleScope.launch {
                     try {
                         val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
-                        val result = repository.likeDiscourseAudio(ids.audioId)
+                        val result = repository.likeDiscourseAudio(ids.audioId,
+                            repository.recentlyPlayedAudios.firstOrNull { it.id == ids.audioId }?.totalLikes ?: 0)
+                            ?: return@launch
                         repository.recentlyPlayedAudios.firstOrNull { it.id == ids.audioId }?.let {
                             repository.recordRecentlyPlayed(it.copy(totalLikes = result.totalLikes))
                         }

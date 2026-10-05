@@ -72,6 +72,8 @@
                         android:visibility="gone" />
                 </LinearLayout>
 
+                <include layout="@layout/discourse_like_button" />
+
                 <Button
                     android:id="@+id/discourse_cancel_downloads"
                     android:layout_width="wrap_content"
