@@ -52,8 +52,10 @@ import org.videolan.vlc.discourse.DiscourseDownloadStore
 import org.videolan.vlc.discourse.DiscoursePlaybackStore
 import org.videolan.vlc.discourse.playDiscourseAudios
 import org.videolan.vlc.discourse.shouldEnqueue
+import org.videolan.vlc.discourse.toMediaWrapper
 import org.videolan.vlc.gui.BaseFragment
 import org.videolan.vlc.gui.helpers.UiTools
+import org.videolan.vlc.gui.helpers.UiTools.addToPlaylist
 import org.videolan.vlc.gui.view.SwipeRefreshLayout
 import org.videolan.vlc.viewmodels.DiscourseViewModel
 import org.videolan.resources.util.registerReceiverCompat
@@ -527,7 +529,12 @@ class DiscourseFragment : BaseFragment() {
                     DiscourseDownloadState.DOWNLOADED -> R.string.discourse_remove_download
                 }))
                 menu.menu.add(0, 2, 1, getString(if (playbackStore.isPlayed(item.id)) R.string.mark_as_not_played else R.string.mark_as_played))
+                menu.menu.add(0, 3, 2, getString(R.string.add_to_playlist))
                 menu.setOnMenuItemClickListener { action ->
+                    if (action.itemId == 3) {
+                        requireActivity().addToPlaylist(listOf(item.toMediaWrapper(requireContext())))
+                        return@setOnMenuItemClickListener true
+                    }
                     if (action.itemId == 1) {
                         when (downloads.state(item)) {
                             DiscourseDownloadState.MISSING, DiscourseDownloadState.FAILED -> if (!downloads.download(item))
