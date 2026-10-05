@@ -86,7 +86,8 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         protected val listEventsHandler: IListEventsHandler? = null,
         protected val reorderable: Boolean = false,
         internal var cardSize: Int = SHOW_IN_LIST,
-        private val playlistStyle: Boolean = false
+        private val playlistStyle: Boolean = false,
+        internal val mixerStyle: Boolean = false
 ) : PagedListAdapter<MediaLibraryItem,
         AudioBrowserAdapter.AbstractMediaItemViewHolder<ViewDataBinding>>(DIFF_CALLBACK),
         FastScroller.SeparatedAdapter, MultiSelectAdapter<MediaLibraryItem>, SwipeDragHelperAdapter
@@ -134,6 +135,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         }
         listImageWidth = ctx.resources.getDimension(R.dimen.audio_browser_item_size).toInt()
         if (playlistStyle) listImageWidth = 108.dp
+        if (mixerStyle) listImageWidth = 40.dp
         defaultCover = getAudioIconDrawable(ctx, type, false)
         defaultCoverCard = getAudioIconDrawable(ctx, type, true)
     }
@@ -326,6 +328,23 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             }
             binding.imageWidth = listImageWidth
             binding.playlistStyle = playlistStyle
+            if (mixerStyle) {
+                binding.root.setBackgroundResource(R.drawable.audio_mixer_row_background)
+                (binding.root.layoutParams as RecyclerView.LayoutParams).apply {
+                    topMargin = 2.dp
+                    bottomMargin = 2.dp
+                }
+                binding.root.minimumHeight = 64.dp
+                binding.title.setTextColor(android.graphics.Color.WHITE)
+                binding.subtitle.setTextColor(android.graphics.Color.LTGRAY)
+                binding.title.textSize = 16f
+                binding.mediaCover.layoutParams.height = listImageWidth
+                binding.selectorImage.layoutParams.height = listImageWidth
+                binding.mediaCover.setColorFilter(android.graphics.Color.GRAY)
+                listOf(R.id.visualizer1, R.id.visualizer2, R.id.visualizer3).forEach {
+                    binding.playing.findViewById<View>(it).setBackgroundColor(android.graphics.Color.rgb(235, 48, 54))
+                }
+            }
             if (playlistStyle) {
                 binding.root.minimumHeight = 124.dp
                 binding.mediaCover.layoutParams.height = listImageWidth
@@ -354,6 +373,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         override fun getMiniVisu() = binding.playing
 
         override fun changePlayingVisibility(isCurrent: Boolean) {
+            binding.root.isActivated = mixerStyle && isCurrent
             binding.mediaCover.visibility = if (isCurrent) View.INVISIBLE else View.VISIBLE
         }
 

@@ -294,7 +294,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
             delay(50L)
         }.launchWhenStarted(lifecycleScope)
         playlistAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_PLAYLIST, this, playlistStyle = true).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
-        mixerAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
+        mixerAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this, mixerStyle = true).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
         mixerAdapter.currentMedia = PlaybackService.instance?.mixerMedia ?: AudioMixerProvider.selected(requireContext())
         adapters = arrayOf(songsAdapter, playlistAdapter, mixerAdapter)
         setupProvider()
@@ -341,6 +341,14 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         val volumeValue = view.findViewById<TextView>(R.id.audio_mixer_volume_value)
         val volumeDown = view.findViewById<MaterialButton>(R.id.audio_mixer_volume_down)
         val volumeUp = view.findViewById<MaterialButton>(R.id.audio_mixer_volume_up)
+        val banner = view.findViewById<View>(R.id.audio_mixer_selected_banner)
+        val panelBody = view.findViewById<View>(R.id.audio_mixer_panel_body)
+        val chevron = view.findViewById<View>(R.id.audio_mixer_panel_chevron)
+        view.findViewById<View>(R.id.audio_mixer_panel_header).setOnClickListener {
+            val expanded = panelBody.visibility != View.VISIBLE
+            panelBody.visibility = if (expanded) View.VISIBLE else View.GONE
+            chevron.rotation = if (expanded) 180f else 0f
+        }
         loop.isCheckable = true
         fun setVolume(value: Int, persist: Boolean = true) {
             val volumeInt = value.coerceIn(1, 100)
@@ -351,8 +359,8 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         fun update() {
             val service = PlaybackService.instance
             val media = service?.mixerMedia ?: AudioMixerProvider.selected(requireContext())
-            selected.text = media?.title?.let { getString(R.string.audio_mixer_selected_track, it) }
-            selected.visibility = if (media == null) View.GONE else View.VISIBLE
+            selected.text = media?.title
+            banner.visibility = if (media == null) View.GONE else View.VISIBLE
             val mixerEnabled = service?.mixerEnabled == true
             toggle.setText(if (mixerEnabled) R.string.audio_mixer_on else R.string.audio_mixer_turn_off)
             toggle.isSelected = mixerEnabled

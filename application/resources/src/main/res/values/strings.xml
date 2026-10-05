@@ -7,6 +7,8 @@
     <string name="cancel">Cancel</string>
     <string name="app_name" translatable="false">Osho Discourse</string>
     <string name="audio_mixer">Audio Mixer</string>
+    <string name="audio_mixer_selected_label">SELECTED TRACK</string>
+    <string name="audio_mixer_panel_title">Background Music Mixer</string>
     <string name="audio_mixer_volume">Mixer volume</string>
     <string name="audio_mixer_on">Mixer On</string>
     <string name="audio_mixer_turn_off">Mixer Off</string>
