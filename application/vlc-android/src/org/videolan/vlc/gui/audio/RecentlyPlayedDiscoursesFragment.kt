@@ -163,7 +163,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         clearCards(audioContainer)
         audioSection.isVisible = audios.isNotEmpty()
         audios.forEach { audio ->
-            val card = createTrackRow(audioContainer, audio.trackNumber ?: audioContainer.childCount + 1)
+            val card = createTrackRow(audioContainer)
             loadStatsImage(card.findViewById(R.id.discourse_track_image), audio.discourseThumbnailUrl)
             card.findViewById<TextView>(R.id.discourse_track_title).text = audio.title
             card.findViewById<TextView>(R.id.discourse_track_meta).text =
@@ -175,7 +175,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     }
 
     private fun addTrackCard(container: ViewGroup, track: MediaWrapper) {
-        val card = createTrackRow(container, track.trackNumber.takeIf { it > 0 } ?: container.childCount + 1)
+        val card = createTrackRow(container)
         val image = card.findViewById<ImageView>(R.id.discourse_track_image)
         image.setImageDrawable(getAudioIconDrawable(requireContext(), MediaLibraryItem.TYPE_MEDIA, true))
         loadImage(image, track, card = true)
@@ -188,9 +188,9 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         container.addView(card)
     }
 
-    private fun createTrackRow(container: ViewGroup, number: Int): View {
+    private fun createTrackRow(container: ViewGroup): View {
         val row = layoutInflater.inflate(R.layout.discourse_track, container, false)
-        row.findViewById<TextView>(R.id.discourse_track_number).text = number.toString()
+        row.findViewById<View>(R.id.discourse_track_number).isVisible = false
         row.findViewById<View>(R.id.discourse_track_download).isVisible = false
         return row
     }
