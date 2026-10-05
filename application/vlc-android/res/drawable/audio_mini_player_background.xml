@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
         android:shape="rectangle">
-    <solid android:color="?attr/audio_header_background" />
-    <corners android:radius="8dp" />
+    <gradient android:angle="0" android:startColor="#402020" android:endColor="#241B1C" />
+    <stroke android:width="1dp" android:color="#813034" />
+    <corners android:radius="40dp" />
 </shape>

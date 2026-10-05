@@ -270,6 +270,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         registerForContextMenu(binding.songsList)
         userVisibleHint = true
         binding.timeline.setOnSeekBarChangeListener(timelineListener)
+        (binding.progressBar as? SeekBar)?.setOnSeekBarChangeListener(timelineListener)
 
         //For resizing purpose, we have to cache this twice even if it's from the same resource
         playToPause = AnimatedVectorDrawableCompat.create(requireActivity(), R.drawable.anim_play_pause_video)!!
@@ -631,14 +632,16 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         if (playlistModel.currentMediaPosition == -1) return
         binding.length.text = if (showRemainingTime) Tools.millisToString(progress.time - progress.length) else progress.lengthText
         binding.timeline.max = progress.length.toInt()
-        binding.progressBar.max = progress.length.toInt()
+        (binding.progressBar as android.widget.ProgressBar).max = progress.length.toInt()
 
         if (!previewingSeek) {
             val displayTime = progress.timeText
-            binding.headerTime.text = if (showRemainingTime) Tools.millisToString(progress.time - progress.length) else displayTime
+            binding.headerTime.text = if (showRemainingTime) Tools.millisToString(progress.time - progress.length) else "$displayTime / ${progress.lengthText}"
             binding.time.text = displayTime
-            if (!isDragging) binding.timeline.progress = progress.time.toInt()
-            binding.progressBar.progress = progress.time.toInt()
+            if (!isDragging) {
+                binding.timeline.progress = progress.time.toInt()
+                (binding.progressBar as android.widget.ProgressBar).progress = progress.time.toInt()
+            }
         }
 
     }
@@ -874,7 +877,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
 
                 binding.time.text = Tools.millisToString(possibleSeek.toLong())
                 binding.timeline.progress = possibleSeek
-                binding.progressBar.progress = possibleSeek
+                (binding.progressBar as android.widget.ProgressBar).progress = possibleSeek
                 handler.postDelayed(this, 50)
             }
         }

@@ -35,6 +35,13 @@ class RecyclerSectionItemDecoration(private val headerOffset: Int, private val s
         if (!::headerView.isInitialized) {
             headerView = inflateHeaderView(parent)
             header = headerView.findViewById<TextView>(R.id.section_header)!!
+            if ((parent.adapter as? org.videolan.vlc.gui.audio.AudioBrowserAdapter)?.playlistStyle == true) {
+                header.setBackgroundResource(R.drawable.playlist_section_background)
+                header.setTextColor(android.graphics.Color.rgb(235, 48, 54))
+                header.setPadding(4, 0, 0, 0)
+                header.textSize = 16f
+                header.setTypeface(header.typeface, android.graphics.Typeface.BOLD)
+            }
             if ((parent.adapter as? org.videolan.vlc.gui.audio.AudioBrowserAdapter)?.mixerStyle == true) {
                 header.setBackgroundResource(R.drawable.audio_mixer_section_background)
                 header.setTextColor(android.graphics.Color.rgb(235, 48, 54))

@@ -86,7 +86,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         protected val listEventsHandler: IListEventsHandler? = null,
         protected val reorderable: Boolean = false,
         internal var cardSize: Int = SHOW_IN_LIST,
-        private val playlistStyle: Boolean = false,
+        val playlistStyle: Boolean = false,
         internal val mixerStyle: Boolean = false
 ) : PagedListAdapter<MediaLibraryItem,
         AudioBrowserAdapter.AbstractMediaItemViewHolder<ViewDataBinding>>(DIFF_CALLBACK),
@@ -134,7 +134,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             else -> AppContextProvider.appContext
         }
         listImageWidth = ctx.resources.getDimension(R.dimen.audio_browser_item_size).toInt()
-        if (playlistStyle) listImageWidth = 108.dp
+        if (playlistStyle) listImageWidth = 72.dp
         if (mixerStyle) listImageWidth = 40.dp
         defaultCover = getAudioIconDrawable(ctx, type, false)
         defaultCoverCard = getAudioIconDrawable(ctx, type, true)
@@ -346,18 +346,26 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 }
             }
             if (playlistStyle) {
-                binding.root.minimumHeight = 124.dp
+                binding.root.setBackgroundResource(R.drawable.playlist_row_background)
+                (binding.root.layoutParams as RecyclerView.LayoutParams).bottomMargin = 20.dp
+                binding.root.minimumHeight = 84.dp
                 binding.mediaCover.layoutParams.height = listImageWidth
                 binding.selectorImage.layoutParams.height = listImageWidth
+                binding.mediaCover.setBackgroundResource(R.drawable.playlist_cover_background)
+                (binding.mediaCover.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).marginStart = 12.dp
+                (binding.selectorImage.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).marginStart = 12.dp
+                binding.mediaCover.setPadding(12.dp, 12.dp, 12.dp, 12.dp)
+                binding.mediaCover.setColorFilter(android.graphics.Color.rgb(205, 78, 80))
+                binding.title.setTextColor(android.graphics.Color.WHITE)
+                binding.subtitle.setTextColor(android.graphics.Color.LTGRAY)
                 binding.title.textSize = 16f
                 binding.subtitle.textSize = 14f
-                binding.itemMore.visibility = View.GONE
             }
         }
 
         override fun selectView(selected: Boolean) {
             binding.setVariable(BR.selected, selected)
-            binding.itemMore.visibility = if (playlistStyle || multiSelectHelper.inActionMode) View.INVISIBLE else View.VISIBLE
+            binding.itemMore.visibility = if (multiSelectHelper.inActionMode) View.INVISIBLE else View.VISIBLE
         }
 
         override fun setItem(item: MediaLibraryItem?) {

@@ -276,9 +276,9 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.topGradient.alpha = slideOffset
         binding.bottomGradient.alpha = slideOffset
         binding.progressBar.alpha = 1 - slideOffset
-        binding.progressBar.layoutParams.height = ((1 - slideOffset) * 4.dp).toInt()
+        binding.progressBar.layoutParams.height = ((1 - slideOffset) * (if (binding.progressBar is android.widget.SeekBar) 24 else 4).dp).toInt()
         binding.progressBar.requestLayout()
-        binding.headerBackground.alpha = if (showCover) (1 - slideOffset) * 0.75F else 0.4F + ((1 - slideOffset) * 0.35F)
+        binding.headerBackground.alpha = if (binding.progressBar is android.widget.SeekBar) 1 - slideOffset else if (showCover) (1 - slideOffset) * 0.75F else 0.4F + ((1 - slideOffset) * 0.35F)
         binding.headerDivider.alpha = if (showCover) 0F else slideOffset
         if (slideOffset != 1f) audioPlayer.clearSearch()
         binding.playlistSearch.alpha = if (showCover) 0F else slideOffset

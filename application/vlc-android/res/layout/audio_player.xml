@@ -70,23 +70,31 @@
                 android:orientation="horizontal"
                 app:layout_constraintGuide_percent="0.3" />
 
-        <ProgressBar
+        <SeekBar
                 android:id="@+id/progressBar"
                 style="@android:style/Widget.ProgressBar.Horizontal"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:focusable="false"
-                android:importantForAccessibility="no"
+                android:layout_height="24dp"
+                android:contentDescription="@string/jump_to_time"
                 android:indeterminate="false"
                 android:layoutDirection="ltr"
                 android:maxHeight="4dp"
                 android:minHeight="4dp"
+                android:thumb="@drawable/mini_player_thumb"
+                android:thumbTint="#EB3036"
+                android:progressTint="#EB3036"
+                android:progressBackgroundTint="#514747"
+                android:splitTrack="false"
                 android:paddingLeft="0px"
                 android:paddingRight="0px"
-                android:progressDrawable="?attr/progress_mini_player"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:progressDrawable="@drawable/mini_player_progress"
+                android:layout_marginStart="68dp"
+                android:layout_marginEnd="68dp"
+                android:layout_marginTop="48dp"
+                android:elevation="5dp"
+                app:layout_constraintLeft_toLeftOf="@id/header"
+                app:layout_constraintRight_toRightOf="@id/header"
+                app:layout_constraintTop_toTopOf="@id/header" />
 
         <ImageView
                 android:id="@+id/expanded_back"
@@ -141,11 +149,13 @@
                 android:id="@+id/header"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
                 android:background="@color/transparent"
                 android:fitsSystemWindows="true"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/progressBar">
+                app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
                     android:id="@+id/header_shuffle"
@@ -274,7 +284,8 @@
                     android:layout_width="0dp"
                     android:layout_height="76dp"
                     android:background="#00000000"
-                    app:layout_constraintEnd_toStartOf="@+id/barrier"
+                    android:layout_marginEnd="64dp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
@@ -388,27 +399,27 @@
                     android:id="@+id/header_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/default_margin"
-                    android:layout_marginRight="@dimen/default_margin"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginTop="32dp"
                     android:clickable="true"
                     android:onClick="@{fragment::onTimeLabelClick}"
                     android:text="@string/time_0"
-                    android:textColor="?attr/font_default"
-                    android:textSize="@dimen/audio_player_header_time_text_size"
-                    app:layout_constraintBottom_toBottomOf="@id/guideline_header_bottom"
+                    android:textColor="#B7B4B4"
+                    android:textSize="12sp"
                     app:layout_constraintEnd_toStartOf="@+id/header_play_pause"
                     app:layout_constraintTop_toTopOf="parent" />
 
             <ImageView
                     android:id="@+id/header_play_pause"
-                    android:layout_width="@dimen/audio_player_header_play_button_size"
-                    android:layout_height="@dimen/audio_player_header_play_button_size"
-                    android:layout_marginEnd="@dimen/default_margin"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="12dp"
                     android:contentDescription="@string/play"
                     android:focusable="true"
                     android:onClick="@{fragment::onPlayPauseClick}"
                     android:onLongClick="@{fragment::onStopClick}"
                     android:scaleType="fitXY"
+                    android:tint="@color/white"
                     app:layout_constraintBottom_toBottomOf="@id/guideline_header_bottom"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
