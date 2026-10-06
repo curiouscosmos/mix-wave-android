@@ -505,7 +505,9 @@ class DiscourseFragment : BaseFragment() {
         private val positions = items.mapIndexed { index, item -> item.id to index }.toMap()
         init { stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY }
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = DiscourseTrackHolder(
-            LayoutInflater.from(parent.context).inflate(R.layout.discourse_track, parent, false)
+            LayoutInflater.from(parent.context).inflate(R.layout.discourse_track, parent, false).apply {
+                clipToOutline = true
+            }
         )
 
         override fun onBindViewHolder(holder: DiscourseTrackHolder, position: Int) {

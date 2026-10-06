@@ -198,6 +198,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
 
     private fun createTrackRow(container: ViewGroup): View {
         val row = layoutInflater.inflate(R.layout.discourse_track, container, false)
+        row.clipToOutline = true
         row.findViewById<View>(R.id.discourse_track_number).isVisible = false
         row.findViewById<View>(R.id.discourse_track_download).isVisible = false
         return row
