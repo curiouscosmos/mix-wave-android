@@ -428,7 +428,8 @@
                     vlc:layout_constraintBottom_toBottomOf="parent"
                     vlc:layout_constraintEnd_toStartOf="@+id/player_overlay_forward"
                     vlc:layout_constraintStart_toEndOf="@+id/player_overlay_rewind"
-                    vlc:srcCompat="@drawable/ic_pause_player" />
+                    vlc:srcCompat="@drawable/ic_pause_player"
+                    vlc:tint="@color/white" />
 
             <ImageView
                     android:id="@+id/player_overlay_forward"

@@ -5,7 +5,7 @@
         android:gravity="center_vertical|fill_horizontal">
         <shape android:shape="rectangle">
             <size android:height="4dp" />
-            <solid android:color="@color/grey200transparent" />
+            <solid android:color="@color/black_more_transparent" />
         </shape>
     </item>
     <item
@@ -14,7 +14,7 @@
         <clip>
             <shape android:shape="rectangle">
                 <size android:height="4dp" />
-                <solid android:color="@color/grey200transparent" />
+                <solid android:color="@color/black_more_transparent" />
             </shape>
         </clip>
     </item>
