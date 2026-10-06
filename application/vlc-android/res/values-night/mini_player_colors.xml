@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mini_player_surface_start">#402020</color>
+    <color name="mini_player_surface_end">#241B1C</color>
+    <color name="mini_player_border">#813034</color>
+    <color name="mini_player_text">#FFFFFF</color>
+    <color name="mini_player_text_secondary">#B7B4B4</color>
+    <color name="mini_player_control">#FFFFFF</color>
+    <color name="mini_player_accent">#EB3036</color>
+    <color name="mini_player_progress_inactive">#514747</color>
+</resources>

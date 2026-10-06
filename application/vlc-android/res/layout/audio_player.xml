@@ -81,9 +81,9 @@
                 android:maxHeight="4dp"
                 android:minHeight="4dp"
                 android:thumb="@drawable/mini_player_thumb"
-                android:thumbTint="#EB3036"
-                android:progressTint="#EB3036"
-                android:progressBackgroundTint="#514747"
+                android:thumbTint="@color/mini_player_accent"
+                android:progressTint="@color/mini_player_accent"
+                android:progressBackgroundTint="@color/mini_player_progress_inactive"
                 android:splitTrack="false"
                 android:paddingLeft="0px"
                 android:paddingRight="0px"
@@ -180,7 +180,8 @@
                     app:layout_constraintHorizontal_chainStyle="packed"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="@id/header_large_play_pause"
-                    app:srcCompat="@drawable/ic_shuffle_audio" />
+                    app:srcCompat="@drawable/ic_shuffle_audio"
+                    app:tint="@color/mini_player_control" />
 
             <ImageView
                     android:id="@+id/header_previous"
@@ -200,7 +201,8 @@
                     app:layout_constraintHorizontal_bias="0.5"
                     app:layout_constraintStart_toEndOf="@+id/header_shuffle"
                     app:layout_constraintTop_toTopOf="@id/header_large_play_pause"
-                    app:srcCompat="@drawable/ic_previous" />
+                    app:srcCompat="@drawable/ic_previous"
+                    app:tint="@color/mini_player_control" />
 
             <androidx.appcompat.widget.AppCompatImageView
                     android:id="@+id/header_large_play_pause"
@@ -217,7 +219,8 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@+id/header_next"
                     app:layout_constraintStart_toEndOf="@+id/header_previous"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/mini_player_control" />
 
             <ImageView
                     android:id="@+id/header_next"
@@ -238,7 +241,8 @@
                     app:layout_constraintHorizontal_bias="0.5"
                     app:layout_constraintStart_toEndOf="@+id/header_large_play_pause"
                     app:layout_constraintTop_toTopOf="@id/header_large_play_pause"
-                    app:srcCompat="@drawable/ic_next" />
+                    app:srcCompat="@drawable/ic_next"
+                    app:tint="@color/mini_player_control" />
 
             <ImageView
                     android:id="@+id/header_repeat"
@@ -369,7 +373,8 @@
                     app:layout_constraintBottom_toBottomOf="@id/guideline_header_bottom"
                     app:layout_constraintEnd_toStartOf="@+id/playlist_switch"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_search_audio" />
+                    app:srcCompat="@drawable/ic_search_audio"
+                    app:tint="@color/mini_player_control" />
 
             <ImageView
                     android:id="@+id/playlist_switch"
@@ -383,7 +388,8 @@
                     app:layout_constraintBottom_toBottomOf="@id/guideline_header_bottom"
                     app:layout_constraintEnd_toStartOf="@+id/adv_function"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_playlist_audio_on" />
+                    app:srcCompat="@drawable/ic_playlist_audio_on"
+                    app:tint="@color/mini_player_control" />
 
             <ImageView
                     android:id="@+id/adv_function"
@@ -397,7 +403,8 @@
                     app:layout_constraintBottom_toBottomOf="@id/guideline_header_bottom"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_overflow_audio" />
+                    app:srcCompat="@drawable/ic_overflow_audio"
+                    app:tint="@color/mini_player_control" />
 
             <TextView
                     android:id="@+id/header_time"
@@ -408,7 +415,7 @@
                     android:clickable="true"
                     android:onClick="@{fragment::onTimeLabelClick}"
                     android:text="@string/time_0"
-                    android:textColor="#B7B4B4"
+                    android:textColor="@color/mini_player_text_secondary"
                     android:textSize="12sp"
                     app:layout_constraintEnd_toStartOf="@+id/header_play_pause"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -423,7 +430,7 @@
                     android:onClick="@{fragment::onPlayPauseClick}"
                     android:onLongClick="@{fragment::onStopClick}"
                     android:scaleType="fitXY"
-                    android:tint="@color/white"
+                    android:tint="@color/mini_player_control"
                     app:layout_constraintBottom_toBottomOf="@id/guideline_header_bottom"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
