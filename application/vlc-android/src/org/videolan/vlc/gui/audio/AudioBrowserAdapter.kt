@@ -335,12 +335,12 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                     bottomMargin = 2.dp
                 }
                 binding.root.minimumHeight = 64.dp
-                binding.title.setTextColor(android.graphics.Color.WHITE)
-                binding.subtitle.setTextColor(android.graphics.Color.LTGRAY)
+                binding.title.setTextColor(binding.root.context.getColor(R.color.audio_mixer_text))
+                binding.subtitle.setTextColor(binding.root.context.getColor(R.color.audio_mixer_text_secondary))
                 binding.title.textSize = 16f
                 binding.mediaCover.layoutParams.height = listImageWidth
                 binding.selectorImage.layoutParams.height = listImageWidth
-                binding.mediaCover.setColorFilter(android.graphics.Color.GRAY)
+                binding.mediaCover.setColorFilter(binding.root.context.getColor(R.color.audio_mixer_text_secondary))
                 listOf(R.id.visualizer1, R.id.visualizer2, R.id.visualizer3).forEach {
                     binding.playing.findViewById<View>(it).setBackgroundColor(android.graphics.Color.rgb(235, 48, 54))
                 }

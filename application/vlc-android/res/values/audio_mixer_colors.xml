@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="audio_mixer_screen_start">#FFF8F5</color>
+    <color name="audio_mixer_screen_end">#FAF7F5</color>
+    <color name="audio_mixer_card">#FFFDFC</color>
+    <color name="audio_mixer_card_border">#E7DAD7</color>
+    <color name="audio_mixer_row_start">#FFFDFC</color>
+    <color name="audio_mixer_row_end">#F1E8E5</color>
+    <color name="audio_mixer_row_active_start">#FFF0ED</color>
+    <color name="audio_mixer_row_active_end">#F8E2DE</color>
+    <color name="audio_mixer_banner_start">#FFF0ED</color>
+    <color name="audio_mixer_banner_end">#F8E2DE</color>
+    <color name="audio_mixer_banner_icon">#B3262D</color>
+    <color name="audio_mixer_separator">#E5DAD8</color>
+    <color name="audio_mixer_text">#211A19</color>
+    <color name="audio_mixer_text_secondary">#685D5B</color>
+    <color name="audio_mixer_accent">#B3262D</color>
+    <color name="audio_mixer_toggle_background_default">#F8EDEA</color>
+    <color name="audio_mixer_toggle_background_selected">#A82222</color>
+    <color name="audio_mixer_toggle_foreground_default">#B3262D</color>
+    <color name="audio_mixer_toggle_foreground_selected">#FFFFFF</color>
+    <color name="audio_mixer_toggle_disabled">#9B9290</color>
+    <color name="audio_mixer_slider_inactive">#D6C9C6</color>
+</resources>
