@@ -13,6 +13,17 @@
     <color name="discourse_catalogue_divider">#E5DAD8</color>
     <color name="discourse_search_field_background">#FFFFFF</color>
     <color name="discourse_search_stroke_default">#D6B9B5</color>
+    <color name="playlist_screen_surface">#FAF7F5</color>
+    <color name="playlist_screen_glow_start">#FFF0EC</color>
+    <color name="playlist_screen_glow_secondary">#F8ECE8</color>
+    <color name="playlist_screen_glow_end">#00FAF7F5</color>
+    <color name="playlist_row_start">#FFFDFC</color>
+    <color name="playlist_row_end">#F1E8E5</color>
+    <color name="playlist_row_accent">#B3262D</color>
+    <color name="playlist_cover_start">#F4DCD6</color>
+    <color name="playlist_cover_end">#EAD0CB</color>
+    <color name="playlist_text">#211A19</color>
+    <color name="playlist_text_secondary">#685D5B</color>
     <color name="discourse_track_surface">#FFFDFC</color>
     <color name="discourse_track_border">#E7DAD7</color>
     <color name="discourse_track_text">#211A19</color>

@@ -49,7 +49,7 @@
             android:layout_marginTop="20dp"
             android:text="@string/playlists"
             android:fontFamily="sans-serif-medium"
-            android:textColor="@color/white"
+            android:textColor="@color/playlist_text"
             android:textSize="20sp" />
 
     <TextView
@@ -59,7 +59,7 @@
             android:layout_marginTop="4dp"
             android:layout_marginBottom="20dp"
             android:text="@string/your_created_playlists"
-            android:textColor="#B7B4B4"
+            android:textColor="@color/playlist_text_secondary"
             android:textSize="14sp" />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -67,8 +67,8 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:paddingBottom="16dp"
             android:clipToPadding="false" />
 

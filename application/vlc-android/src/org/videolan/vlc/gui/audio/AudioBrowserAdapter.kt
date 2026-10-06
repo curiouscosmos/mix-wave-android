@@ -356,8 +356,8 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 (binding.selectorImage.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).marginStart = 12.dp
                 binding.mediaCover.setPadding(12.dp, 12.dp, 12.dp, 12.dp)
                 binding.mediaCover.setColorFilter(android.graphics.Color.rgb(205, 78, 80))
-                binding.title.setTextColor(android.graphics.Color.WHITE)
-                binding.subtitle.setTextColor(android.graphics.Color.LTGRAY)
+                binding.title.setTextColor(binding.root.context.getColor(R.color.playlist_text))
+                binding.subtitle.setTextColor(binding.root.context.getColor(R.color.playlist_text_secondary))
                 binding.title.textSize = 16f
                 binding.subtitle.textSize = 14f
             }
