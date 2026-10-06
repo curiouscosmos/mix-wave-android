@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="6dp"
         app:boxBackgroundMode="outline"
-        app:boxBackgroundColor="#281515"
+        app:boxBackgroundColor="@color/discourse_search_field_background"
         app:boxStrokeColor="@color/discourse_search_stroke"
         app:boxStrokeWidth="1dp"
         app:boxCornerRadiusTopStart="28dp"
@@ -38,7 +38,7 @@
         android:singleLine="true"
         android:textColor="@color/discourse_catalogue_text"
         android:textCursorDrawable="@drawable/discourse_search_cursor"
-        android:textColorHint="#B3B3B3"
+        android:textColorHint="@color/discourse_catalogue_secondary"
         android:textSize="18sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -67,7 +67,7 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:padding="32dp"
-            android:textColor="#B3B3B3"
+            android:textColor="@color/discourse_catalogue_secondary"
             android:textSize="14sp"
             android:visibility="gone" />
     </FrameLayout>

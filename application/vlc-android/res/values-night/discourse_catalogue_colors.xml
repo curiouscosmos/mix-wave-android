@@ -11,6 +11,8 @@
     <color name="discourse_catalogue_text">#F5F3F3</color>
     <color name="discourse_catalogue_secondary">#BBB8B8</color>
     <color name="discourse_catalogue_divider">#302B2B</color>
+    <color name="discourse_search_field_background">#281515</color>
+    <color name="discourse_search_stroke_default">#923330</color>
     <color name="discourse_track_surface">#1B171B</color>
     <color name="discourse_track_border">#302329</color>
     <color name="discourse_track_text">#FFFFFF</color>
