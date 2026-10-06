@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -17,6 +18,7 @@ import android.widget.ArrayAdapter
 import android.widget.AdapterView
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.Spinner
 import android.widget.TextView
@@ -170,6 +172,7 @@ class DiscourseFragment : BaseFragment() {
             arguments?.parcelable<Discourse>(DiscourseDetailActivity.ARG_DISCOURSE)?.let(model::openDiscourse)
         }
         model.state.observe(viewLifecycleOwner, ::render)
+        model.loadingMore.observe(viewLifecycleOwner) { (grid.adapter as? DiscourseAdapter)?.setLoadingMore(it) }
         viewLifecycleOwner.lifecycleScope.launch {
             playbackStore.initialize()
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -407,9 +410,10 @@ class DiscourseFragment : BaseFragment() {
     private inner class DiscourseAdapter(
         items: List<Discourse>,
         private val click: (Discourse) -> Unit
-    ) : RecyclerView.Adapter<DiscourseAdapter.Holder>() {
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         private var items = items
         private var positions = items.mapIndexed { index, item -> item.id to index }.toMap()
+        private var loadingMore = false
         inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
             val card: View = view.findViewById(R.id.discourse_catalogue_card)
             val heading: View = view.findViewById(R.id.discourse_letter_heading)
@@ -423,11 +427,24 @@ class DiscourseFragment : BaseFragment() {
             val downloaded: ProgressBar = view.findViewById(R.id.discourse_download_progress)
         }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Holder(
-            layoutInflater.inflate(R.layout.discourse_catalogue_card, parent, false)
-        )
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
+            if (viewType == 1) object : RecyclerView.ViewHolder(FrameLayout(parent.context).apply {
+                layoutParams = RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    (56 * parent.resources.displayMetrics.density).toInt()
+                )
+                addView(ProgressBar(context).apply { isIndeterminate = true }, FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER
+                ))
+            }) {} else Holder(layoutInflater.inflate(R.layout.discourse_catalogue_card, parent, false))
 
-        override fun onBindViewHolder(holder: Holder, position: Int) {
+        override fun getItemViewType(position: Int) = if (position == items.size) 1 else 0
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (position == items.size) return
+            holder as Holder
             val item = items[position]
             val heading = discourseCatalogueHeading(item.title, items.getOrNull(position - 1)?.title,
                 model.sortFilter == DiscourseViewModel.SortFilter.DEFAULT)
@@ -458,10 +475,17 @@ class DiscourseFragment : BaseFragment() {
             else change.discourseIds.forEach { id -> positions[id]?.let { notifyItemChanged(it, "progress") } }
         }
         fun refreshDownloads() = notifyItemRangeChanged(0, items.size, "download")
-        override fun getItemCount() = items.size
+        override fun getItemCount() = items.size + if (loadingMore) 1 else 0
 
-        override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
+        fun setLoadingMore(loading: Boolean) {
+            if (loadingMore == loading) return
+            loadingMore = loading
+            if (loading) notifyItemInserted(items.size) else notifyItemRemoved(items.size)
+        }
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
             if (payloads.isEmpty()) onBindViewHolder(holder, position)
+            else if (holder !is Holder) return
             else if ("download" in payloads) {
                 val item = items[position]
                 bindDiscourseDownloadIndicator(holder, item)

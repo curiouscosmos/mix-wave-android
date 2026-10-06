@@ -35,6 +35,8 @@ class DiscourseViewModel(
 
     private val mutableState = MutableLiveData<State>(State.Idle)
     val state: LiveData<State> = mutableState
+    private val mutableLoadingMore = MutableLiveData(false)
+    val loadingMore: LiveData<Boolean> = mutableLoadingMore
     private var loadJob: Job? = null
     private var cachedCatalogue: State.Catalogue? = null
     private var nextPage = 1
@@ -73,6 +75,7 @@ class DiscourseViewModel(
         val catalogue = cachedCatalogue ?: return
         if (nextPage > totalPages || loadJob?.isActive == true) return
         loadJob = viewModelScope.launch {
+            mutableLoadingMore.value = true
             try {
                 val response = pageLoader(nextPage, forceRefreshPages, languageFilter.query, sortFilter.query)
                 nextPage++
@@ -83,6 +86,8 @@ class DiscourseViewModel(
                 throw error
             } catch (error: Exception) {
                 // Keep the current page visible; reaching the end retries on the next scroll.
+            } finally {
+                mutableLoadingMore.value = false
             }
         }
     }
