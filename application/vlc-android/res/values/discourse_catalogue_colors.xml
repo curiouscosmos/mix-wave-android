@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="discourse_catalogue_background">#0D0D0D</color>
-    <color name="discourse_catalogue_surface_start">#321A19</color>
-    <color name="discourse_catalogue_surface_end">#211312</color>
-    <color name="discourse_catalogue_border">#71302E</color>
-    <color name="discourse_catalogue_accent">#FF484D</color>
-    <color name="discourse_catalogue_text">#F5F3F3</color>
-    <color name="discourse_catalogue_secondary">#BBB8B8</color>
-    <color name="discourse_catalogue_divider">#302B2B</color>
+    <color name="discourse_catalogue_background">#FFFDFC</color>
+    <color name="discourse_catalogue_surface_start">#FFF8F6</color>
+    <color name="discourse_catalogue_surface_end">#F8EDEA</color>
+    <color name="discourse_catalogue_border">#E7C9C5</color>
+    <color name="discourse_catalogue_accent">#B3262D</color>
+    <color name="discourse_catalogue_text">#211A19</color>
+    <color name="discourse_catalogue_secondary">#685D5B</color>
+    <color name="discourse_catalogue_divider">#E5DAD8</color>
+    <color name="discourse_track_surface">#FFFDFC</color>
+    <color name="discourse_track_border">#E7DAD7</color>
+    <color name="discourse_track_text">#211A19</color>
+    <color name="discourse_track_secondary">#685D5B</color>
+    <color name="discourse_track_downloaded_surface">#F9EDEF</color>
+    <color name="discourse_track_downloaded_border">#E7C6CF</color>
 </resources>

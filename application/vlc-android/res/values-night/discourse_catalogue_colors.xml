@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="discourse_catalogue_background">#0D0D0D</color>
+    <color name="discourse_catalogue_surface_start">#321A19</color>
+    <color name="discourse_catalogue_surface_end">#211312</color>
+    <color name="discourse_catalogue_border">#71302E</color>
+    <color name="discourse_catalogue_accent">#FF484D</color>
+    <color name="discourse_catalogue_text">#F5F3F3</color>
+    <color name="discourse_catalogue_secondary">#BBB8B8</color>
+    <color name="discourse_catalogue_divider">#302B2B</color>
+    <color name="discourse_track_surface">#1B171B</color>
+    <color name="discourse_track_border">#302329</color>
+    <color name="discourse_track_text">#FFFFFF</color>
+    <color name="discourse_track_secondary">#BEA8AA</color>
+    <color name="discourse_track_downloaded_surface">#29171D</color>
+    <color name="discourse_track_downloaded_border">#64303D</color>
+</resources>

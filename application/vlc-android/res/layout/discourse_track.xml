@@ -40,7 +40,7 @@
             android:orientation="vertical">
 
             <TextView
-                android:textColor="#FFFFFF"
+                android:textColor="@color/discourse_track_text"
                 android:id="@+id/discourse_track_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -49,7 +49,7 @@
                 android:textAppearance="?attr/textAppearanceSubtitle1" />
 
             <TextView
-                android:textColor="#BEA8AA"
+                android:textColor="@color/discourse_track_secondary"
                 android:id="@+id/discourse_track_meta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -58,7 +58,7 @@
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <TextView
-                android:visibility="gone" android:textColor="#BEA8AA"
+                android:visibility="gone" android:textColor="@color/discourse_track_secondary"
                 android:id="@+id/discourse_track_likes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
