@@ -38,15 +38,15 @@
                 android:layout_weight="0.6"
                 android:orientation="vertical">
 
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/discourse_detail_label" android:textColor="#BEA8AA" android:textSize="11sp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/discourse_detail_label" android:textColor="@color/discourse_catalogue_secondary" android:textSize="11sp" />
                 <TextView
-                    android:textColor="#FFFFFF" android:textSize="24sp" android:textStyle="bold"
+                    android:textColor="@color/discourse_catalogue_text" android:textSize="24sp" android:textStyle="bold"
                     android:id="@+id/discourse_detail_title"
                     style="?attr/textAppearanceHeadline6"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />
 
-                <TextView android:id="@+id/discourse_detail_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#BEA8AA" android:layout_marginTop="8dp" />
+                <TextView android:id="@+id/discourse_detail_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/discourse_catalogue_secondary" android:layout_marginTop="8dp" />
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -68,7 +68,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
                         android:textAppearance="?attr/textAppearanceCaption"
-                        android:textColor="#FF5269"
+                        android:textColor="@color/discourse_catalogue_accent"
                         android:visibility="gone" />
                 </LinearLayout>
 
@@ -95,7 +95,7 @@
 
             <com.google.android.material.button.MaterialButton android:id="@+id/discourse_play_all" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/play_all" android:textColor="#FFFFFF" app:backgroundTint="#CD263D" app:icon="@drawable/ic_play_all" app:iconSize="20dp" app:iconTint="#FFFFFF" />
             <com.google.android.material.button.MaterialButton
-                app:strokeColor="#CD263D" app:strokeWidth="1dp" app:backgroundTint="#210C10" android:textColor="#FFFFFF"
+                app:strokeColor="@color/discourse_catalogue_accent" app:strokeWidth="1dp" app:backgroundTint="@color/discourse_catalogue_surface_end" android:textColor="@color/discourse_catalogue_text"
                 android:id="@+id/discourse_download_all"
                 android:layout_width="0dp" android:layout_weight="1" android:layout_marginStart="8dp"
                 android:layout_height="wrap_content"
@@ -112,7 +112,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_marginStart="8dp"
-                android:textColor="#BEA8AA" android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="@color/discourse_catalogue_secondary" android:textAppearance="?attr/textAppearanceCaption"
                 android:visibility="gone" />
 
             <Button
@@ -120,7 +120,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textColor="#FF5269" android:backgroundTint="#210C10" android:text="@string/discourse_remove_all" />
+                android:textColor="@color/discourse_catalogue_accent" android:backgroundTint="@color/discourse_catalogue_surface_end" android:text="@string/discourse_remove_all" />
         </LinearLayout>
-        <TextView android:id="@+id/discourse_tracks_heading" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:textColor="#FFFFFF" android:textStyle="bold" />
+        <TextView android:id="@+id/discourse_tracks_heading" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:textColor="@color/discourse_catalogue_text" android:textStyle="bold" />
 </LinearLayout>

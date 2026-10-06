@@ -2,6 +2,8 @@
 <resources>
     <color name="discourse_catalogue_background">#0D0D0D</color>
     <color name="discourse_catalogue_background_start">#1C1110</color>
+    <color name="discourse_detail_background_start">#2D1017</color>
+    <color name="discourse_detail_background_end">#09090B</color>
     <color name="discourse_catalogue_surface_start">#321A19</color>
     <color name="discourse_catalogue_surface_end">#211312</color>
     <color name="discourse_catalogue_border">#71302E</color>
