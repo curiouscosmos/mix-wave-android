@@ -1,6 +1,6 @@
 workflows:
   osho-discourse-android:
-    name: Osho Discourse Android
+    name: Rajneesh Discourse Android
     max_build_duration: 120
     instance_type: mac_mini_m2
     triggering:

@@ -2,7 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools"
         tools:ignore="MissingTranslation">
 
-    <!-- Main Osho Discourse Interface -->
+    <!-- Main Rajneesh Discourse Interface -->
     <string name="ok">Goed</string>
     <string name="cancel">Kanselleer</string>
     <string name="other">Ander</string>

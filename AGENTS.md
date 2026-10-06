@@ -1,12 +1,12 @@
-# Osho Discourse Android context
+# Rajneesh Discourse Android context
 
-This repo is a fork/rebrand of VLC Android. The product name is **Osho Discourse**.
+This repo is a fork/rebrand of VLC Android. The product name is **Rajneesh Discourse**.
 
-Primary goal: keep VLC's local media playback base, but present it as Osho Discourse with a music-first UX and an added **Audio Mixer** feature that can play a selected local audio file in the background alongside the main player.
+Primary goal: keep VLC's local media playback base, but present it as Rajneesh Discourse with a music-first UX and an added **Audio Mixer** feature that can play a selected local audio file in the background alongside the main player.
 
 ## Product direction
 
-- App name and user-facing branding should be **Osho Discourse**, not VLC or VideoLAN.
+- App name and user-facing branding should be **Rajneesh Discourse**, not VLC or VideoLAN.
 - Official website should point to `sandalbar.online`.
 - Source code URL should point to `https://github.com/curiouscosmos/mix-wave-android`.
 - Dark theme is the default.
@@ -21,7 +21,7 @@ Primary goal: keep VLC's local media playback base, but present it as Osho Disco
 
 ## Current implemented changes to preserve
 
-- Replaced VLC launcher/onboarding/header icons with Osho Discourse assets.
+- Replaced VLC launcher/onboarding/header icons with Rajneesh Discourse assets.
 - Header icon uses 8dp rounded corners. Avoid `clipToOutline` in XML because min API is 26.
 - Added bottom mini-player on Music, fixed near the bottom like Spotify.
 - Removed Music random/shuffle floating button.
@@ -42,7 +42,7 @@ Primary goal: keep VLC's local media playback base, but present it as Osho Disco
   - Mixer loop must restart when its track reaches end.
   - Mixer volume must not reset to 100% when main playback changes.
 
-## Osho discourse API
+## Discourse API
 
 The non-UI API integration lives in `application/vlc-android/src/org/videolan/vlc/discourse/`. Backend reference files are in `api/`; read `api/docs.md`, `api/types/discourse.type.ts`, and `api/edge.ts` when changing the contract. Do not integrate the `/seed` route into the Android app.
 
@@ -111,7 +111,7 @@ UI/UX for catalogue browsing, search, filters, discourse details, and like contr
 - `application/vlc-android/src/org/videolan/vlc/StartActivity.kt`
   - Startup shortcut routing. Browser shortcut should use `R.id.nav_directories`, not any generated bottom-nav menu item.
 - `application/vlc-android/src/org/videolan/vlc/discourse/`
-  - Osho discourse API models, client, repository, persisted like state, and VLC playback mapping.
+  - Discourse API models, client, repository, persisted like state, and VLC playback mapping.
 
 ## Build / verification
 
