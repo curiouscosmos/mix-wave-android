@@ -96,19 +96,19 @@ class DiscourseRepository(
         likesStore.unlike(id, audio = false, totalLikes = totalLikes) { api.unlike(userId, discourseId = id).data }
             .also { it?.let { result -> updateCachedLikeCounts(discourseId = id, discourseCount = result.totalLikes) } }
 
-    suspend fun unlikeDiscourseAudio(id: String, totalLikes: Int = 0, discourseId: String? = null): UnlikeData? =
-        likesStore.unlike(id, audio = true, totalLikes = totalLikes, discourseId = discourseId) {
+    suspend fun unlikeDiscourseAudio(id: String, totalLikes: Int = 0): UnlikeData? =
+        likesStore.unlike(id, audio = true, totalLikes = totalLikes) {
             api.unlike(userId, audioId = id).data
         }.also { it?.let { result ->
-            updateCachedLikeCounts(discourseId, result.discourseTotalLikes, id, result.totalLikes)
+            updateCachedLikeCounts(audioId = id, audioCount = result.totalLikes)
         } }
 
     suspend fun toggleDiscourseLike(id: String, totalLikes: Int = 0) {
         if (id in likedDiscourses) unlikeDiscourse(id, totalLikes) else likeDiscourse(id, totalLikes)
     }
 
-    suspend fun toggleDiscourseAudioLike(id: String, totalLikes: Int = 0, discourseId: String? = null) {
-        if (id in likedAudios) unlikeDiscourseAudio(id, totalLikes, discourseId) else likeDiscourseAudio(id, totalLikes)
+    suspend fun toggleDiscourseAudioLike(id: String, totalLikes: Int = 0) {
+        if (id in likedAudios) unlikeDiscourseAudio(id, totalLikes) else likeDiscourseAudio(id, totalLikes)
     }
 
     private fun updateCachedLikeCounts(

@@ -59,22 +59,28 @@ class DiscourseLikesRepositoryTest {
     fun cleanup() = unmockkObject(Settings, OshoUserIdentity)
 
     @Test
-    fun audioUnlikeSendsExactlyOneIdAndUpdatesCachedCountsWithoutReorderingHistory() = runBlocking {
+    fun audioTogglesOnlyChangeAudioCountsAndPreserveDiscourseStateAndHistory() = runBlocking {
         coEvery { api.unlike("user", null, "audio") } returns UnlikeResponse(
             UnlikeData(discourseAudioId = "audio", likedByUserId = "user", unliked = true,
-                totalLikes = 0, discourseTotalLikes = 4))
-        repository.toggleDiscourseAudioLike("audio", 1, "parent")
+                totalLikes = 0))
+        repository.toggleDiscourseAudioLike("audio", 1)
         coVerify(exactly = 1) { api.unlike("user", null, "audio") }
         assertEquals(listOf("other-audio", "audio"), repository.recentlyPlayedAudios.map { it.id })
         assertEquals(0, repository.recentlyPlayedAudios.last().totalLikes)
         assertEquals(listOf("other", "parent"), repository.recentlyPlayedDiscourses.map { it.id })
-        assertEquals(4, repository.recentlyPlayedDiscourses.last().totalLikes)
+        assertEquals(5, repository.recentlyPlayedDiscourses.last().totalLikes)
         assertTrue("parent" in repository.likedDiscourses)
         assertFalse("audio" in repository.likedAudios)
         repository.recordRecentlyPlayed(repository.recentlyPlayedAudios.last().copy(totalLikes = 1))
         repository.recordRecentlyPlayed(repository.recentlyPlayedDiscourses.last().copy(totalLikes = 5))
         assertEquals(0, repository.recentlyPlayedAudios.first().totalLikes)
-        assertEquals(4, repository.recentlyPlayedDiscourses.first().totalLikes)
+        assertEquals(5, repository.recentlyPlayedDiscourses.first().totalLikes)
+        coEvery { api.likeDiscourseAudio("audio", LikeRequest("user")) } returns LikeResponse(
+            LikeData(discourseAudioId = "audio", likedByUserId = "user", liked = true, totalLikes = 1))
+        repository.toggleDiscourseAudioLike("audio", 0)
+        assertEquals(1, repository.recentlyPlayedAudios.first().totalLikes)
+        assertEquals(5, repository.recentlyPlayedDiscourses.first().totalLikes)
+        assertTrue("parent" in repository.likedDiscourses)
     }
 
     @Test

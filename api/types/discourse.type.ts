@@ -64,6 +64,31 @@ export type GetDiscourseAudiosByDiscourseResponse = {
 	};
 };
 
+export type GetUserLikesRequest = {
+	user_id: string;
+};
+
+export type GetUserLikesResponse = {
+	discourse: string[];
+	discourse_audio: string[];
+};
+
+export type DeleteUserLikeRequest = {
+	user_id: string;
+	discourse_id?: string;
+	discourse_audio_id?: string;
+};
+
+export type DeleteUserLikeResponse = {
+	data: {
+		discourse_id?: string;
+		discourse_audio_id?: string;
+		liked_by_user_id: string;
+		unliked: boolean;
+		total_likes: number;
+	};
+};
+
 export type DiscourseLanguage =
 	| "hindi"
 	| "english";

@@ -258,6 +258,73 @@ async function getTopListening(url: URL): Promise<Response> {
 	return jsonResponse({ data, meta: { by, time, limit: PAGE_SIZE } });
 }
 
+async function getUserLikes(url: URL): Promise<Response> {
+	const userId = url.searchParams.get("user_id")?.trim();
+	if (!userId) return jsonResponse({ error: "user_id is required." }, 400);
+
+	const [discourses, audios] = await Promise.all([
+		db.execute({
+			sql: "SELECT discourse_id FROM discourse_likes WHERE liked_by_user_id = ?",
+			args: [userId],
+		}),
+		db.execute({
+			sql: "SELECT discourse_audio_id FROM discourse_audio_likes WHERE liked_by_user_id = ?",
+			args: [userId],
+		}),
+	]);
+
+	return jsonResponse({
+		discourse: discourses.rows.map((row) => row.discourse_id),
+		discourse_audio: audios.rows.map((row) => row.discourse_audio_id),
+	});
+}
+
+async function deleteUserLike(url: URL): Promise<Response> {
+	const userId = url.searchParams.get("user_id")?.trim();
+	const discourseId = url.searchParams.get("discourse_id")?.trim();
+	const audioId = url.searchParams.get("discourse_audio_id")?.trim();
+	if (!userId || Boolean(discourseId) === Boolean(audioId)) {
+		return jsonResponse({ error: "user_id and exactly one of discourse_id or discourse_audio_id are required." }, 400);
+	}
+
+	if (discourseId) {
+		const result = await db.execute({
+			sql: "DELETE FROM discourse_likes WHERE discourse_id = ? AND liked_by_user_id = ?",
+			args: [discourseId, userId],
+		});
+		if (result.rowsAffected) {
+			await db.execute({
+				sql: "UPDATE discourse SET total_likes = MAX(0, total_likes - 1) WHERE id = ?",
+				args: [discourseId],
+			});
+		}
+
+		const count = await db.execute({
+			sql: "SELECT total_likes FROM discourse WHERE id = ?",
+			args: [discourseId],
+		});
+		return jsonResponse({ data: { discourse_id: discourseId, liked_by_user_id: userId, unliked: Boolean(result.rowsAffected), total_likes: Number(count.rows[0]?.total_likes ?? 0) } });
+	}
+
+	const result = await db.execute({
+		sql: "DELETE FROM discourse_audio_likes WHERE discourse_audio_id = ? AND liked_by_user_id = ?",
+		args: [audioId, userId],
+	});
+	if (result.rowsAffected) {
+		await db.execute({ sql: "UPDATE discourse_audio SET total_likes = MAX(0, total_likes - 1) WHERE id = ?", args: [audioId] });
+	}
+
+	const audioCount = await db.execute({ sql: "SELECT total_likes FROM discourse_audio WHERE id = ?", args: [audioId] });
+	return jsonResponse({
+		data: {
+			discourse_audio_id: audioId,
+			liked_by_user_id: userId,
+			unliked: Boolean(result.rowsAffected),
+			total_likes: Number(audioCount.rows[0]?.total_likes ?? 0),
+		},
+	});
+}
+
 const parsePage = (value: string | null) => {
 	const page = Number(value ?? "1");
 
@@ -805,16 +872,10 @@ async function likeDiscourseAudio(
 		],
 	});
 	if (likeResult.rowsAffected) {
-		await db.batch([
-			{
-				sql: `UPDATE discourse_audio SET total_likes = total_likes + 1 WHERE id = ?`,
-				args: [audioId],
-			},
-			{
-				sql: `UPDATE discourse SET total_likes = total_likes + 1 WHERE id = (SELECT discourse_id FROM discourse_audio WHERE id = ?)`,
-				args: [audioId],
-			},
-		], "write");
+		await db.execute({
+			sql: `UPDATE discourse_audio SET total_likes = total_likes + 1 WHERE id = ?`,
+			args: [audioId],
+		});
 	}
 
 	const countResult =
@@ -888,12 +949,22 @@ BunnySDK.net.http.serve(
 
 						stats:
 							"/stats",
+
+						likes:
+							"/likes?user_id=USER_UUID",
 					},
 				});
 			}
 
-			if (["stats", "discourses", "discourse-audios"].includes(resource)) {
+			if (["stats", "discourses", "discourse-audios", "likes"].includes(resource)) {
 				await ensureSchema();
+			}
+
+			if (resource === "likes" && request.method === "GET" && !id) {
+				return getUserLikes(url);
+			}
+			if (resource === "likes" && request.method === "DELETE" && !id) {
+				return deleteUserLike(url);
 			}
 
 			if (resource === "stats") {

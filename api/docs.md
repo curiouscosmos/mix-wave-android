@@ -31,7 +31,18 @@ Adds one to the discourse `total_likes` on the first like from this user. Repeat
 
 PUT /discourse-audios/:id/like
 BODY: { "user_id": "USER_UUID" }
-Adds one to the audio and parent discourse `total_likes` on the first like from this user. Repeated likes are idempotent.
+Adds one only to the audio's `total_likes` on the first like from this user. Repeated likes are idempotent. Discourse and audio likes are independent; liking or unliking an audio never changes the discourse's count or liked state.
+
+GET /likes?user_id=USER_UUID
+Returns the discourse and discourse audio IDs liked by the user:
+`{ "discourse": ["DISCOURSE_UUID"], "discourse_audio": ["AUDIO_UUID"] }`.
+Either array is empty when the user has no likes of that type. Missing or blank `user_id` returns `400`.
+
+DELETE /likes?user_id=USER_UUID&discourse_id=DISCOURSE_UUID
+DELETE /likes?user_id=USER_UUID&discourse_audio_id=AUDIO_UUID
+Removes the specified like for that user. `user_id` and exactly one entity ID are required; invalid combinations return `400`. Repeated requests are idempotent and return `unliked: false` without changing counts. A successful removal returns `unliked: true` and the updated `total_likes` for that entity only.
+
+When deploying the independent-count behavior, run `api/migrations/independent-discourse-likes.sql` once against the backend database to recalculate historical discourse totals from direct discourse likes. It is idempotent and does not change users' likes or audio totals. Android does not run this migration.
 
 # Listening stats
 

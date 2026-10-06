@@ -518,7 +518,7 @@ class DiscourseFragment : BaseFragment() {
                 item.fileSize?.takeIf { it > 0 }?.let { Formatter.formatFileSize(requireContext(), it) }
             ).joinToString(" · ")
             holder.likes.isVisible = false
-            likesUi.bind(holder.itemView, item.id, true, item.title, item.totalLikes, item.discourseId)
+            likesUi.bind(holder.itemView, item.id, true, item.title, item.totalLikes)
             holder.played.isVisible = playbackStore.isPlayed(item.id)
             holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}"
             holder.itemView.setOnClickListener { holder.bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION }?.let(click) }

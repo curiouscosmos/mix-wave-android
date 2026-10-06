@@ -90,8 +90,7 @@ data class UnlikeData(
     @Json(name = "discourse_audio_id") val discourseAudioId: String? = null,
     @Json(name = "liked_by_user_id") val likedByUserId: String,
     val unliked: Boolean,
-    @Json(name = "total_likes") val totalLikes: Int,
-    @Json(name = "discourse_total_likes") val discourseTotalLikes: Int? = null
+    @Json(name = "total_likes") val totalLikes: Int
 )
 
 data class LikeData(

@@ -45,7 +45,7 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         }
     }
 
-    fun bind(root: View, id: String, audio: Boolean, title: String, count: Int = 0, discourseId: String? = null) {
+    fun bind(root: View, id: String, audio: Boolean, title: String, count: Int = 0) {
         val view = root.findViewById<TextView>(R.id.discourse_like)
         val binding = Binding(DiscourseLikesStore.Target(id, audio), title, count)
         bindings[view] = binding
@@ -54,7 +54,7 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         view.setOnClickListener {
             owner.lifecycleScope.launch {
                 try {
-                    if (audio) repository.toggleDiscourseAudioLike(id, count, discourseId)
+                    if (audio) repository.toggleDiscourseAudioLike(id, count)
                     else repository.toggleDiscourseLike(id, count)
                 } catch (error: CancellationException) {
                     throw error

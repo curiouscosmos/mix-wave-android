@@ -42,16 +42,13 @@ internal class DiscourseLikesStore(
             request().also { check(it.liked) { "Like was not acknowledged" } }
         }
 
-    suspend fun unlike(id: String, audio: Boolean, totalLikes: Int, discourseId: String? = null,
+    suspend fun unlike(id: String, audio: Boolean, totalLikes: Int,
                        request: suspend () -> UnlikeData): UnlikeData? =
-        change(id, audio, false, totalLikes, count = { it.totalLikes },
-            parentCount = { result -> discourseId?.let { parent -> result.discourseTotalLikes?.let { Target(parent, false) to it } } },
-            request = request)
+        change(id, audio, false, totalLikes, count = { it.totalLikes }, request = request)
 
     private suspend fun <T> change(
         id: String, audio: Boolean, liked: Boolean, totalLikes: Int,
         count: (T) -> Int,
-        parentCount: (T) -> Pair<Target, Int>? = { null },
         request: suspend () -> T
     ): T? {
         val target = Target(id, audio)
@@ -75,7 +72,7 @@ internal class DiscourseLikesStore(
                 synchronized(this) {
                     val current = mutableState.value
                     val counts = current.counts + (target to count(result).coerceAtLeast(0))
-                    mutableState.value = current.copy(counts = parentCount(result)?.let { counts + it } ?: counts)
+                    mutableState.value = current.copy(counts = counts)
                 }
                 result
             }

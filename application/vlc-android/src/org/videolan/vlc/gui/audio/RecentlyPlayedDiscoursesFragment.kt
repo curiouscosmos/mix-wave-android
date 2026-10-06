@@ -172,7 +172,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             card.findViewById<TextView>(R.id.discourse_track_meta).text =
                 getString(R.string.weekly_plays, audio.plays)
             card.setOnClickListener { requireContext().playDiscourseAudio(audio) }
-            likesUi.bind(card, audio.id, true, audio.title, audio.totalLikes, audio.discourseId)
+            likesUi.bind(card, audio.id, true, audio.title, audio.totalLikes)
             bindProgress(card, audio.id, null)
             audioContainer.addView(card)
         }
@@ -190,7 +190,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         track.discoursePlaybackIds()?.let {
             bindProgress(card, it.audioId, null)
             val audio = DiscourseRepository(requireContext()).recentlyPlayedAudios.firstOrNull { audio -> audio.id == it.audioId }
-            likesUi.bind(card, it.audioId, true, track.title.orEmpty(), audio?.totalLikes ?: 0, it.discourseId)
+            likesUi.bind(card, it.audioId, true, track.title.orEmpty(), audio?.totalLikes ?: 0)
         }
         if (track.discoursePlaybackIds() == null) card.findViewById<ProgressBar>(R.id.listening_progress).isVisible = false
         container.addView(card)

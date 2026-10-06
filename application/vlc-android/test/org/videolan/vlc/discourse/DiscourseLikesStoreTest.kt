@@ -168,24 +168,24 @@ class DiscourseLikesStoreTest {
     }
 
     @Test
-    fun parsesIdempotentUnlikeAndAudioParentCounts() {
+    fun parsesIdempotentUnlikeAndIgnoresLegacyParentCount() {
         val adapter = Moshi.Builder().add(KotlinJsonAdapterFactory()).build().adapter(UnlikeResponse::class.java)
         val audio = adapter.fromJson("""{"data":{"discourse_audio_id":"audio","liked_by_user_id":"user","unliked":true,"total_likes":0,"discourse_total_likes":7}}""")!!.data
         assertEquals(0, audio.totalLikes)
-        assertEquals(7, audio.discourseTotalLikes)
+        assertEquals("audio", audio.discourseAudioId)
         val discourse = adapter.fromJson("""{"data":{"discourse_id":"discourse","liked_by_user_id":"user","unliked":false,"total_likes":0}}""")!!.data
         assertFalse(discourse.unliked)
-        assertNull(discourse.discourseTotalLikes)
+        assertEquals("discourse", discourse.discourseId)
     }
 
     @Test
-    fun unlikeIsOptimisticUpdatesParentAndPersistsRemovalWithoutExtendingExpiry() = runBlocking {
+    fun audioUnlikeOnlyUpdatesAudioAndPersistsRemovalWithoutExtendingExpiry() = runBlocking {
         store.refresh { UserLikesResponse(setOf("parent"), setOf("audio")) }
         val fetchedAt = settings.getLong(DiscourseLikesStore.FETCHED_AT, -1)
         val response = CompletableDeferred<UnlikeData>()
         val target = DiscourseLikesStore.Target("audio", true)
         val pending = async(start = CoroutineStart.UNDISPATCHED) {
-            store.unlike("audio", true, 1, "parent") { response.await() }
+            store.unlike("audio", true, 1) { response.await() }
         }
         assertFalse(store.state.value.liked(target))
         assertEquals(0, store.state.value.counts[target])
@@ -194,9 +194,9 @@ class DiscourseLikesStoreTest {
         assertNull(store.unlike("audio", true, 1) { error("Duplicate unlike") })
         now++
         response.complete(UnlikeData(discourseAudioId = "audio", likedByUserId = "user",
-            unliked = false, totalLikes = 0, discourseTotalLikes = 12))
+            unliked = false, totalLikes = 0))
         pending.await()
-        assertEquals(12, store.state.value.counts[DiscourseLikesStore.Target("parent", false)])
+        assertNull(store.state.value.counts[DiscourseLikesStore.Target("parent", false)])
         assertEquals(setOf("parent"), store.state.value.discourseIds)
         assertTrue(DiscourseLikesStore(settings).state.value.audioIds.isEmpty())
         assertEquals(fetchedAt, settings.getLong(DiscourseLikesStore.FETCHED_AT, -1))
