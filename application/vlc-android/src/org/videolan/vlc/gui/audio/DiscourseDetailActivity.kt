@@ -34,8 +34,11 @@ class DiscourseDetailActivity : ContentActivity() {
         findViewById<View>(R.id.fragment_placeholder).apply {
             (layoutParams as CoordinatorLayout.LayoutParams).behavior = AppBarLayout.ScrollingViewBehavior()
         }
-        toolbar.setBackgroundColor(android.graphics.Color.parseColor("#210C10"))
-        toolbar.setTitleTextColor(android.graphics.Color.WHITE)
+        val toolbarBackground = getColor(R.color.discourse_detail_background_start)
+        val toolbarForeground = getColor(R.color.discourse_catalogue_text)
+        toolbar.setBackgroundColor(toolbarBackground)
+        toolbar.setTitleTextColor(toolbarForeground)
+        toolbar.navigationIcon?.mutate()?.setTint(toolbarForeground)
         (toolbar.layoutParams as AppBarLayout.LayoutParams).scrollFlags = 0
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.app_name)
