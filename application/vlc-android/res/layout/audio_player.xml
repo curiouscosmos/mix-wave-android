@@ -123,7 +123,7 @@
                 android:layout_marginTop="38dp"
                 android:fontFamily="sans-serif-medium"
                 android:text="@string/music_player"
-                android:textColor="@color/white"
+                android:textColor="?attr/font_default"
                 android:textSize="20sp"
                 android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -556,10 +556,10 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/player_like_label"
-                android:textColor="#DDFFFFFF"
+                android:textColor="?attr/font_default"
                 android:textSize="12sp"
                 android:drawableTop="@drawable/ic_favorite"
-                android:drawableTint="#EF3831"
+                android:drawableTint="?attr/player_icon_color"
                 android:drawablePadding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
@@ -567,7 +567,7 @@
             <View
                 android:layout_width="1dp"
                 android:layout_height="48dp"
-                android:background="#33FFFFFF" />
+                android:background="?attr/default_divider" />
             <TextView
                 android:id="@+id/player_discourse"
                 android:layout_width="0dp"
@@ -575,10 +575,10 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/player_view_discourse"
-                android:textColor="#DDFFFFFF"
+                android:textColor="?attr/font_default"
                 android:textSize="12sp"
                 android:drawableTop="@drawable/ic_player_discourse"
-                android:drawableTint="#FFFFFF"
+                android:drawableTint="?attr/player_icon_color"
                 android:drawablePadding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
@@ -586,7 +586,7 @@
             <View
                 android:layout_width="1dp"
                 android:layout_height="48dp"
-                android:background="#33FFFFFF" />
+                android:background="?attr/default_divider" />
             <TextView
                 android:id="@+id/player_add_playlist"
                 android:layout_width="0dp"
@@ -594,10 +594,10 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/add_to_playlist"
-                android:textColor="#DDFFFFFF"
+                android:textColor="?attr/font_default"
                 android:textSize="12sp"
                 android:drawableTop="@drawable/ic_add_to_playlist"
-                android:drawableTint="#FFFFFF"
+                android:drawableTint="?attr/player_icon_color"
                 android:drawablePadding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
@@ -605,7 +605,7 @@
             <View
                 android:layout_width="1dp"
                 android:layout_height="48dp"
-                android:background="#33FFFFFF" />
+                android:background="?attr/default_divider" />
             <TextView
                 android:id="@+id/player_sleep"
                 android:layout_width="0dp"
@@ -613,10 +613,10 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/player_sleep_timer"
-                android:textColor="#DDFFFFFF"
+                android:textColor="?attr/font_default"
                 android:textSize="12sp"
                 android:drawableTop="@drawable/ic_player_timer"
-                android:drawableTint="#FFFFFF"
+                android:drawableTint="?attr/player_icon_color"
                 android:drawablePadding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
@@ -671,7 +671,7 @@
                 android:layout_marginStart="4dp"
                         app:layout_constraintBottom_toBottomOf="@id/play_pause"
                         app:layout_constraintTop_toTopOf="@id/play_pause"
-                        app:tint="@color/white"
+                        app:tint="?attr/player_icon_color"
                 />
 
         <TextView
@@ -711,7 +711,7 @@
                 android:layout_marginTop="0dp"
                         android:layout_marginBottom="0dp"
                         android:layout_marginEnd="4dp"
-                        app:tint="@color/white"
+                        app:tint="?attr/player_icon_color"
                 />
 
         <ImageView
@@ -825,7 +825,7 @@
                 android:importantForAccessibility="no"
                 android:onClick="@{fragment::onTimeLabelClick}"
                 android:text="@string/time_0"
-                android:textColor="@color/white_transparent_60"
+                android:textColor="?attr/font_audio_light"
                 android:textSize="16sp"
                 app:layout_constraintBottom_toBottomOf="@+id/player_timeline_background"
                 app:layout_constraintEnd_toEndOf="@+id/player_timeline_background"
@@ -853,7 +853,7 @@
                 app:layout_constraintRight_toLeftOf="@id/audio_rewind_10"
                 app:layout_constraintTop_toTopOf="@+id/play_pause"
                 app:srcCompat="@drawable/ic_shuffle_audio"
-                app:tint="@color/white_transparent_60" />
+                app:tint="?attr/player_icon_color" />
 
         <ImageView
                 android:id="@+id/previous"
@@ -873,7 +873,7 @@
                 app:layout_constraintRight_toLeftOf="@+id/play_pause"
                 app:layout_constraintTop_toTopOf="@+id/play_pause"
                 app:srcCompat="@drawable/ic_previous"
-                app:tint="@color/white"
+                app:tint="?attr/player_icon_color"
                 android:visibility="gone"
                 />
 
@@ -894,7 +894,7 @@
                 app:layout_constraintHorizontal_bias="0.5"
                 app:layout_constraintLeft_toRightOf="@id/audio_rewind_10"
                 app:layout_constraintRight_toLeftOf="@id/audio_forward_10"
-                app:tint="@color/white"
+                app:tint="?attr/player_icon_color"
                 app:layout_constraintBottom_toBottomOf="parent"
                 />
 
@@ -917,7 +917,7 @@
                 app:layout_constraintRight_toLeftOf="@+id/repeat"
                 app:layout_constraintTop_toTopOf="@+id/play_pause"
                 app:srcCompat="@drawable/ic_next"
-                app:tint="@color/white"
+                app:tint="?attr/player_icon_color"
                 android:visibility="gone"
                 />
 
