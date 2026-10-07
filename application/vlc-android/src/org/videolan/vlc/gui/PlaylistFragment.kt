@@ -102,6 +102,7 @@ class PlaylistFragment : BaseAudioBrowser<PlaylistsViewModel>(), SwipeRefreshLay
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.swipeLayout.setOnRefreshListener(this)
+        playlists.setPaddingRelative(12.dp, playlists.paddingTop, 12.dp, playlists.paddingBottom)
 
 
         //size of an item
@@ -233,7 +234,7 @@ class PlaylistFragment : BaseAudioBrowser<PlaylistsViewModel>(), SwipeRefreshLay
         when (viewModel.providerInCard) {
             true -> {
                 val screenWidth = (requireActivity() as? INavigator)?.getFragmentWidth(requireActivity()) ?: requireActivity().getScreenWidth()
-                adapter?.cardSize = RecyclerSectionItemGridDecoration.getItemSize(screenWidth, nbColumns, spacing, 16.dp)
+                adapter?.cardSize = RecyclerSectionItemGridDecoration.getItemSize(screenWidth - playlists.paddingStart - playlists.paddingEnd, nbColumns, spacing, 16.dp)
                 adapter?.let { adapter ->
                     @Suppress("UNCHECKED_CAST")
                     displayListInGrid(playlists, adapter, viewModel.provider as MedialibraryProvider<MediaLibraryItem>, spacing)
