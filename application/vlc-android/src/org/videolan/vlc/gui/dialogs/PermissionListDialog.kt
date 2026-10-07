@@ -152,7 +152,6 @@ class PermissionListDialog : VLCBottomSheetDialogFragment() {
         }
 
         // media permission states
-        binding.manageMediaVideo.isEnabled = !Permissions.hasAllAccess(requireActivity()) && !Permissions.hasVideoPermission(requireActivity())
         binding.manageMediaAudio.isEnabled = !Permissions.hasAllAccess(requireActivity()) && !Permissions.hasAudioPermission(requireActivity())
 
         // explanation text state
@@ -178,12 +177,6 @@ class PermissionListDialog : VLCBottomSheetDialogFragment() {
 
 
         //media permission icons
-        binding.manageMediaVideo.setImageDrawable(
-            ContextCompat.getDrawable(
-                requireActivity(),
-                if (Permissions.hasVideoPermission(requireActivity())) R.drawable.ic_permission_media_video else R.drawable.ic_permission_media_video_denied
-            )
-        )
         binding.manageMediaAudio.setImageDrawable(
             ContextCompat.getDrawable(
                 requireActivity(),
@@ -249,7 +242,6 @@ class PermissionListDialog : VLCBottomSheetDialogFragment() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     ActivityCompat.requestPermissions(
                         requireActivity(), arrayOf(
-                            Manifest.permission.READ_MEDIA_VIDEO,
                             Manifest.permission.READ_MEDIA_AUDIO
                         ), Permissions.FINE_STORAGE_PERMISSION_REQUEST_CODE
                     )
@@ -277,28 +269,15 @@ class PermissionListDialog : VLCBottomSheetDialogFragment() {
             }
         }
 
-        binding.manageMediaVideo.setOnClickListener {
-            if (!Permissions.hasAllAccess(requireActivity()) && !Permissions.hasVideoPermission(requireActivity())) {
-                ActivityCompat.requestPermissions(
-                    requireActivity(), arrayOf(
-                        Manifest.permission.READ_MEDIA_VIDEO
-                    ), Permissions.FINE_STORAGE_PERMISSION_REQUEST_CODE
-                )
-                Permissions.timeAsked = System.currentTimeMillis()
-            }
-        }
-
         //Manage view visibility for older versions
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             binding.manageMediaPermsCheck.setGone()
-            binding.manageMediaVideo.setGone()
             binding.manageMediaAudio.setGone()
 
         }
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             binding.manageMediaAudio.setGone()
-            binding.manageMediaVideo.setGone()
         }
 
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 || AndroidDevices.isTv) {
@@ -322,7 +301,6 @@ class PermissionListDialog : VLCBottomSheetDialogFragment() {
     }
 
 }
-
 
 
 

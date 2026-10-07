@@ -113,32 +113,6 @@ class PhoneScreenhotsInstrumentedTest : BaseUITest() {
     }
 
     @Test
-    fun testTakeScreenshotVideo() {
-        onView(AllOf.allOf(withId(R.id.nav_video), withEffectiveVisibility(Visibility.VISIBLE)))
-                .perform(click())
-        Log.d("Espresso", "0")
-        waitUntilLoaded { activity.findViewById(R.id.video_grid) }
-        SystemClock.sleep(1500)
-        Log.d("Espresso", "1")
-
-        ScreenshotUtil.takeScreenshot(1, "video_list")
-
-        val rvMatcher = withRecyclerView(R.id.video_grid)
-        Log.d("Espresso", "2")
-        onView(rvMatcher.atPosition(2)).perform(click())
-        Log.d("Espresso", "3")
-
-        onView(isRoot()).perform(orientationLandscape())
-        onView(isRoot()).perform(waitId(R.id.player_root, 5000))
-
-        SystemClock.sleep(1500)
-        onView(withId(R.id.player_root)).perform(click())
-        SystemClock.sleep(500)
-        ScreenshotUtil.takeScreenshot(6, "video_player")
-
-    }
-
-    @Test
     fun testTakeScreenshotBrowser() {
         onView(AllOf.allOf(withId(R.id.nav_directories), withEffectiveVisibility(Visibility.VISIBLE)))
                  .perform(click())

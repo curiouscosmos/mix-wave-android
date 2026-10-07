@@ -40,7 +40,7 @@ import org.videolan.resources.EXTRA_FOR_ESPRESSO
 import org.videolan.resources.EXTRA_TARGET
 import org.videolan.resources.ID_AUDIO
 import org.videolan.resources.ID_DIRECTORIES
-import org.videolan.resources.ID_VIDEO
+import org.videolan.resources.ID_PLAYLISTS
 import org.videolan.resources.util.parcelableList
 import org.videolan.tools.isStarted
 import org.videolan.tools.setGone
@@ -56,7 +56,6 @@ import org.videolan.vlc.gui.audio.SearchFragment
 import org.videolan.vlc.gui.browser.BaseBrowserFragment
 import org.videolan.vlc.gui.browser.MainBrowserFragment
 import org.videolan.vlc.gui.helpers.UiTools.isTablet
-import org.videolan.vlc.gui.video.VideoBrowserFragment
 import org.videolan.vlc.util.getScreenWidth
 
 private const val TAG = "Navigator"
@@ -107,7 +106,7 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
             }
             R.id.nav_playlists -> PlaylistFragment()
             R.id.nav_search -> SearchFragment()
-            else -> VideoBrowserFragment()
+            else -> HomeFragment()
         }
     }
 
@@ -151,7 +150,8 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
         R.id.nav_audio -> ID_AUDIO
         R.id.nav_audio_mixer -> ID_AUDIO_MIXER
         R.id.nav_directories -> ID_DIRECTORIES
-        else -> ID_VIDEO
+        R.id.nav_playlists -> ID_PLAYLISTS
+        else -> "search"
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {

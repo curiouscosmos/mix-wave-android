@@ -82,15 +82,14 @@ class EmptyLoadingStateView : FrameLayout {
             loadingFlipper.visibility = if (value == EmptyLoadingState.LOADING) VISIBLE else GONE
             loadingTitle.visibility = if (value == EmptyLoadingState.LOADING) VISIBLE else GONE
             emptyTextView.visibility = if (value in arrayOf(EmptyLoadingState.EMPTY, EmptyLoadingState.EMPTY_SEARCH, EmptyLoadingState.EMPTY_FAVORITES)) VISIBLE else GONE
-            emptyImageView.visibility = if (value in arrayOf(EmptyLoadingState.EMPTY,EmptyLoadingState.MISSING_PERMISSION,EmptyLoadingState.MISSING_VIDEO_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION, EmptyLoadingState.EMPTY_SEARCH, EmptyLoadingState.EMPTY_FAVORITES)) VISIBLE else GONE
+            emptyImageView.visibility = if (value in arrayOf(EmptyLoadingState.EMPTY,EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION, EmptyLoadingState.EMPTY_SEARCH, EmptyLoadingState.EMPTY_FAVORITES)) VISIBLE else GONE
             emptyImageView.setImageBitmap(context.getBitmapFromDrawable(if (value == EmptyLoadingState.EMPTY_FAVORITES) R.drawable.ic_fav_empty else if (value in arrayOf(EmptyLoadingState.EMPTY, EmptyLoadingState.EMPTY_SEARCH, EmptyLoadingState.EMPTY_FAVORITES)) R.drawable.ic_empty else R.drawable.ic_empty_warning))
-            permissionTitle.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_VIDEO_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
-            permissionTextView.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_VIDEO_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
-            grantPermissionButton.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_VIDEO_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
-            pickFileButton.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_VIDEO_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) VISIBLE else GONE
+            permissionTitle.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION,  EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
+            permissionTextView.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION,  EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
+            grantPermissionButton.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION,  EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
+            pickFileButton.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION,  EmptyLoadingState.MISSING_AUDIO_PERMISSION) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) VISIBLE else GONE
             noMediaButton.visibility = if (showNoMedia && value == EmptyLoadingState.EMPTY) VISIBLE else if (value == EmptyLoadingState.EMPTY_FAVORITES) INVISIBLE else GONE
             permissionTextView.text = when (state) {
-                EmptyLoadingState.MISSING_VIDEO_PERMISSION -> context.getString(R.string.permission_video)
                 EmptyLoadingState.MISSING_AUDIO_PERMISSION -> context.getString(R.string.permission_audio)
                 else ->
                     buildString {
@@ -164,13 +163,6 @@ class EmptyLoadingStateView : FrameLayout {
                     ), Permissions.FINE_STORAGE_PERMISSION_REQUEST_CODE
                 )
 
-                EmptyLoadingState.MISSING_VIDEO_PERMISSION -> ActivityCompat.requestPermissions(
-                    context as Activity, arrayOf(
-                        Manifest.permission.READ_MEDIA_VIDEO,
-                        Manifest.permission.READ_MEDIA_IMAGES
-                    ), Permissions.FINE_STORAGE_PERMISSION_REQUEST_CODE
-                )
-
                 else -> (context as? FragmentActivity)?.askStoragePermission(false, null)
 
             }
@@ -211,5 +203,5 @@ class EmptyLoadingStateView : FrameLayout {
 }
 
 enum class EmptyLoadingState {
-    LOADING, EMPTY, EMPTY_SEARCH, NONE, MISSING_PERMISSION, MISSING_VIDEO_PERMISSION, MISSING_AUDIO_PERMISSION, EMPTY_FAVORITES
+    LOADING, EMPTY, EMPTY_SEARCH, NONE, MISSING_PERMISSION, MISSING_AUDIO_PERMISSION, EMPTY_FAVORITES
 }

@@ -13,7 +13,7 @@ Primary goal: keep VLC's local media playback base, but present it as Rajneesh D
 - Music is the home screen.
 - The old home/browser screen was moved out of the first bottom-nav position.
 - Bottom navigation should not show Browse.
-- The video tab label should be **Videos**.
+- Do not show a Videos tab or video browsing screen in the main app navigation.
 - Music screen should only show these top tabs:
   - Tracks
   - Playlists

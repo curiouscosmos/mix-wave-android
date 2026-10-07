@@ -23,7 +23,7 @@ class MainActivityNavigationUITest : BaseUITest() {
     private lateinit var activity: MainActivity
 
     override fun beforeTest() {
-        activityTestRule.launchActivity(Intent().putExtra(EXTRA_TARGET, R.id.nav_video))
+        activityTestRule.launchActivity(Intent().putExtra(EXTRA_TARGET, R.id.nav_audio))
         activity = activityTestRule.activity
     }
 

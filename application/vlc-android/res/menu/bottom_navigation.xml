@@ -32,10 +32,6 @@
             android:title="@string/home"
             android:icon="@drawable/ic_auto_home" />
     <item
-            android:id="@+id/nav_video"
-            android:title="@string/videos"
-            android:icon="@drawable/ic_video" />
-    <item
             android:id="@+id/nav_search"
             android:title="@string/search"
             android:icon="@drawable/ic_search" />

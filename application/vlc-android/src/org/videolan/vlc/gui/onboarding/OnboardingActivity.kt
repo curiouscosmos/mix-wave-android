@@ -148,7 +148,6 @@ class OnboardingActivity : AppCompatActivity(), OnboardingFragmentListener {
                     this@OnboardingActivity, arrayOf<String>(
                         Manifest.permission.READ_MEDIA_AUDIO,
                         Manifest.permission.READ_MEDIA_IMAGES,
-                        Manifest.permission.READ_MEDIA_VIDEO
                     ), Permissions.FINE_STORAGE_PERMISSION_REQUEST_CODE
                 )
                 return@launch

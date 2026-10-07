@@ -141,15 +141,9 @@ object Permissions {
         if (!skipCache) {
             return getFromCache(context, PermissionType.VIDEO)
         }
-        val result =  Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU &&
-                (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED || isExternalStorageManager()) ||
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_MEDIA_VIDEO
-                ) == PackageManager.PERMISSION_GRANTED || isExternalStorageManager()))
+        val result = (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) ||
+                isExternalStorageManager()
         cache.put(PermissionType.VIDEO, Pair(System.currentTimeMillis(), result))
         return result
 
@@ -179,22 +173,10 @@ object Permissions {
                 Manifest.permission.READ_MEDIA_AUDIO
             ) == PackageManager.PERMISSION_GRANTED
             )
-    fun hasVideoPermission(context: Context) = (
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_VIDEO
-            ) == PackageManager.PERMISSION_GRANTED
-            )
-
     fun hasAnyFileFineAccess(context: Context) = canReadStorage(context) || (
             ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.READ_MEDIA_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
-            ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_VIDEO
             ) == PackageManager.PERMISSION_GRANTED
             ||
             ContextCompat.checkSelfPermission(
@@ -209,10 +191,6 @@ object Permissions {
                 context,
                 Manifest.permission.READ_MEDIA_AUDIO
             ) == PackageManager.PERMISSION_GRANTED ||
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.READ_MEDIA_VIDEO
-                    ) == PackageManager.PERMISSION_GRANTED ||
                     ContextCompat.checkSelfPermission(
                         context,
                         Manifest.permission.READ_MEDIA_IMAGES
