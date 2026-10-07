@@ -287,6 +287,12 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         registerForContextMenu(binding.songsList)
         userVisibleHint = true
         binding.timeline.setOnSeekBarChangeListener(timelineListener)
+        if (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK != android.content.res.Configuration.UI_MODE_NIGHT_YES) {
+            val timelineTint = android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.mini_player_control))
+            binding.timeline.progressTintList = timelineTint
+            binding.timeline.thumbTintList = timelineTint
+            binding.timeline.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.mini_player_progress_inactive))
+        }
         (binding.progressBar as? SeekBar)?.setOnSeekBarChangeListener(timelineListener)
 
         //For resizing purpose, we have to cache this twice even if it's from the same resource
@@ -620,8 +626,10 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         val target = ids?.let { org.videolan.vlc.discourse.DiscourseLikesStore.Target(it.audioId, true) }
         val liked = if (ids == null) media.isFavorite else ids.audioId in repository.likedAudios
         binding.playerLike?.isEnabled = target !in repository.likes.value.pending
+        binding.playerLike?.setCompoundDrawablesRelativeWithIntrinsicBounds(0,
+            if (liked) R.drawable.ic_header_media_favorite else R.drawable.ic_header_media_favorite_outline, 0, 0)
         binding.playerLike?.compoundDrawableTintList = android.content.res.ColorStateList.valueOf(
-            android.graphics.Color.parseColor(if (liked) "#EF3831" else "#FFFFFF"))
+            if (liked) android.graphics.Color.parseColor("#EF3831") else requireContext().getColor(R.color.player_like_outline_tint))
         val count = repository.likes.value.counts[target]
             ?: repository.recentlyPlayedAudios.firstOrNull { it.id == ids?.audioId }?.totalLikes ?: 0
         binding.playerLike?.text = if (ids == null) getString(R.string.player_like_label)
