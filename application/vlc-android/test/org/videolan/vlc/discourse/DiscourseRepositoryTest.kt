@@ -4,9 +4,11 @@ import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.robolectric.annotation.Config
 import org.videolan.tools.Settings
 import org.videolan.vlc.BaseTest
 
+@Config(sdk = [28])
 class DiscourseRepositoryTest : BaseTest() {
     private lateinit var repository: DiscourseRepository
 
@@ -62,6 +64,22 @@ class DiscourseRepositoryTest : BaseTest() {
 
         repository.recordRecentlyPlayed(first)
 
+        assertEquals(listOf(first, second), repository.recentlyPlayedAudios)
+    }
+
+    @Test
+    fun queueTransitionsRecordThePlayingTrackWithoutCatalogueOrNetworkCalls() {
+        val first = audio("first")
+        val second = audio("second").copy(title = "Title | with separator")
+        val queue = listOf(first, second).map { it.toMediaWrapper(context) }
+        assertEquals(emptyList<DiscourseAudio>(), repository.recentlyPlayedAudios)
+
+        queue[0].recordDiscourseRecentlyPlayed(context)
+        queue[1].recordDiscourseRecentlyPlayed(context)
+
+        assertEquals(DiscoursePlaybackIds(second.discourseId, second.id), queue[1].discoursePlaybackIds())
+        assertEquals(listOf(second, first), repository.recentlyPlayedAudios)
+        queue[0].recordDiscourseRecentlyPlayed(context)
         assertEquals(listOf(first, second), repository.recentlyPlayedAudios)
     }
 

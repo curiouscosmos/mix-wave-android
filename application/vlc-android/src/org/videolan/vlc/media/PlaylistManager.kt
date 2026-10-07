@@ -97,6 +97,7 @@ import org.videolan.vlc.discourse.DiscourseRepository
 import org.videolan.vlc.discourse.discourseContinuation
 import org.videolan.vlc.discourse.toMediaWrapper
 import org.videolan.vlc.discourse.discoursePlaybackIds
+import org.videolan.vlc.discourse.recordDiscourseRecentlyPlayed
 import org.videolan.vlc.discourse.discourseCheckpointDue
 import org.videolan.vlc.util.FileUtils
 import org.videolan.vlc.util.FontCache
@@ -1284,6 +1285,9 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                         }
                     } ?: return
                     if (newMedia) {
+                        if (!settings.getBoolean(KEY_INCOGNITO, false) && settings.getBoolean(PLAYBACK_HISTORY, true)) {
+                            withContext(Dispatchers.IO) { getCurrentMedia()?.recordDiscourseRecentlyPlayed(ctx) }
+                        }
                         loadMediaMeta(mw)
                         mw.length = player.getLength()
                         saveMediaList()

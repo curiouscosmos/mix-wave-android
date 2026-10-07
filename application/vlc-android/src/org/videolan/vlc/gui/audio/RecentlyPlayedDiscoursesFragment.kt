@@ -38,6 +38,9 @@ import org.videolan.vlc.media.MediaSessionBrowser
 import org.videolan.vlc.media.MediaUtils
 
 class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_discourses) {
+    private val historyListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "osho_api_recently_played_audios" && view != null) loadTracks()
+    }
     private var statsJob: Job? = null
     private lateinit var likesUi: DiscourseLikesUi
     private val progressCards = HashMap<View, Pair<String, Int?>>()
@@ -250,6 +253,16 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             val bitmap = HttpImageLoader.downloadBitmap(imageUrl)
             if (image.tag == imageUrl && bitmap != null) image.setImageBitmap(bitmap)
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Settings.getInstance(requireContext()).registerOnSharedPreferenceChangeListener(historyListener)
+    }
+
+    override fun onStop() {
+        Settings.getInstance(requireContext()).unregisterOnSharedPreferenceChangeListener(historyListener)
+        super.onStop()
     }
 
     override fun onResume() {

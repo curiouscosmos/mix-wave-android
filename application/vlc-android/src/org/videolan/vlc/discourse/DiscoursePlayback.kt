@@ -9,9 +9,14 @@ import org.videolan.tools.AppScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 private const val DISCOURSE_TAG_PREFIX = "osho_discourse:"
 private const val DISCOURSE_TAG_SEPARATOR = "|"
+private val playbackAudioAdapter by lazy {
+    Moshi.Builder().add(KotlinJsonAdapterFactory()).build().adapter(DiscourseAudio::class.java)
+}
 
 data class DiscoursePlaybackIds(val discourseId: String, val audioId: String)
 
@@ -50,14 +55,23 @@ fun DiscourseAudio.toMediaWrapper(context: Context): MediaWrapper = MLServiceLoc
     0L
 ).apply {
     time = DiscoursePlaybackStore(context).position(this@toMediaWrapper.id) ?: 0L
-    tag = "$DISCOURSE_TAG_PREFIX${this@toMediaWrapper.discourseId}$DISCOURSE_TAG_SEPARATOR${this@toMediaWrapper.id}"
+    tag = "$DISCOURSE_TAG_PREFIX${this@toMediaWrapper.discourseId}$DISCOURSE_TAG_SEPARATOR${this@toMediaWrapper.id}$DISCOURSE_TAG_SEPARATOR${playbackAudioAdapter.toJson(this@toMediaWrapper)}"
 }
 
 fun MediaWrapper.discoursePlaybackIds(): DiscoursePlaybackIds? {
     val value = tag?.removePrefix(DISCOURSE_TAG_PREFIX) ?: return null
     if (value == tag) return null
-    val ids = value.split(DISCOURSE_TAG_SEPARATOR, limit = 2)
-    return if (ids.size == 2 && ids.all(String::isNotBlank)) DiscoursePlaybackIds(ids[0], ids[1]) else null
+    val ids = value.split(DISCOURSE_TAG_SEPARATOR, limit = 3)
+    return if (ids.size >= 2 && ids.take(2).all(String::isNotBlank)) DiscoursePlaybackIds(ids[0], ids[1]) else null
+}
+
+internal fun MediaWrapper.recordDiscourseRecentlyPlayed(context: Context) {
+    val ids = discoursePlaybackIds() ?: return
+    val json = tag?.split(DISCOURSE_TAG_SEPARATOR, limit = 3)?.getOrNull(2) ?: return
+    val audio = runCatching { playbackAudioAdapter.fromJson(json) }.getOrNull() ?: return
+    if (audio.id == ids.audioId && audio.discourseId == ids.discourseId) {
+        DiscourseRepository(context).recordRecentlyPlayed(audio)
+    }
 }
 
 fun Context.playDiscourseAudio(audio: DiscourseAudio) {
@@ -65,7 +79,6 @@ fun Context.playDiscourseAudio(audio: DiscourseAudio) {
     AppScope.launch {
         val media = withContext(Dispatchers.IO) {
             DiscoursePlaybackStore(context).register(listOf(audio))
-            DiscourseRepository(context).recordRecentlyPlayed(audio)
             audio.toMediaWrapper(context)
         }
         MediaUtils.openMedia(context, media)
@@ -77,7 +90,6 @@ fun Context.playDiscourseAudios(audios: List<DiscourseAudio>, position: Int = 0)
     AppScope.launch {
         val media = withContext(Dispatchers.IO) {
             DiscoursePlaybackStore(context).register(audios)
-            audios.getOrNull(position)?.let { DiscourseRepository(context).recordRecentlyPlayed(it) }
             audios.map { it.toMediaWrapper(context) }
         }
         MediaUtils.openList(context, media, position)
