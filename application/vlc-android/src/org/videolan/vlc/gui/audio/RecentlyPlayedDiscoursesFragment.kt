@@ -41,6 +41,9 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private val historyListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "osho_api_recently_played_audios" && view != null) loadTracks()
     }
+    private val localHistoryListener = Medialibrary.HistoryCb {
+        lifecycleScope.launch(Dispatchers.Main) { if (view != null) loadTracks() }
+    }
     private var statsJob: Job? = null
     private lateinit var likesUi: DiscourseLikesUi
     private val progressCards = HashMap<View, Pair<String, Int?>>()
@@ -258,10 +261,12 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     override fun onStart() {
         super.onStart()
         Settings.getInstance(requireContext()).registerOnSharedPreferenceChangeListener(historyListener)
+        Medialibrary.getInstance().addHistoryCb(localHistoryListener)
     }
 
     override fun onStop() {
         Settings.getInstance(requireContext()).unregisterOnSharedPreferenceChangeListener(historyListener)
+        Medialibrary.getInstance().removeHistoryCb(localHistoryListener)
         super.onStop()
     }
 

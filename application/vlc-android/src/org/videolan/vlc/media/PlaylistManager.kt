@@ -1285,9 +1285,6 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                         }
                     } ?: return
                     if (newMedia) {
-                        if (!settings.getBoolean(KEY_INCOGNITO, false) && settings.getBoolean(PLAYBACK_HISTORY, true)) {
-                            withContext(Dispatchers.IO) { getCurrentMedia()?.recordDiscourseRecentlyPlayed(ctx) }
-                        }
                         loadMediaMeta(mw)
                         mw.length = player.getLength()
                         saveMediaList()
@@ -1297,7 +1294,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                         if (player.hasRenderer || (!player.isVideoPlaying() && (mw.hasFlag(MediaWrapper.MEDIA_FORCE_AUDIO) || !player.canSwitchToVideo()))) {
                             showAudioPlayer.value = true
                         }
-                        savePlaycount(mw)
+                        if (mw.type == MediaWrapper.TYPE_VIDEO) savePlaycount(mw)
                         if (mw.title == mw.fileName || (mw.type == MediaWrapper.TYPE_STREAM && (mw.title != player.mediaplayer.media?.getMeta(IMedia.Meta.Title, true) || mw.artistName != player.mediaplayer.media?.getMeta(IMedia.Meta.Artist, true)))) {
                             // used for initial metadata update. We avoid the metadata load when the initial MediaPlayer.Event.ESSelected is sent to avoid race conditions
                             refreshTrackMeta(mw)
@@ -1396,6 +1393,12 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
         mw.updateMeta(player.mediaplayer)
         service.onMediaListChanged()
         service.showNotification()
+    }
+
+    internal suspend fun recordRecentlyPlayed(media: MediaWrapper) {
+        if (settings.getBoolean(KEY_INCOGNITO, false) || !settings.getBoolean(PLAYBACK_HISTORY, true)) return
+        withContext(Dispatchers.IO) { media.recordDiscourseRecentlyPlayed(ctx) }
+        savePlaycount(media)
     }
 
     private suspend fun savePlaycount(mw: MediaWrapper) {
