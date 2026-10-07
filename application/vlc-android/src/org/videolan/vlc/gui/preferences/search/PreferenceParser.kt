@@ -73,6 +73,7 @@ import org.videolan.vlc.R
 import org.videolan.vlc.gui.helpers.DefaultPlaybackAction
 import org.videolan.vlc.gui.helpers.DefaultPlaybackActionMediaType
 import org.videolan.vlc.gui.helpers.UiTools
+import org.videolan.vlc.gui.preferences.PreferenceVisibilityManager
 import org.videolan.vlc.providers.medialibrary.AlbumsProvider
 import org.videolan.vlc.providers.medialibrary.ArtistsProvider
 import org.videolan.vlc.providers.medialibrary.FoldersProvider
@@ -136,6 +137,11 @@ object PreferenceParser {
             }
         .forEach {
             result.addAll(parsePreferences(context, it))
+        }
+        result.removeAll {
+            it.parentScreen == R.xml.preferences_video ||
+                    it.parentScreen == R.xml.preferences_video_controls ||
+                    PreferenceVisibilityManager.isVideoSetting(it.key)
         }
         return result
     }

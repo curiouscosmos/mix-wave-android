@@ -64,6 +64,14 @@ import org.videolan.vlc.util.FeatureFlag
 
 object PreferenceVisibilityManager {
 
+    private val hiddenVideoSettings = setOf(
+        "video_settings_category", "video_category", "ui_video_category",
+        "video_action_switch", "hardware_acceleration", "screen_orientation",
+        "video_resume_playback", "media_seen", "playlist_mode_video", "show_video_thumbnails"
+    )
+
+    fun isVideoSetting(key: String?) = key != null && key in hiddenVideoSettings
+
     /**
      * Return true if the preference should be visible
      *
@@ -71,7 +79,9 @@ object PreferenceVisibilityManager {
      * @param sharedPreferences the [SharedPreferences] that is used for some conditions
      * @param forTv true it has been called from the TV UI
      */
-    fun isPreferenceVisible(key:String?, sharedPreferences: SharedPreferences, forTv: Boolean = false) = when (key) {
+    fun isPreferenceVisible(key:String?, sharedPreferences: SharedPreferences, forTv: Boolean = false) = when {
+        isVideoSetting(key) -> false
+        else -> when (key) {
         //hidden on TV
         KEY_QUICK_PLAY_DEFAULT, KEY_QUICK_PLAY, "secondary_display_category", "secondary_display_category_summary", KEY_ENABLE_CLONE_MODE, SAVE_BRIGHTNESS,
         KEY_APP_THEME, LIST_TITLE_ELLIPSIZE, KEY_ENABLE_HEADSET_DETECTION, KEY_ENABLE_PLAY_ON_HEADSET_INSERTION, KEY_IGNORE_HEADSET_MEDIA_BUTTON_PRESSES,
@@ -90,6 +100,7 @@ object PreferenceVisibilityManager {
         "remote_access_category" -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1
         "permissions_title" -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1
         else -> true
+        }
     }
 
     /**

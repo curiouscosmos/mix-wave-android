@@ -17,7 +17,9 @@
                 android:title="@string/auto_rescan"/>
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/video_prefs_category">
+    <PreferenceCategory
+            android:key="video_settings_category"
+            android:title="@string/video_prefs_category">
         <ListPreference
                 android:key="video_action_switch"
                 android:defaultValue="0"
