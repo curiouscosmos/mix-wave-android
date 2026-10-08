@@ -32,6 +32,10 @@
             android:title="@string/home"
             android:icon="@drawable/ic_auto_home" />
     <item
+            android:id="@+id/nav_discourses"
+            android:title="@string/discourses"
+            android:icon="@drawable/ic_auto_my_library" />
+    <item
             android:id="@+id/nav_search"
             android:title="@string/search"
             android:icon="@drawable/ic_search" />
