@@ -48,7 +48,7 @@ When deploying the independent-count behavior, run `api/migrations/independent-d
 
 POST /stats
 BODY: `{ "user_id": "USER_UUID", "discourse_id": "DISCOURSE_UUID", "discourse_audio_id": "AUDIO_UUID" }`
-Both IDs are required and must refer to existing records. If the same user has recorded either discourse or audio ID within the prior 24 hours, the entire event is suppressed. New events return `201` with `{ "data": { "recorded": true } }`; suppressed repeats return `200` with `{ "data": { "recorded": false, "reason": "duplicate_within_24_hours" } }`.
+Both IDs are required and must refer to existing records. Android sends an event after 60 seconds of actual playback, including tracks reached with Previous or Next; paused and buffering time is excluded. Each event counts toward both the track and its discourse. If the same user has recorded the audio ID within the prior 24 hours, the event is suppressed; other tracks in the same discourse still count. New events return `201` with `{ "data": { "recorded": true } }`; suppressed repeats return `200` with `{ "data": { "recorded": false, "reason": "duplicate_within_24_hours" } }`.
 
 GET /stats?by=discourse&time=7_days
 GET /stats?by=discourse_audio&time=24_hours

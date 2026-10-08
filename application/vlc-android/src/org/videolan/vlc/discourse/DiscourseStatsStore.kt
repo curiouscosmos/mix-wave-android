@@ -14,7 +14,7 @@ class DiscourseStatsStore(context: Context) {
     @Synchronized
     fun shouldSend(discourseId: String, audioId: String, now: Long = System.currentTimeMillis()): Boolean {
         cleanup(now)
-        return !contains(DISCOURSE_STATS, discourseId, now) && !contains(AUDIO_STATS, audioId, now)
+        return !contains(AUDIO_STATS, audioId, now)
     }
 
     @Synchronized

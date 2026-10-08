@@ -221,9 +221,9 @@ async function recordListening(request: Request): Promise<Response> {
 		sql: `INSERT INTO stats (discourse_id, discourse_audio_id, user_id)
               SELECT ?, ?, ? WHERE NOT EXISTS (
 			SELECT 1 FROM stats WHERE user_id = ? AND created_at >= datetime('now', '-24 hours')
-			AND (discourse_id = ? OR discourse_audio_id = ?)
+			AND discourse_audio_id = ?
 		)`,
-		args: [discourseId, audioId, userId, userId, discourseId, audioId],
+		args: [discourseId, audioId, userId, userId, audioId],
 	});
 	return insert.rowsAffected
 		? jsonResponse({ data: { recorded: true } }, 201)

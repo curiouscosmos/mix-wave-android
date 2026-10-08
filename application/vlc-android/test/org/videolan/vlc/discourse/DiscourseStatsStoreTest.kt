@@ -17,13 +17,13 @@ class DiscourseStatsStoreTest : BaseTest() {
     }
 
     @Test
-    fun suppressesRecentDiscourseOrAudio() {
+    fun suppressesRecentAudioButAllowsNextTrackInSameDiscourse() {
         val now = 1_000_000L
         assertTrue(store.shouldSend("discourse", "audio", now))
 
         store.markSent("discourse", "audio", now)
 
-        assertFalse(store.shouldSend("discourse", "other-audio", now + 1))
+        assertTrue(store.shouldSend("discourse", "other-audio", now + 1))
         assertFalse(store.shouldSend("other-discourse", "audio", now + 1))
         assertTrue(store.shouldSend("other-discourse", "other-audio", now + 1))
     }

@@ -154,6 +154,7 @@ import org.videolan.tools.KEY_CURRENT_MEDIA_IS_AUDIO
 import org.videolan.tools.KEY_ENABLE_HEADSET_DETECTION
 import org.videolan.tools.KEY_ENABLE_PLAY_ON_HEADSET_INSERTION
 import org.videolan.tools.KEY_METERED_CONNECTION
+import org.videolan.tools.KEY_INCOGNITO
 import org.videolan.tools.KEY_PLAYBACK_SPEED_AUDIO_GLOBAL
 import org.videolan.tools.KEY_VIDEO_APP_SWITCH
 import org.videolan.tools.LOCKSCREEN_COVER
@@ -213,7 +214,6 @@ import java.util.Calendar
 import kotlin.math.absoluteValue
 
 private const val TAG = "VLC/PlaybackService"
-private const val DISCOURSE_STATS_DELAY_MS = 2L * 60L * 1000L
 
 class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineScope, SchedulerCallback {
     override val coroutineContext = Dispatchers.IO + SupervisorJob()
@@ -278,7 +278,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     private var mixerStartJob: Job? = null
     private var mixerFadeJob: Job? = null
     private var mixerStopJob: Job? = null
-    private var discourseStatsJob: Job? = null
     private var playbackHistoryJob: Job? = null
     private val playbackHistoryTimer = org.videolan.vlc.media.PlaybackHistoryTimer()
     var mixerMedia: MediaWrapper? = null
@@ -356,7 +355,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 audioFocusHelper.changeAudioFocus(true)
                 if (!wakeLock.isHeld) wakeLock.acquire()
                 showNotification()
-                startDiscourseStatsTimer()
                 startPlaybackHistoryTimer()
                 nbErrors = 0
                 syncAudioMixerWithPlayback()
@@ -371,7 +369,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 executeUpdate(true)
                 showNotification()
                 if (wakeLock.isHeld) wakeLock.release()
-                cancelDiscourseStatsTimer()
                 cancelPlaybackHistoryTimer()
                 pauseAudioMixer()
             }
@@ -412,12 +409,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             MediaPlayer.Event.EndReached -> {
                 mediaEndReached = true
                 playQueueFinished = !playlistManager.hasNext() || playlistManager.stopAfter == currentMediaPosition
-                cancelDiscourseStatsTimer()
                 cancelPlaybackHistoryTimer(reset = true)
                 stopAudioMixer()
             }
             MediaPlayer.Event.Stopped -> {
-                cancelDiscourseStatsTimer()
                 cancelPlaybackHistoryTimer(reset = true)
                 stopAudioMixer()
             }
@@ -960,7 +955,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     override fun onDestroy() {
-        cancelDiscourseStatsTimer()
         cancelPlaybackHistoryTimer(reset = true)
         releaseAudioMixer()
         serviceFlow.value = null
@@ -986,7 +980,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             delay(remaining)
             if (!isPlaying || currentMediaWrapper !== media) return@launch
             playbackHistoryTimer.markRecorded()
-            lifecycleScope.launch { playlistManager.recordRecentlyPlayed(media) }
+            recordQualifiedPlayback(media)
         }
     }
 
@@ -996,26 +990,24 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         val media = playbackHistoryTimer.track as? MediaWrapper
         if (playbackHistoryTimer.pause(android.os.SystemClock.elapsedRealtime()) && media != null) {
             playbackHistoryTimer.markRecorded()
-            lifecycleScope.launch { playlistManager.recordRecentlyPlayed(media) }
+            recordQualifiedPlayback(media)
         }
         if (reset) playbackHistoryTimer.reset()
     }
 
-    private fun startDiscourseStatsTimer() {
-        cancelDiscourseStatsTimer()
-        val media = currentMediaWrapper ?: return
+    private fun recordQualifiedPlayback(media: MediaWrapper) {
+        lifecycleScope.launch { playlistManager.recordRecentlyPlayed(media) }
         val ids = media.discoursePlaybackIds() ?: return
-        val tag = media.tag
-        discourseStatsJob = lifecycleScope.launch {
-            delay(DISCOURSE_STATS_DELAY_MS)
-            if (!isPlaying || currentMediaWrapper?.tag != tag) return@launch
-            DiscourseRepository(this@PlaybackService).recordListeningStats(ids.discourseId, ids.audioId)
+        if (settings.getBoolean(KEY_INCOGNITO, false)) return
+        lifecycleScope.launch {
+            try {
+                DiscourseRepository(this@PlaybackService).recordListeningStats(ids.discourseId, ids.audioId)
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w(TAG, "Unable to record discourse listening stats", error)
+            }
         }
-    }
-
-    private fun cancelDiscourseStatsTimer() {
-        discourseStatsJob?.cancel()
-        discourseStatsJob = null
     }
 
     override fun onBind(intent: Intent): IBinder? {
