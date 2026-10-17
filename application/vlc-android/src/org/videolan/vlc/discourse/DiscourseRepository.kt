@@ -1,6 +1,12 @@
 package org.videolan.vlc.discourse
 
 import android.content.Context
+import android.widget.Toast
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.videolan.tools.ErrorReporter
+import org.videolan.vlc.R
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -15,7 +21,7 @@ class DiscourseRepository(
     private val likesStore = DiscourseLikesStore.shared(settings)
     internal val likes get() = likesStore.state
 
-    suspend fun refreshLikes() = likesStore.refresh { api.likes(userId) }
+    suspend fun refreshLikes() = safely(Unit) { likesStore.refresh { api.likes(userId) } }
     private val statsStore = DiscourseStatsStore(appContext)
     private val recentlyPlayedAdapter = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
@@ -34,7 +40,7 @@ class DiscourseRepository(
         .build()
         .adapter<List<DiscourseAudio>>(Types.newParameterizedType(List::class.java, DiscourseAudio::class.java))
 
-    suspend fun apiIndex() = api.index()
+    suspend fun apiIndex() = safely<ApiIndex?>(null) { api.index() }
 
     suspend fun getDiscourses(
         page: Int = 1,
@@ -43,14 +49,10 @@ class DiscourseRepository(
         language: String? = null,
         sort: String? = null,
         forceRefresh: Boolean = false
-    ) = api.discourses(
-        page,
-        search.cleanQuery(),
-        isAudioCleaned,
-        language.cleanQuery(),
-        sort.cleanQuery(),
-        cacheControl(forceRefresh)
-    )
+    ) = fetch {
+        api.discourses(page, search.cleanQuery(), isAudioCleaned, language.cleanQuery(),
+            sort.cleanQuery(), cacheControl(forceRefresh))
+    }
 
     val catalogueLanguage: String?
         get() = settings.getString(KEY_CATALOGUE_LANGUAGE, null)
@@ -69,10 +71,10 @@ class DiscourseRepository(
         discourseName: String? = null,
         language: String? = null,
         forceRefresh: Boolean = false
-    ) = api.discourseAudios(page, search.cleanQuery(), discourseName.cleanQuery(), language.cleanQuery(), cacheControl(forceRefresh))
+    ) = fetch { api.discourseAudios(page, search.cleanQuery(), discourseName.cleanQuery(), language.cleanQuery(), cacheControl(forceRefresh)) }
 
     suspend fun getDiscourseAudios(discourseId: String, forceRefresh: Boolean = false) =
-        api.discourseAudios(discourseId, cacheControl(forceRefresh))
+        fetch { api.discourseAudios(discourseId, cacheControl(forceRefresh)) }
 
     suspend fun getWeeklyDiscourseStats(forceRefresh: Boolean = false): List<Discourse> =
         getWeeklyStats(KEY_STATS_DISCOURSES, statsDiscoursesAdapter, forceRefresh) {
@@ -85,23 +87,31 @@ class DiscourseRepository(
         }
 
     suspend fun likeDiscourse(id: String, totalLikes: Int = 0): LikeData? =
-        likesStore.like(id, audio = false, totalLikes = totalLikes) { api.likeDiscourse(id, LikeRequest(userId)).data }
+        safely(null) {
+            likesStore.like(id, audio = false, totalLikes = totalLikes) { api.likeDiscourse(id, LikeRequest(userId)).data }
             .also { it?.let { result -> updateCachedLikeCounts(discourseId = id, discourseCount = result.totalLikes) } }
+        }
 
     suspend fun likeDiscourseAudio(id: String, totalLikes: Int = 0): LikeData? =
-        likesStore.like(id, audio = true, totalLikes = totalLikes) { api.likeDiscourseAudio(id, LikeRequest(userId)).data }
+        safely(null) {
+            likesStore.like(id, audio = true, totalLikes = totalLikes) { api.likeDiscourseAudio(id, LikeRequest(userId)).data }
             .also { it?.let { result -> updateCachedLikeCounts(audioId = id, audioCount = result.totalLikes) } }
+        }
 
     suspend fun unlikeDiscourse(id: String, totalLikes: Int = 0): UnlikeData? =
-        likesStore.unlike(id, audio = false, totalLikes = totalLikes) { api.unlike(userId, discourseId = id).data }
+        safely(null) {
+            likesStore.unlike(id, audio = false, totalLikes = totalLikes) { api.unlike(userId, discourseId = id).data }
             .also { it?.let { result -> updateCachedLikeCounts(discourseId = id, discourseCount = result.totalLikes) } }
+        }
 
     suspend fun unlikeDiscourseAudio(id: String, totalLikes: Int = 0): UnlikeData? =
-        likesStore.unlike(id, audio = true, totalLikes = totalLikes) {
-            api.unlike(userId, audioId = id).data
-        }.also { it?.let { result ->
-            updateCachedLikeCounts(audioId = id, audioCount = result.totalLikes)
-        } }
+        safely(null) {
+            likesStore.unlike(id, audio = true, totalLikes = totalLikes) {
+                api.unlike(userId, audioId = id).data
+            }.also { it?.let { result ->
+                updateCachedLikeCounts(audioId = id, audioCount = result.totalLikes)
+            } }
+        }
 
     suspend fun toggleDiscourseLike(id: String, totalLikes: Int = 0) {
         if (id in likedDiscourses) unlikeDiscourse(id, totalLikes) else likeDiscourse(id, totalLikes)
@@ -135,8 +145,8 @@ class DiscourseRepository(
         }
     }
 
-    suspend fun recordListeningStats(discourseId: String, audioId: String) {
-        if (!statsStore.shouldSend(discourseId, audioId)) return
+    suspend fun recordListeningStats(discourseId: String, audioId: String) = safely(Unit) {
+        if (!statsStore.shouldSend(discourseId, audioId)) return@safely
         api.recordStats(StatsRequest(userId, discourseId, audioId))
         statsStore.markSent(discourseId, audioId)
     }
@@ -190,7 +200,10 @@ class DiscourseRepository(
         if (!forceRefresh && cachedAt > System.currentTimeMillis() - STATS_CACHE_TTL) return cached
         return try {
             request().also { saveStats(key, adapter, it) }
-        } catch (_: Exception) {
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            ErrorReporter.error("DiscourseRepository", "API request failed", error)
             cached
         }
     }
@@ -204,6 +217,27 @@ class DiscourseRepository(
 
     private val userId: String
         get() = OshoUserIdentity.ensure(appContext)
+
+    private suspend fun <T> fetch(request: suspend () -> T): T = try {
+        request()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        ErrorReporter.error("DiscourseRepository", "API request failed", error)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(appContext, R.string.discourse_server_error, Toast.LENGTH_LONG).show()
+        }
+        throw error
+    }
+
+    private suspend fun <T> safely(fallback: T, request: suspend () -> T): T = try {
+        request()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        ErrorReporter.error("DiscourseRepository", "API request failed", error)
+        fallback
+    }
 
     private fun String?.cleanQuery() = this?.trim()?.takeIf(String::isNotEmpty)
 

@@ -1,6 +1,15 @@
 package org.videolan.vlc.discourse
 
 import io.mockk.mockk
+import io.mockk.coEvery
+import io.mockk.mockkObject
+import io.mockk.verify
+import io.mockk.every
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CancellationException
+import org.videolan.tools.ErrorReporter
+import org.robolectric.shadows.ShadowToast
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -11,6 +20,7 @@ import org.videolan.vlc.BaseTest
 @Config(sdk = [28])
 class DiscourseRepositoryTest : BaseTest() {
     private lateinit var repository: DiscourseRepository
+    private lateinit var api: DiscourseApi
 
     @Before
     fun clearRecentlyPlayed() {
@@ -18,7 +28,83 @@ class DiscourseRepositoryTest : BaseTest() {
             .remove("osho_api_recently_played_discourses")
             .remove("osho_api_recently_played_audios")
             .commit()
-        repository = DiscourseRepository(context, mockk())
+        api = mockk()
+        repository = DiscourseRepository(context, api)
+        mockkObject(ErrorReporter)
+        every { ErrorReporter.error(any(), any(), any()) } returns Unit
+        ShadowToast.reset()
+    }
+
+    @Test
+    fun catalogueFailureShowsToastAndPreservesRetryError() = runBlocking {
+        val failure = retrofit2.HttpException(retrofit2.Response.error<Any>(500,
+            okhttp3.ResponseBody.create(okhttp3.MediaType.parse("application/json"), "{\"error\":\"Internal server error\"}")))
+        coEvery { api.discourses(any(), any(), any(), any(), any(), any()) } throws failure
+        try {
+            repository.getDiscourses()
+            org.junit.Assert.fail("Expected caller to receive failure for its retry state")
+        } catch (error: retrofit2.HttpException) {
+            assertSame(failure, error)
+        }
+        assertEquals("Failed to communicate with the server.", ShadowToast.getTextOfLatestToast())
+        verify { ErrorReporter.error(any(), any(), failure) }
+    }
+
+    @Test
+    fun diagnosticsFailureIsSilentAndReported() = runBlocking {
+        val failure = java.io.IOException("Server unavailable")
+        coEvery { api.index(any()) } throws failure
+        assertEquals(null, repository.apiIndex())
+        assertEquals(0, ShadowToast.shownToastCount())
+        verify { ErrorReporter.error(any(), any(), failure) }
+    }
+
+    @Test
+    fun audioFetchFailuresShowToastForBothOverloads() = runBlocking {
+        val failure = java.io.IOException("Server unavailable")
+        coEvery { api.discourseAudios(any<String>(), any()) } throws failure
+        coEvery { api.discourseAudios(any<Int>(), any(), any(), any(), any()) } throws failure
+        val requests: List<suspend () -> Any> = listOf(
+            { repository.getDiscourseAudios("discourse") },
+            { repository.getDiscourseAudios(page = 1) }
+        )
+        requests.forEach { request ->
+            try {
+                request()
+                org.junit.Assert.fail("Expected fetch failure")
+            } catch (error: java.io.IOException) {
+                assertSame(failure, error)
+            }
+        }
+        assertEquals(2, ShadowToast.shownToastCount())
+        verify(exactly = 2) { ErrorReporter.error(any(), any(), failure) }
+    }
+
+    @Test
+    fun failedLikeRollsBackAndIsReportedWithoutToast() = runBlocking {
+        mockkObject(OshoUserIdentity)
+        every { OshoUserIdentity.ensure(any()) } returns "user"
+        val failure = java.io.IOException("Server unavailable")
+        coEvery { api.likeDiscourse("failed-like", any()) } throws failure
+        assertEquals(null, repository.likeDiscourse("failed-like", 5))
+        org.junit.Assert.assertFalse("failed-like" in repository.likedDiscourses)
+        org.junit.Assert.assertTrue(repository.likes.value.pending.isEmpty())
+        assertEquals(0, ShadowToast.shownToastCount())
+        verify { ErrorReporter.error(any(), any(), failure) }
+    }
+
+    @Test
+    fun cancellationIsNeverReportedOrShown() = runBlocking {
+        val cancellation = CancellationException("Stopped")
+        coEvery { api.index(any()) } throws cancellation
+        try {
+            repository.apiIndex()
+            org.junit.Assert.fail("Expected cancellation")
+        } catch (error: CancellationException) {
+            assertSame(cancellation, error)
+        }
+        verify(exactly = 0) { ErrorReporter.error(any(), any(), any()) }
+        assertEquals(0, ShadowToast.shownToastCount())
     }
 
     @Test
