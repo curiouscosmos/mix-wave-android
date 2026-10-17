@@ -7,6 +7,7 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody
 import org.videolan.resources.AppContextProvider
 import org.videolan.resources.util.ConnectivityInterceptor
 import org.videolan.vlc.BuildConfig
@@ -133,12 +134,18 @@ internal class StaleCacheInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         if (request.method != "GET" || request.url.pathSegments.lastOrNull() == "likes") return chain.proceed(request)
-        return try {
-            val response = chain.proceed(request)
-            if (response.code < 500) response else cached(chain, request)?.also { response.close() } ?: response
+        val response = try {
+            chain.proceed(request)
         } catch (error: IOException) {
-            cached(chain, request) ?: throw error
+            return cached(chain, request) ?: throw error
         }
+        if (response.code < 500) return response
+        // Release the network exchange before asking OkHttp for a cached response.
+        val body = response.body
+        val errorResponse = response.newBuilder().body(body?.use {
+            ResponseBody.create(it.contentType(), it.bytes())
+        }).build()
+        return cached(chain, request) ?: errorResponse
     }
 
     private fun cached(chain: Interceptor.Chain, request: Request): Response? {
