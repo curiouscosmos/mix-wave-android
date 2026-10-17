@@ -170,10 +170,6 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
 
         if (!::songsAdapter.isInitialized) setupModels()
         setupPlaylistControls(views[PLAYLISTS_TAB])
-        if (viewModel.showResumeCard) {
-            (requireActivity() as AudioPlayerContainerActivity).proposeCard()
-            viewModel.showResumeCard = false
-        }
 
         for (i in 0 until MODE_TOTAL) {
             @Suppress("UNCHECKED_CAST")

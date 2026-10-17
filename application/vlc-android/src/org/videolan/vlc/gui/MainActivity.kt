@@ -116,6 +116,7 @@ class MainActivity : ContentActivity(),
         /*** Start initializing the UI  */
         setContentView(R.layout.main)
         initAudioPlayerContainerActivity()
+        proposeCard()
         setupNavigation(savedInstanceState)
 
         /* Set up the action bar */

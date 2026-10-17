@@ -26,7 +26,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.videolan.medialibrary.interfaces.media.Playlist
-import org.videolan.tools.KEY_AUDIO_RESUME_CARD
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.providers.medialibrary.PlaylistsProvider
@@ -42,7 +41,6 @@ class AudioBrowserViewModel(context: Context) : MedialibraryViewModel(context) {
     override val providers = arrayOf(tracksProvider, playlistsProvider, mixerTracksProvider)
     val providersInCard = arrayOf(false, false, false)
 
-    var showResumeCard = settings.getBoolean(KEY_AUDIO_RESUME_CARD, true)
     val displayModeKeys = arrayOf("display_mode_audio_browser_track", "display_mode_playlist_rows_AudioOnly", "display_mode_audio_mixer")
 
 

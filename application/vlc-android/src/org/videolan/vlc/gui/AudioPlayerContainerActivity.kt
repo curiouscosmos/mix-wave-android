@@ -57,6 +57,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.appbar.AppBarLayout
@@ -69,16 +70,14 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior.from
 import com.google.android.material.navigationrail.NavigationRailView
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.videolan.medialibrary.interfaces.Medialibrary
 import org.videolan.resources.util.getFromMl
 import org.videolan.resources.util.startMedialibrary
 import org.videolan.tools.AUDIO_RESUME_PLAYBACK
 import org.videolan.tools.KEY_AUDIO_LAST_PLAYLIST
+import org.videolan.tools.KEY_AUDIO_RESUME_CARD
 import org.videolan.tools.KEY_AUDIO_PLAYER_SHOW_COVER
 import org.videolan.tools.KEY_CURRENT_AUDIO
 import org.videolan.tools.PREF_AUDIOPLAYER_TIPS_SHOWN
@@ -346,6 +345,11 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         audioPlayerContainer = findViewById(R.id.audio_player_container)
         (audioPlayerContainer.layoutParams as CoordinatorLayout.LayoutParams).bottomMargin = bottomInset
         updateMiniPlayerLayout()
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                PlaybackService.serviceFlow.collect { onServiceChanged(it) }
+            }
+        }
     }
 
     private fun updateToolbarScrollability(enabled: Boolean) {
@@ -591,6 +595,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         service?.let {
             unregisterObserver(it)
             registerObserver(it)
+            if (it.hasMedia()) showAudioPlayer()
         }
     }
 
@@ -615,9 +620,6 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     }
 
     override fun onResume() {
-        PlaybackService.serviceFlow.onEach {
-            onServiceChanged(it)
-        }.launchIn(MainScope())
         if (playerShown)
             applyMarginToProgressBar(playerBehavior.peekHeight)
         else
@@ -846,11 +848,17 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     @SuppressLint("RestrictedApi")
     fun proposeCard() = lifecycleScope.launchWhenStarted {
         delay(1000L)
+        if (!settings.getBoolean(KEY_AUDIO_RESUME_CARD, true)) return@launchWhenStarted
+        if (PlaybackService.instance?.hasMedia() == true) return@launchWhenStarted
         if (PlaylistManager.showAudioPlayer.value == true) return@launchWhenStarted
         val song = settings.getString(KEY_CURRENT_AUDIO, null) ?: return@launchWhenStarted
         if (settings.getString(KEY_AUDIO_LAST_PLAYLIST, null).isNullOrEmpty()) return@launchWhenStarted
-        getFromMl { getMedia(song.toUri()) } ?: return@launchWhenStarted
+        val uri = song.toUri()
+        if (uri.scheme != "http" && uri.scheme != "https") {
+            getFromMl { getMedia(uri) } ?: return@launchWhenStarted
+        }
         if (!settings.getBoolean(AUDIO_RESUME_PLAYBACK, true)) return@launchWhenStarted
+        if (PlaybackService.instance?.hasMedia() == true) return@launchWhenStarted
         PlaybackService.loadLastAudio(this@AudioPlayerContainerActivity, startPaused = true)
     }
 

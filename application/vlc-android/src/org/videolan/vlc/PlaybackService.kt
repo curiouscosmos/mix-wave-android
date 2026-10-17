@@ -920,7 +920,9 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             ACTION_REMOTE_PLAY,
             ACTION_REMOTE_LAST_PLAYLIST -> {
                 if (playlistManager.hasCurrentMedia()) {
-                    if (intent.getBooleanExtra(EXTRA_PLAY_ONLY, false)) {
+                    if (intent.getBooleanExtra(EXTRA_START_PAUSED, false)) {
+                        // A delayed startup restore must leave an already loaded queue alone.
+                    } else if (intent.getBooleanExtra(EXTRA_PLAY_ONLY, false)) {
                         if (!isPlaying)
                             play()
                     } else if (isPlaying) pause()
