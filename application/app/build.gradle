@@ -13,6 +13,14 @@ if (!sentryDsn) {
     }
 }
 
+def verifySentryConfiguration = tasks.register('verifySentryConfiguration') {
+    doLast {
+        if (!sentryDsn) {
+            throw new GradleException('SENTRY_DSN is required for release builds. Set it in the build environment or .env.production.')
+        }
+    }
+}
+
 android {
     compileOptions {
         coreLibraryDesugaringEnabled = true
@@ -162,6 +170,11 @@ android {
     namespace = 'org.videolan.mobile.app'
     // make per-variant version code
     applicationVariants.all { variant ->
+        if (!variant.buildType.debuggable) {
+            variant.generateBuildConfigProvider.configure {
+                dependsOn verifySentryConfiguration
+            }
+        }
         //Custom APK name and versionCode
         variant.outputs.each { output ->
             def outputAbi = output.getFilter(com.android.build.OutputFile.ABI)

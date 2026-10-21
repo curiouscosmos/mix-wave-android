@@ -22,9 +22,14 @@ package org.videolan.mobile.app
 import android.annotation.TargetApi
 import android.content.res.Configuration
 import android.os.Build
+import android.os.Debug
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.multidex.MultiDexApplication
+import io.sentry.Sentry
 import io.sentry.android.core.SentryAndroid
 import org.videolan.libvlc.Dialog
 import org.videolan.tools.BitmapCache
@@ -43,16 +48,45 @@ class VLCApplication : MultiDexApplication(), Dialog.Callbacks by DialogDelegate
     @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
-        HttpImageLoader.initialize(this)
-        setupApplication()
         try {
             SentryAndroid.init(this) { options ->
                 options.dsn = BuildConfig.SENTRY_DSN
                 options.environment = if (BuildConfig.DEBUG) "debug" else "production"
+                options.isAttachThreads = true
             }
+            if (Sentry.isEnabled()) startMainThreadWatchdog()
+            else Log.e(TAG, "Sentry is disabled: no DSN configured")
         } catch (error: Throwable) {
             Log.e(TAG, "Unable to initialize Sentry; continuing without error reporting", error)
         }
+        HttpImageLoader.initialize(this)
+        setupApplication()
+    }
+
+    private fun startMainThreadWatchdog() {
+        // SDK ANRs on Android 11+ depend on OS exit records; capture live stalls too.
+        val mainLooper = Looper.getMainLooper()
+        val handler = Handler(mainLooper)
+        // Uptime excludes deep sleep during screen-off playback.
+        val watchdog = MainThreadWatchdog({ handler.post(it) }, SystemClock::uptimeMillis) {
+            val error = IllegalStateException("Main thread blocked for at least ${MainThreadWatchdog.TIMEOUT_MS} ms")
+            error.stackTrace = mainLooper.thread.stackTrace
+            Sentry.captureException(error) { scope ->
+                scope.setTag("failure.type", "main_thread_stall")
+            }
+        }
+        Thread({
+            try {
+                while (!Thread.currentThread().isInterrupted) {
+                    watchdog.check(Debug.isDebuggerConnected() || Debug.waitingForDebugger())
+                    Thread.sleep(1_000L)
+                }
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } catch (error: Exception) {
+                Log.e(TAG, "Main thread watchdog stopped", error)
+            }
+        }, "main-thread-watchdog").apply { isDaemon = true }.start()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
