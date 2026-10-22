@@ -520,7 +520,7 @@
                 android:layout_height="0dp"
                 android:layout_marginTop="0dp"
                 android:visibility="gone"
-                app:layout_constraintBottom_toTopOf="@id/expanded_actions"
+                app:layout_constraintBottom_toTopOf="@id/noise_cancellation"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
 
@@ -537,6 +537,20 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 app:layout_constraintGuide_percent="0.17" />
+        <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/noise_cancellation"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:paddingHorizontal="16dp"
+                android:text="@string/noise_cancellation"
+                android:textColor="?attr/font_default"
+                android:enabled="false"
+                android:visibility="gone"
+                app:switchPadding="12dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/expanded_actions" />
+
         <LinearLayout
                 android:id="@+id/expanded_actions"
                 android:layout_width="0dp"

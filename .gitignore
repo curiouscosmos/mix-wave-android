@@ -72,6 +72,7 @@ vlc-android/build/
 java-libs/WheelView/build/
 libVLC/build/
 .kotlin/
+.cxx/
 
 #medialibrary build
 libvlc.pc

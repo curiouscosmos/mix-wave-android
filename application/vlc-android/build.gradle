@@ -37,6 +37,10 @@ android {
 
     defaultConfig {
 
+        externalNativeBuild {
+            cmake { arguments '-DANDROID_STL=c++_static' }
+        }
+
         resValue "string", "build_time", buildTime(project)
         resValue "string", "build_host", hostName(project)
         resValue "string", "build_revision", build_revision
@@ -53,7 +57,7 @@ android {
         buildConfigField 'String[]', 'TRANSLATION_ARRAY', generateTranslation()
         buildConfigField 'int', 'VLC_MAJOR_VERSION', "${rootProject.ext.vlcMajorVersion}"
 
-        testInstrumentationRunner "org.videolan.vlc.MultidexTestRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // The following argument makes the Android Test Orchestrator run its
         // "pm clear" command after each test invocation. This command ensures
         // that the app's state is completely cleared between tests.
@@ -78,6 +82,13 @@ android {
                 outputs.upToDateWhen { false }
                 showStandardStreams = true
             }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'native/CMakeLists.txt'
+            version '3.22.1'
         }
     }
 
@@ -131,6 +142,7 @@ android {
         assets.srcDirs = ['flavors/debug/assets']
     }
     sourceSets.androidTest {
+        manifest.srcFile 'androidTest/AndroidManifest.xml'
         java.srcDirs = ['androidTest', 'test-common']
         assets.srcDirs = ['flavors/debug/assets']
         assets.srcDirs += files("$projectDir/assets/schemas".toString())
@@ -169,6 +181,9 @@ task generateSources(type: Jar) {
 }
 
 dependencies {
+    implementation('io.github.kaleyravideo:android-deepfilternet:0.0.8') {
+        exclude group: 'org.jetbrains.kotlinx' // Use the application's shared coroutine runtime.
+    }
     devApi project(':libvlcjni:libvlc')
     devApi project(':medialibrary')
     debugApi "org.videolan.android:libvlc-all:$rootProject.ext.libvlcVersion"

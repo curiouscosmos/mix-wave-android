@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="noise_cancellation">Noise cancellation</string>
+    <string name="noise_cancellation_error">Noise cancellation unavailable. Restored normal playback.</string>
+</resources>

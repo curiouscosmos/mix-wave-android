@@ -448,7 +448,7 @@
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="8dp"
                 android:visibility="gone"
-                app:layout_constraintBottom_toTopOf="@+id/time"
+                app:layout_constraintBottom_toTopOf="@+id/noise_cancellation"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="@id/guideline14"
                 app:layout_constraintTop_toBottomOf="@+id/header"
@@ -657,7 +657,7 @@
                 android:layout_height="0dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp"
-                app:layout_constraintBottom_toTopOf="@+id/time"
+                app:layout_constraintBottom_toTopOf="@+id/noise_cancellation"
                 app:layout_constraintDimensionRatio="1"
                 app:layout_constraintEnd_toStartOf="@+id/guideline14"
                 app:layout_constraintStart_toStartOf="parent"
@@ -665,6 +665,20 @@
                 tools:layout_constraintLeft_creator="1"
                 tools:visibility="visible" />
 
+
+        <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/noise_cancellation"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:paddingHorizontal="16dp"
+                android:text="@string/noise_cancellation"
+                android:textColor="?attr/font_default"
+                android:enabled="false"
+                android:visibility="gone"
+                app:switchPadding="12dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/time" />
 
         <TextView
                 android:id="@+id/time"

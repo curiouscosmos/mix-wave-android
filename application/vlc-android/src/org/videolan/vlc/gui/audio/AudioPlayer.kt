@@ -65,6 +65,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.videolan.libvlc.MediaPlayer
@@ -244,6 +245,22 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.noiseCancellation.setOnClickListener {
+            playlistModel.service?.setNoiseCancellation(binding.noiseCancellation.isChecked)
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                PlaybackService.serviceFlow.collectLatest { service ->
+                    if (service == null) {
+                        binding.noiseCancellation.isChecked = false
+                        binding.noiseCancellation.isEnabled = false
+                    } else service.noiseCancellation.collect { state ->
+                        binding.noiseCancellation.isChecked = state.enabled
+                        binding.noiseCancellation.isEnabled = !state.loading && (state.available || state.enabled)
+                    }
+                }
+            }
+        }
         val likesRepository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {

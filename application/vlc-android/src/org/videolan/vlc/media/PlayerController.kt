@@ -22,6 +22,7 @@ import org.videolan.resources.VLCOptions
 import org.videolan.tools.KEY_EQUALIZER_ENABLED
 import org.videolan.tools.*
 import org.videolan.vlc.*
+import org.videolan.vlc.audio.NoiseOutput
 import org.videolan.vlc.gui.dialogs.VideoTracksDialog
 import org.videolan.vlc.gui.dialogs.adapters.VlcTrack
 import org.videolan.vlc.repository.EqualizerRepository
@@ -38,9 +39,14 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     val speed by lazy(LazyThreadSafetyMode.NONE) { MutableLiveData<Float>().apply { value = 1.0F } }
     private val slaveRepository by lazy { SlaveRepository.getInstance(context) }
 
+    private var currentEqualizer: MediaPlayer.Equalizer? = null
     var mediaplayer = newMediaPlayer()
         private set
     var switchToVideo = false
+    var onNoiseReset: (() -> Unit)? = null
+    private var noiseOutput: NoiseOutput? = null
+    private var eventGeneration = 0L
+    private var outputRestore: Pair<Long, Boolean>? = null
     var seekable = false
     var pausable = false
     var previousMediaStats: IMedia.Stats? = null
@@ -55,10 +61,12 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     fun getMedia(): IMedia? = mediaplayer.media
 
     fun play() {
+        outputRestore = outputRestore?.let { it.first to false }
         if (mediaplayer.hasMedia() && !mediaplayer.isReleased) mediaplayer.play()
     }
 
     fun pause(): Boolean {
+        outputRestore = outputRestore?.let { it.first to true }
         if (isPlaying() && mediaplayer.hasMedia() && pausable) {
             mediaplayer.pause()
             return true
@@ -67,6 +75,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     }
 
     fun stop() {
+        resetNoiseCancellation()
         if (mediaplayer.hasMedia() && !mediaplayer.isReleased) mediaplayer.stop()
         setPlaybackStopped()
     }
@@ -78,6 +87,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
 
     private var mediaplayerEventListener: MediaPlayerEventListener? = null
     internal suspend fun startPlayback(media: IMedia, listener: MediaPlayerEventListener, time: Long) {
+        resetNoiseCancellation()
         mediaplayerEventListener = listener
         resetPlaybackState(time, media.duration)
         mediaplayer.setEventListener(null)
@@ -86,7 +96,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
         if (!mediaplayer.isReleased) {
             if (Settings.getInstance(context).getBoolean(KEY_EQUALIZER_ENABLED, false)) withContext(Dispatchers.IO) {
                 val repository = EqualizerRepository.getInstance(context)
-                mediaplayer.setEqualizer(repository.getCurrentEqualizer(context).getEqualizer())
+                setEqualizer(repository.getCurrentEqualizer(context).getEqualizer())
             }
             mediaplayer.setVideoTitleDisplay(MediaPlayer.Position.Disable, 0)
             mediaplayer.play()
@@ -102,6 +112,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
 
     @MainThread
     fun restart() {
+        resetNoiseCancellation()
         val mp = mediaplayer
         val volume:Int? = if (!mp.isReleased) mp.volume else null
         mediaplayer = newMediaPlayer()
@@ -114,10 +125,12 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     }
 
     fun setPosition(position: Float) {
+        outputRestore = outputRestore?.let { (getLength() * position).toLong() to it.second }
         if (seekable && mediaplayer.hasMedia() && !mediaplayer.isReleased) mediaplayer.position = position
     }
 
     fun setTime(time: Long, fast:Boolean = false) {
+        outputRestore = outputRestore?.let { time to it.second }
         if (seekable && mediaplayer.hasMedia() && !mediaplayer.isReleased) mediaplayer.setTime(time, fast)
     }
 
@@ -182,7 +195,10 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
 
     fun setAudioDelay(delay: Long) = mediaplayer.setAudioDelay(delay)
 
-    fun setEqualizer(equalizer: MediaPlayer.Equalizer?) = mediaplayer.setEqualizer(equalizer)
+    fun setEqualizer(equalizer: MediaPlayer.Equalizer?): Boolean {
+        currentEqualizer = equalizer
+        return mediaplayer.setEqualizer(equalizer)
+    }
 
     @MainThread
     fun setVideoScale(scale: Float) {
@@ -199,6 +215,12 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     }
 
     fun release(player: MediaPlayer = mediaplayer) {
+        if (player === mediaplayer && noiseOutput != null) {
+            resetNoiseCancellation()
+            release()
+            return
+        }
+        if (player === mediaplayer) resetNoiseCancellation()
         player.setEventListener(null)
         if (isVideoPlaying()) player.vlcVout.detachViews()
         releaseMedia()
@@ -227,11 +249,76 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
 
     private fun newMediaPlayer() : MediaPlayer {
         return MediaPlayer(VLCInstance.getInstance(context)).apply {
+            currentEqualizer?.let { setEqualizer(it) }
             setAudioDigitalOutputEnabled(VLCOptions.isAudioDigitalOutputEnabled(settings))
             VLCOptions.getAout(settings)?.let { setAudioOutput(it) }
             setRenderer(PlaybackService.renderer.value)
             this.vlcVout.addCallback(this@PlayerController)
         }
+    }
+
+    /** A user track transition discards callbacks; internal output restarts bypass this hook. */
+    fun resetNoiseCancellation() {
+        onNoiseReset?.invoke()
+        val output = noiseOutput ?: return
+        noiseOutput = null
+        outputRestore = null
+        eventGeneration++
+        val old = mediaplayer
+        val volume = old.volume
+        val rate = old.rate
+        old.setEventListener(null)
+        output.cancel()
+        old.stop()
+        output.close()
+        old.release()
+        mediaplayer = newMediaPlayer()
+        mediaplayer.volume = volume
+        mediaplayer.rate = rate
+    }
+
+    /** Recreate the player to remove amem options completely when returning to ordinary output. */
+    fun changeNoiseOutput(output: NoiseOutput?): Boolean {
+        val old = mediaplayer
+        val media = old.media ?: run { output?.close(); return false }
+        val time = outputRestore?.first ?: old.time.coerceAtLeast(0)
+        val paused = outputRestore?.second ?: isPaused()
+        val volume = old.volume
+        val rate = old.rate
+        eventGeneration++
+        old.setEventListener(null)
+        noiseOutput?.cancel()
+        old.stop()
+        noiseOutput?.close()
+        noiseOutput = null
+        old.release()
+        mediaplayer = newMediaPlayer()
+        var success = true
+        try {
+            if (output != null) {
+                output.install(mediaplayer)
+                noiseOutput = output
+            }
+        } catch (_: Exception) {
+            output?.close()
+            mediaplayer.release()
+            mediaplayer = newMediaPlayer()
+            success = false
+        } catch (_: LinkageError) {
+            output?.close()
+            mediaplayer.release()
+            mediaplayer = newMediaPlayer()
+            success = false
+        }
+        media.addOption(":start-time=${time / 1000.0}")
+        mediaplayer.media = media
+        media.release()
+        mediaplayer.volume = volume
+        mediaplayer.rate = rate
+        outputRestore = time to paused
+        mediaplayer.setEventListener(this)
+        mediaplayer.play()
+        return success
     }
 
     override fun onSurfacesCreated(vlcVout: IVLCVout?) {}
@@ -318,10 +405,20 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     private var lastTime = 0L
     var lastPosition = 0F
     @OptIn(ObsoleteCoroutinesApi::class)
-    private val eventActor = actor<MediaPlayer.Event>(capacity = Channel.UNLIMITED, start = CoroutineStart.UNDISPATCHED) {
-        for (event in channel) {
+    private val eventActor = actor<Pair<Long, MediaPlayer.Event>>(capacity = Channel.UNLIMITED, start = CoroutineStart.UNDISPATCHED) {
+        for ((generation, event) in channel) {
+            if (generation != eventGeneration) continue
+            if (event.type == MediaPlayer.Event.EndReached || event.type == MediaPlayer.Event.EncounteredError || event.type == MediaPlayer.Event.Stopped)
+                resetNoiseCancellation()
             when (event.type) {
-                MediaPlayer.Event.Playing -> playbackState = PlaybackStateCompat.STATE_PLAYING
+                MediaPlayer.Event.Playing -> {
+                    playbackState = PlaybackStateCompat.STATE_PLAYING
+                    outputRestore?.let { (time, paused) ->
+                        outputRestore = null
+                        mediaplayer.setTime(time)
+                        if (paused) mediaplayer.pause()
+                    }
+                }
                 MediaPlayer.Event.Paused -> playbackState = PlaybackStateCompat.STATE_PAUSED
                 MediaPlayer.Event.EncounteredError -> setPlaybackStopped()
                 MediaPlayer.Event.PausableChanged -> pausable = event.pausable
@@ -349,7 +446,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     }
 
     override fun onEvent(event: MediaPlayer.Event?) {
-        if (event != null) eventActor.trySend(event)
+        if (event != null) eventActor.trySend(eventGeneration to event)
     }
 
     private fun setPlaybackStopped() {
