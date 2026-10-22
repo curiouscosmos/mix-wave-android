@@ -84,10 +84,10 @@ class EmptyLoadingStateView : FrameLayout {
             emptyTextView.visibility = if (value in arrayOf(EmptyLoadingState.EMPTY, EmptyLoadingState.EMPTY_SEARCH, EmptyLoadingState.EMPTY_FAVORITES)) VISIBLE else GONE
             emptyImageView.visibility = if (value in arrayOf(EmptyLoadingState.EMPTY,EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION, EmptyLoadingState.EMPTY_SEARCH, EmptyLoadingState.EMPTY_FAVORITES)) VISIBLE else GONE
             emptyImageView.setImageBitmap(context.getBitmapFromDrawable(if (value == EmptyLoadingState.EMPTY_FAVORITES) R.drawable.ic_fav_empty else if (value in arrayOf(EmptyLoadingState.EMPTY, EmptyLoadingState.EMPTY_SEARCH, EmptyLoadingState.EMPTY_FAVORITES)) R.drawable.ic_empty else R.drawable.ic_empty_warning))
-            permissionTitle.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION,  EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
-            permissionTextView.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION,  EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
-            grantPermissionButton.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION,  EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
-            pickFileButton.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION,  EmptyLoadingState.MISSING_AUDIO_PERMISSION) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) VISIBLE else GONE
+            permissionTitle.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
+            permissionTextView.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
+            grantPermissionButton.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION)) VISIBLE else GONE
+            pickFileButton.visibility = if (value in arrayOf(EmptyLoadingState.MISSING_PERMISSION, EmptyLoadingState.MISSING_AUDIO_PERMISSION) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) VISIBLE else GONE
             noMediaButton.visibility = if (showNoMedia && value == EmptyLoadingState.EMPTY) VISIBLE else if (value == EmptyLoadingState.EMPTY_FAVORITES) INVISIBLE else GONE
             permissionTextView.text = when (state) {
                 EmptyLoadingState.MISSING_AUDIO_PERMISSION -> context.getString(R.string.permission_audio)

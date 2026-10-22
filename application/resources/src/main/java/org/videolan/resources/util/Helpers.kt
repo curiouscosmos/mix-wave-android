@@ -96,11 +96,7 @@ private fun isAnyFileFinePermissionGranted(context: Context) = (
         ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.READ_MEDIA_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_MEDIA_IMAGES
-                ) == PackageManager.PERMISSION_GRANTED
+        ) == PackageManager.PERMISSION_GRANTED
         )
 
 /**
@@ -121,4 +117,3 @@ fun applyOverscanMargin(activity: Activity) {
     val vm = activity.resources.getDimensionPixelSize(R.dimen.tv_overscan_vertical)
     activity.findViewById<View>(android.R.id.content).setPadding(hm, vm, hm, vm)
 }
-

@@ -61,7 +61,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         card.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
         val titleId = if (count == null) R.id.discourse_track_title else R.id.discourse_title
         if (count == null) card.findViewById<View>(R.id.discourse_track_played).isVisible = playbackStore.isPlayed(id)
-        card.contentDescription = "${card.findViewById<TextView>(titleId).text}. ${getString(R.string.discourse_listening_percentage, percent)}"
+        val accessibleCard = if (count == null) card else card.findViewById<View>(R.id.discourse_catalogue_card)
+        accessibleCard.contentDescription = "${card.findViewById<TextView>(titleId).text}. ${getString(R.string.discourse_listening_percentage, percent)}"
     }
     private fun clearCards(container: ViewGroup) {
         for (i in 0 until container.childCount) {
@@ -211,7 +212,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     }
 
     private fun addDiscourseCard(container: ViewGroup, discourse: Discourse, metadata: String) {
-        val card = layoutInflater.inflate(R.layout.discourse_card, container, false)
+        val card = layoutInflater.inflate(R.layout.discourse_catalogue_card, container, false)
+        card.findViewById<View>(R.id.discourse_letter_heading).isVisible = false
         card.findViewById<TextView>(R.id.discourse_title).text = discourse.title
         card.findViewById<TextView>(R.id.discourse_language).text = discourse.language.replaceFirstChar(Char::uppercase)
         card.findViewById<TextView>(R.id.discourse_counts).text = metadata
@@ -231,7 +233,9 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             progress = (completed * 100 / discourse.totalTracks.coerceAtLeast(1)).coerceAtMost(100)
         }
         loadImage(card.findViewById(R.id.discourse_image), discourse)
-        card.setOnClickListener { (parentFragment as? HomeFragment)?.openDiscourse(discourse) }
+        card.findViewById<View>(R.id.discourse_catalogue_card).setOnClickListener {
+            (parentFragment as? HomeFragment)?.openDiscourse(discourse)
+        }
         bindProgress(card, discourse.id, discourse.totalTracks)
         container.addView(card)
     }

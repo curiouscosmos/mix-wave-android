@@ -740,7 +740,7 @@ Changes between 3.0.13 and 3.0.90:
 ------------------
 
 Application:
- * minSDK is now 17 (Android 4.2)
+ * minSDK is now 30 (Android 4.2)
  * Medialibrary scan is now optional
  * Launcher shortcuts
  * OTG devices support in file browser

@@ -928,12 +928,12 @@
     <string name="discourse_counts">%1$d tracks · %2$d likes</string>
     <string name="discourse_likes">%1$d likes</string>
     <string-array name="discourse_languages">
-        <item>All languages</item>
+        <item>Languages</item>
         <item>Hindi</item>
         <item>English</item>
     </string-array>
     <string-array name="discourse_sorts">
-        <item>Default</item>
+        <item>Sort</item>
         <item>Number of likes</item>
     </string-array>
     <string name="ctx_player_video_track">Select video track</string>

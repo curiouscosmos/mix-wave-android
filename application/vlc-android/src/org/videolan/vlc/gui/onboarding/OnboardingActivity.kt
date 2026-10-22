@@ -146,8 +146,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingFragmentListener {
             if (onlyMedia && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 ActivityCompat.requestPermissions(
                     this@OnboardingActivity, arrayOf<String>(
-                        Manifest.permission.READ_MEDIA_AUDIO,
-                        Manifest.permission.READ_MEDIA_IMAGES,
+                        Manifest.permission.READ_MEDIA_AUDIO
                     ), Permissions.FINE_STORAGE_PERMISSION_REQUEST_CODE
                 )
                 return@launch
