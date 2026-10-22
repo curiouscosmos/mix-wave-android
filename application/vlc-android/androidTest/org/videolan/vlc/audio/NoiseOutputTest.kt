@@ -31,6 +31,55 @@ import kotlin.math.sin
 /** Exercises the packaged model and the actual LibVLC callbacks, not mocked JNI. */
 @RunWith(AndroidJUnit4::class)
 class NoiseOutputTest {
+    @Test fun ordinaryOutputReturnsAfterDisableAndTrackEnd() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        AppContextProvider.init(context)
+        val manager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+        val source = waveFile("noise-output-transition.wav")
+        lateinit var controller: PlayerController
+        fun main(block: () -> Unit) = instrumentation.runOnMainSync(block)
+        val listener = object : MediaPlayerEventListener {
+            override suspend fun onEvent(event: MediaPlayer.Event) {}
+        }
+        fun start() = runBlocking(Dispatchers.Main) {
+            val media = Media(VLCInstance.getInstance(context), Uri.fromFile(source))
+            try { controller.startPlayback(media, listener, 0) } finally { media.release() }
+        }
+        fun assertOutput(expectedVolume: Int) {
+            await { controller.mediaplayer.time > 500 }
+            await(5000) { manager.activePlaybackConfigurations.isNotEmpty() }
+            assertEquals("Ordinary output volume was lost", expectedVolume, controller.getVolume())
+        }
+        main { controller = PlayerController(context) }
+        try {
+            start()
+            main { assertEquals(0, controller.setVolume(65)) }
+            assertOutput(65)
+            repeat(2) { transition ->
+                val output = NoiseOutput.create(context) { fail("Unexpected filter failure") }
+                main { assertTrue(controller.changeNoiseOutput(output)) }
+                await { output.processedSamples > 48000 }
+                assertEquals(65, controller.getVolume())
+                main { assertEquals(0, controller.setVolume(37)) }
+                assertEquals(37, controller.getVolume())
+                if (transition == 0) {
+                    main { assertTrue(controller.changeNoiseOutput(null)) }
+                } else {
+                    val ended = CountDownLatch(1)
+                    main { controller.onNoiseReset = { ended.countDown() }; controller.setTime(34000) }
+                    assertTrue("Track did not end", ended.await(8, TimeUnit.SECONDS))
+                    start()
+                }
+                assertOutput(37)
+                main { assertEquals(0, controller.setVolume(65)) }
+            }
+        } finally {
+            main { controller.stop(); controller.release() }
+            source.delete()
+        }
+    }
+
     @Test fun nativePlaybackPauseSeekDrainAndFailureRecovery() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val source = waveFile("noise-output-test.wav")

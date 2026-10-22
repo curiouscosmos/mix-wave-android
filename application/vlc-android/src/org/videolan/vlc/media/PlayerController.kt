@@ -45,6 +45,8 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     var switchToVideo = false
     var onNoiseReset: (() -> Unit)? = null
     private var noiseOutput: NoiseOutput? = null
+    // LibVLC's callback output does not report its volume back through getVolume().
+    private var noiseVolume: Int? = null
     private var eventGeneration = 0L
     private var outputRestore: Pair<Long, Boolean>? = null
     var seekable = false
@@ -261,11 +263,12 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     fun resetNoiseCancellation() {
         onNoiseReset?.invoke()
         val output = noiseOutput ?: return
+        val volume = getVolume()
         noiseOutput = null
+        noiseVolume = null
         outputRestore = null
         eventGeneration++
         val old = mediaplayer
-        val volume = old.volume
         val rate = old.rate
         old.setEventListener(null)
         output.cancel()
@@ -283,7 +286,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
         val media = old.media ?: run { output?.close(); return false }
         val time = outputRestore?.first ?: old.time.coerceAtLeast(0)
         val paused = outputRestore?.second ?: isPaused()
-        val volume = old.volume
+        val volume = getVolume()
         val rate = old.rate
         eventGeneration++
         old.setEventListener(null)
@@ -291,6 +294,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
         old.stop()
         noiseOutput?.close()
         noiseOutput = null
+        noiseVolume = null
         old.release()
         mediaplayer = newMediaPlayer()
         var success = true
@@ -298,6 +302,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
             if (output != null) {
                 output.install(mediaplayer)
                 noiseOutput = output
+                noiseVolume = volume
             }
         } catch (_: Exception) {
             output?.close()
@@ -386,9 +391,13 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
         if (!mediaplayer.isReleased)  mediaplayer.title = title
     }
 
-    fun getVolume() = if (!mediaplayer.isReleased) mediaplayer.volume else 100
+    fun getVolume() = noiseVolume ?: if (!mediaplayer.isReleased) mediaplayer.volume else 100
 
-    fun setVolume(volume: Int) = if (!mediaplayer.isReleased) mediaplayer.setVolume(volume) else -1
+    fun setVolume(volume: Int): Int {
+        val result = if (!mediaplayer.isReleased) mediaplayer.setVolume(volume) else -1
+        if (result == 0 && noiseOutput != null) noiseVolume = volume
+        return result
+    }
 
     suspend fun expand(): IMediaList? {
         return mediaplayer.media?.let {
