@@ -322,6 +322,24 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>
 
+        <TextView
+                android:id="@+id/about_disclaimer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:layout_marginHorizontal="16dp"
+                android:padding="16dp"
+                android:gravity="center_vertical"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:text="@string/acknowledgements_disclaimer"
+                style="@style/About.Title"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/about_authors_container"
+                app:layout_constraintWidth_max="600dp" />
+
         <androidx.cardview.widget.CardView
                 android:id="@+id/about_vlc_card"
                 android:layout_width="0dp"
@@ -339,7 +357,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/about_authors_container"
+                app:layout_constraintTop_toBottomOf="@id/about_disclaimer"
                 app:layout_constraintWidth_max="600dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout

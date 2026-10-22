@@ -138,10 +138,6 @@ open class ContentActivity : AudioPlayerContainerActivity(), SearchView.OnQueryT
                 startActivityForResult(Intent(this, SecondaryActivity::class.java).putExtra(SecondaryActivity.KEY_FRAGMENT, SecondaryActivity.ABOUT), SecondaryActivity.ACTIVITY_RESULT_SECONDARY)
                 return true
             }
-            R.id.ml_menu_disclaimer -> {
-                startActivityForResult(Intent(this, SecondaryActivity::class.java).putExtra(SecondaryActivity.KEY_FRAGMENT, SecondaryActivity.DISCLAIMER), SecondaryActivity.ACTIVITY_RESULT_SECONDARY)
-                return true
-            }
             else -> return super.onOptionsItemSelected(item)
         }
     }

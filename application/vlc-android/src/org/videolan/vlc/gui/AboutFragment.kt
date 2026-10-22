@@ -21,6 +21,7 @@
 package org.videolan.vlc.gui
 
 import android.os.Bundle
+import android.content.Intent
 import android.view.*
 import androidx.appcompat.view.ActionMode
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -49,6 +50,10 @@ class AboutFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        view.findViewById<View>(R.id.about_disclaimer).setOnClickListener {
+            startActivity(Intent(requireContext(), SecondaryActivity::class.java)
+                .putExtra(SecondaryActivity.KEY_FRAGMENT, SecondaryActivity.DISCLAIMER))
+        }
         requireActivity().findViewById<FloatingActionButton>(R.id.fab).setGone()
         requireActivity().findViewById<View>(R.id.sliding_tabs).setGone()
         lifecycleScope.launch {

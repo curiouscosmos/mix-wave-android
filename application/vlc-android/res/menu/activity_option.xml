@@ -201,12 +201,6 @@
             android:title="@string/about"
             vlc:showAsAction="never" />
     <item
-            android:id="@+id/ml_menu_disclaimer"
-            android:icon="@drawable/ic_information"
-            android:orderInCategory="4"
-            android:title="@string/acknowledgements_disclaimer"
-            vlc:showAsAction="never" />
-    <item
             android:id="@+id/ml_menu_custom_dir"
             android:contentDescription="@string/add_custom_path_description"
             android:orderInCategory="3"
