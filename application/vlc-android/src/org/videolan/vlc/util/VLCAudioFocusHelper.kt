@@ -143,13 +143,18 @@ class VLCAudioFocusHelper(private val service: PlaybackService) {
                             lossTransientVolume = -1
                         }
 
-                        if (lossTransient && wasPlaying) {
-                            if (podcastPlaying) {
-                                // If the interruption was short just restart playback
-                                val deltaTime = System.currentTimeMillis() - lossTime
-                                if (deltaTime > 1_000L) schedulePlayback(2_000L) else resumePlayback()
-                            } else if (service.settings.getBoolean(RESUME_PLAYBACK, true)) {
-                                resumePlayback()
+                        if (lossTransient) {
+                            val shouldResume = wasPlaying
+                            wasPlaying = false
+                            lossTransient = false
+                            if (shouldResume) {
+                                if (podcastPlaying) {
+                                    // If the interruption was short just restart playback
+                                    val deltaTime = System.currentTimeMillis() - lossTime
+                                    if (deltaTime > 1_000L) schedulePlayback(2_000L) else resumePlayback()
+                                } else if (service.settings.getBoolean(RESUME_PLAYBACK, true)) {
+                                    resumePlayback()
+                                }
                             }
                         }
                     }
@@ -158,6 +163,7 @@ class VLCAudioFocusHelper(private val service: PlaybackService) {
 
             private fun pausePlayback() {
                 if (lossTransient) return
+                handler.removeCallbacks(delayedPodcastRunnable)
                 lossTransient = true
                 wasPlaying = service.isPlaying
                 if (wasPlaying) {
