@@ -369,7 +369,6 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         binding.playerAddPlaylist?.setOnClickListener {
             playlistModel.currentMediaWrapper?.let { requireActivity().addToPlaylist(listOf(it)) }
         }
-        binding.playerSleep?.setOnClickListener { binding.sleepQuickAction.performClick() }
         binding.playerDiscourse?.setOnClickListener {
             val media = playlistModel.currentMediaWrapper ?: return@setOnClickListener
             val ids = media.discoursePlaybackIds() ?: return@setOnClickListener

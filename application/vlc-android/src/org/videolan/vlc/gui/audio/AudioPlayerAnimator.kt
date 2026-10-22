@@ -172,7 +172,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         }
 
         hidePlaylistConstraint.setVisibility(R.id.songs_list, View.GONE)
-        hidePlaylistConstraint.setVisibility(R.id.noise_cancellation, View.VISIBLE)
+        if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.noise_cancellation, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.audio_rewind_10, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.audio_rewind_text, View.VISIBLE)
@@ -195,7 +195,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         headerHidePlaylistConstraint.connect(R.id.playback_chips, ConstraintSet.BOTTOM, R.id.guideline_header_bottom, ConstraintSet.BOTTOM)
 
         hidePlaylistLandscapeConstraint.setVisibility(R.id.songs_list, View.GONE)
-        hidePlaylistLandscapeConstraint.setVisibility(R.id.noise_cancellation, View.VISIBLE)
+        if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.noise_cancellation, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.audio_rewind_10, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.audio_rewind_text, View.VISIBLE)
@@ -285,7 +285,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.contentLayout.setBackgroundResource(if (slideOffset == 0f) android.R.color.transparent else R.drawable.audio_player_screen_background)
         binding.backgroundView.alpha = slideOffset * if (binding.expandedActions != null) 0.55f else 1f
         binding.expandedActions?.alpha = slideOffset
-        binding.noiseCancellation.alpha = slideOffset
+        binding.noiseCancellation.alpha = if (binding.expandedActions == null) slideOffset else 1f
         binding.topGradient.alpha = slideOffset
         binding.bottomGradient.alpha = slideOffset
         binding.progressBar.alpha = 1 - slideOffset

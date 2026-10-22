@@ -1,6 +1,6 @@
 # Current-track noise cancellation
 
-The expanded player exposes a non-persistent switch owned by `PlaybackService`.
+The expanded player exposes a non-persistent Noise icon button owned by `PlaybackService`.
 It is available for seekable files/streams rendered on the device with LibVLC 3;
 remote renderers and video playback do not use this output. Pause, resume, seeking, and UI recreation
 keep the switch enabled. Track replacement, end (including repeat-one), stop,

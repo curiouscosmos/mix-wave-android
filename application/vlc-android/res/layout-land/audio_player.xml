@@ -666,16 +666,23 @@
                 tools:visibility="visible" />
 
 
-        <androidx.appcompat.widget.SwitchCompat
+        <androidx.appcompat.widget.AppCompatToggleButton
                 android:id="@+id/noise_cancellation"
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
+                android:layout_height="64dp"
                 android:paddingHorizontal="16dp"
-                android:text="@string/noise_cancellation"
-                android:textColor="?attr/font_default"
+                android:textOn="@string/player_noise_label"
+                android:textOff="@string/player_noise_label"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:contentDescription="@string/noise_cancellation"
+                android:drawableTop="@drawable/ic_player_noise"
+                android:drawablePadding="8dp"
+                android:drawableTint="@color/noise_action_tint"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:textColor="@color/noise_action_tint"
                 android:enabled="false"
                 android:visibility="gone"
-                app:switchPadding="12dp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintBottom_toTopOf="@id/time" />
