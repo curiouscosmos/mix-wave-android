@@ -61,6 +61,11 @@ million samples with zero underruns. Synthetic noise output/input energy was
 approximately 0.0000094. Kotlin, resource packaging, all four native ABI builds,
 the test APK, and the complete debug app build also passed.
 
+UI checks also passed with a real seekable discourse stream in portrait and
+landscape: default-off state, enabling during playback, state across rotation,
+and disabling while paused without moving the saved position. Artwork shrinks
+to fit so the added switch does not clip the track title or subtitle.
+
 This checkout's existing `UtilTests.kt` has syntax errors, and generated
 `build_host` contains an unescaped resource reference on the verification host.
 The new unit tests were run with a temporary Gradle init script restricting test
@@ -68,7 +73,7 @@ sources to `test/org/videolan/vlc/audio` and overriding only the generated
 `build_host` value. Maven DNS also required a temporary local mirror of the
 official 0.0.8 artifact. None of those workarounds changes project sources.
 
-Before release, listen to real local recordings and seekable discourse streams;
-verify Bluetooth route switching, background playback, both screen orientations,
-and simultaneous Audio Mixer playback. Check speech quality and longer sessions
+Before release, listen to real local recordings and discourse streams; verify
+Bluetooth route switching, background playback, and simultaneous Audio Mixer
+playback. Check speech quality and longer sessions
 on lower-powered devices as well as the automated synthetic tests.
