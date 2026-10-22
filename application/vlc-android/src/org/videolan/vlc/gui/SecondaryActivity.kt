@@ -194,6 +194,7 @@ class SecondaryActivity : ContentActivity(), IDialogManager {
                 }
             }
             ABOUT -> fragment = AboutFragment()
+            DISCLAIMER -> fragment = DisclaimerFragment()
             HISTORY -> fragment = HistoryFragment()
             VIDEO_GROUP_LIST -> {
                 fragment = VideoGridFragment().apply {
@@ -227,6 +228,7 @@ class SecondaryActivity : ContentActivity(), IDialogManager {
 
         const val ALBUMS_SONGS = "albumsSongs"
         const val ABOUT = "about"
+        const val DISCLAIMER = "disclaimer"
         const val HISTORY = "history"
         const val VIDEO_GROUP_LIST = "videoGroupList"
         const val STORAGE_BROWSER = "storage_browser"

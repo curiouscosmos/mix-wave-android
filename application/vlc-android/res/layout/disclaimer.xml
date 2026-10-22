@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+        <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityHeading="true"
+                android:text="@string/acknowledgements_disclaimer"
+                android:textColor="?attr/about_text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+        <TextView
+                android:id="@+id/disclaimer_acknowledgements"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:lineSpacingExtra="4dp"
+                android:text="@string/disclaimer_acknowledgements"
+                android:textColor="?attr/about_text_primary"
+                android:textSize="16sp" />
+
+        <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:accessibilityHeading="true"
+                android:text="@string/disclaimer_report_title"
+                android:textColor="?attr/about_text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+        <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:lineSpacingExtra="4dp"
+                android:text="@string/disclaimer_report_body"
+                android:textColor="?attr/about_text_primary"
+                android:textSize="16sp" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
