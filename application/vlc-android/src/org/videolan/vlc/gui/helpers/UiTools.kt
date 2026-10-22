@@ -530,7 +530,7 @@ object UiTools {
             AboutVersionDialog.newInstance().show(activity.supportFragmentManager, "AboutVersionDialog")
         }
         v.findViewById<View>(R.id.about_website_container).setOnClickListener {
-            activity.openLinkIfPossible("https://sandalbar.online")
+            activity.openLinkIfPossible("https://rajneeshdiscourse.com")
         }
         v.findViewById<View>(R.id.about_authors_container).setOnClickListener {
             activity.startActivity(Intent(activity, AuthorsActivity::class.java))
