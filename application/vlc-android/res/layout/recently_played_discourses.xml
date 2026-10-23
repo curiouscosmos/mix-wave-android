@@ -16,9 +16,67 @@
             android:paddingTop="16dp">
 
     <LinearLayout
+        android:id="@+id/weekly_tracks_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:text="@string/top_tracks_week"
+            android:textAppearance="?attr/textAppearanceHeadline6" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none">
+            <LinearLayout
+                android:id="@+id/weekly_tracks_list"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="4dp"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/weekly_discourses_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:visibility="gone"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:text="@string/top_discourses_week"
+            android:textAppearance="?attr/textAppearanceHeadline6" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none">
+            <LinearLayout
+                android:id="@+id/weekly_discourses_list"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="10dp"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/recently_played_discourses_section"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
         android:orientation="vertical">
 
         <TextView
@@ -53,53 +111,6 @@
 
         <LinearLayout
             android:id="@+id/recently_played_tracks_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="vertical" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/weekly_discourses_section"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:visibility="gone"
-        android:orientation="vertical">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
-            android:text="@string/top_discourses_week"
-            android:textAppearance="?attr/textAppearanceHeadline6" />
-
-        <LinearLayout
-            android:id="@+id/weekly_discourses_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:paddingHorizontal="10dp"
-            android:orientation="vertical" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/weekly_tracks_section"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:visibility="gone"
-        android:orientation="vertical">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
-            android:text="@string/top_tracks_week"
-            android:textAppearance="?attr/textAppearanceHeadline6" />
-
-        <LinearLayout
-            android:id="@+id/weekly_tracks_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"

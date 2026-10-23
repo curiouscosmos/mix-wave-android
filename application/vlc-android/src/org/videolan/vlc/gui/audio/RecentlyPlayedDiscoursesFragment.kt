@@ -205,6 +205,9 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
 
     private fun createTrackRow(container: ViewGroup): View {
         val row = layoutInflater.inflate(R.layout.discourse_track, container, false)
+        if (container.id == R.id.weekly_tracks_list) {
+            row.layoutParams.width = (320 * resources.displayMetrics.density).toInt()
+        }
         row.clipToOutline = true
         row.findViewById<View>(R.id.discourse_track_number).isVisible = false
         row.findViewById<View>(R.id.discourse_track_download).isVisible = false
@@ -213,6 +216,11 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
 
     private fun addDiscourseCard(container: ViewGroup, discourse: Discourse, metadata: String) {
         val card = layoutInflater.inflate(R.layout.discourse_catalogue_card, container, false)
+        if (container.id == R.id.weekly_discourses_list) {
+            card.layoutParams.width = (320 * resources.displayMetrics.density).toInt()
+            (card.layoutParams as android.widget.LinearLayout.LayoutParams).marginEnd =
+                (8 * resources.displayMetrics.density).toInt()
+        }
         card.findViewById<View>(R.id.discourse_letter_heading).isVisible = false
         card.findViewById<TextView>(R.id.discourse_title).text = discourse.title
         card.findViewById<TextView>(R.id.discourse_language).text = discourse.language.replaceFirstChar(Char::uppercase)
