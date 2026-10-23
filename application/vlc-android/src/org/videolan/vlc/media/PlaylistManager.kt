@@ -4,6 +4,7 @@ import android.content.Intent
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.widget.Toast
+import org.json.JSONObject
 import androidx.annotation.MainThread
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -115,6 +116,7 @@ import java.util.Stack
 import kotlin.math.max
 
 private const val TAG = "VLC/PlaylistManager"
+private const val DISCOURSE_TAGS_SUFFIX = "_discourse_tags"
 private const val PREVIOUS_LIMIT_DELAY = 5000L
 private const val PLAYLIST_AUDIO_REPEAT_MODE_KEY = "audio_repeat_mode"
 private const val PLAYLIST_VIDEO_REPEAT_MODE_KEY = "video_repeat_mode"
@@ -380,8 +382,13 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
         }
         launch {
             val playList = withContext(Dispatchers.Default) {
+                val tags = runCatching {
+                    JSONObject(settings.getString("$locationsKey$DISCOURSE_TAGS_SUFFIX", "{}") ?: "{}")
+                }.getOrDefault(JSONObject())
                 locations.asSequence().mapTo(ArrayList(locations.size)) {
-                    MLServiceLocator.getAbstractMediaWrapper(it.toUri())
+                    MLServiceLocator.getAbstractMediaWrapper(it.toUri()).apply {
+                        tag = tags.optString(it, null)
+                    }
                 }
             }
             // load playlist
@@ -911,17 +918,29 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
         val isAudio = isAudioList() || forceVideo
         withContext(Dispatchers.Default) {
             val list = mediaList.copy.takeIf { it.isNotEmpty() } ?: return@withContext
-            for (mw in list) locations.append(" ").append(mw.uri.toString())
+            val tags = JSONObject()
+            for (mw in list) {
+                locations.append(" ").append(mw.uri.toString())
+                if (mw.discoursePlaybackIds() != null) tags.put(mw.uri.toString(), mw.tag)
+            }
             //We save a concatenated String because putStringSet is APIv11.
             if (isAudio) {
                 if (settings.getBoolean(AUDIO_RESUME_PLAYBACK, true)) {
-                    settings.putSingle(KEY_MEDIA_LAST_PLAYLIST_RESUME, locations.toString().trim())
-                    settings.putSingle(KEY_AUDIO_LAST_PLAYLIST, locations.toString().trim())
+                    settings.edit {
+                        putString(KEY_MEDIA_LAST_PLAYLIST_RESUME, locations.toString().trim())
+                        putString(KEY_AUDIO_LAST_PLAYLIST, locations.toString().trim())
+                        putString("$KEY_MEDIA_LAST_PLAYLIST_RESUME$DISCOURSE_TAGS_SUFFIX", tags.toString())
+                        putString("$KEY_AUDIO_LAST_PLAYLIST$DISCOURSE_TAGS_SUFFIX", tags.toString())
+                    }
                 }
             } else {
                 if (settings.getBoolean(VIDEO_RESUME_PLAYBACK, true)) {
-                    settings.putSingle(KEY_MEDIA_LAST_PLAYLIST_RESUME, locations.toString().trim())
-                    settings.putSingle(KEY_MEDIA_LAST_PLAYLIST, locations.toString().trim())
+                    settings.edit {
+                        putString(KEY_MEDIA_LAST_PLAYLIST_RESUME, locations.toString().trim())
+                        putString(KEY_MEDIA_LAST_PLAYLIST, locations.toString().trim())
+                        putString("$KEY_MEDIA_LAST_PLAYLIST_RESUME$DISCOURSE_TAGS_SUFFIX", tags.toString())
+                        putString("$KEY_MEDIA_LAST_PLAYLIST$DISCOURSE_TAGS_SUFFIX", tags.toString())
+                    }
                 }
             }
         }
