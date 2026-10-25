@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Brand background matches the adaptive icon background. -->
+    <item android:drawable="@color/ic_launcher_background" />
+    <!-- Centered app logo. The foreground already carries its own light background. -->
+    <item
+            android:width="160dp"
+            android:height="160dp"
+            android:gravity="center">
+        <bitmap
+                android:gravity="fill"
+                android:src="@mipmap/ic_launcher_foreground" />
+    </item>
+</layer-list>

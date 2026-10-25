@@ -21,7 +21,8 @@ Primary goal: keep VLC's local media playback base, but present it as Rajneesh D
 
 ## Current implemented changes to preserve
 
-- Replaced VLC launcher/onboarding/header icons with Rajneesh Discourse assets.
+- Replaced VLC launcher/onboarding/header icons with the Rajneesh Discourse "Osho" script icon set (`icons/` at repo root is the source drop). The same artwork is used for the app icon, splash, header, onboarding, About, notification, TV channel, widget and default media artwork.
+- Splash screen lives in `application/vlc-android/res/drawable/splash_background.xml`, applied through `Theme.VLC.Splash` on `StartActivity` (Android 12+ attributes in `res/values-v31/styles.xml`).
 - Header icon uses 8dp rounded corners. Avoid `clipToOutline` in XML because min API is 26.
 - Added bottom mini-player on Music, fixed near the bottom like Spotify.
 - Removed Music random/shuffle floating button.

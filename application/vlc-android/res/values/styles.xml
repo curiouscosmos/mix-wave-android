@@ -500,6 +500,18 @@
         <item name="android:backgroundDimEnabled">false</item>
     </style>
 
+    <style name="Theme.VLC.Splash.Base" parent="Theme.VLC.Transparent">
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:statusBarColor">@color/ic_launcher_background</item>
+        <item name="android:navigationBarColor">@color/ic_launcher_background</item>
+    </style>
+
+    <style name="Theme.VLC.Splash" parent="Theme.VLC.Splash.Base" />
+
     <style name="Theme.VLC.Player" parent="Theme.VLC.Player.7" />
 
     <style name="Theme.VLC.Player.7" parent="Theme.MaterialComponents.NoActionBar">
