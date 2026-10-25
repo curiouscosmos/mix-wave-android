@@ -1214,7 +1214,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     @MainThread
-    fun pause() = playlistManager.pause()
+    fun pause() {
+        pauseAudioMixer()
+        playlistManager.pause()
+    }
 
     @MainThread
     fun play() = playlistManager.play()

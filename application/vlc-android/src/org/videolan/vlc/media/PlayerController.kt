@@ -2,6 +2,7 @@ package org.videolan.vlc.media
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import android.support.v4.media.session.PlaybackStateCompat
 import android.widget.Toast
 import androidx.annotation.MainThread
@@ -49,6 +50,11 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     private var noiseVolume: Int? = null
     private var eventGeneration = 0L
     private var outputRestore: Pair<Long, Boolean>? = null
+    private var playbackWatchdog: Job? = null
+    private var lastPlaybackProgress = 0L
+    private var pauseRequestedAt = 0L
+    private var recoveringInput = false
+    private var reconnectFailed = false
     var seekable = false
     var pausable = false
     var previousMediaStats: IMedia.Stats? = null
@@ -63,13 +69,23 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     fun getMedia(): IMedia? = mediaplayer.media
 
     fun play() {
+        if (reconnectFailed) {
+            recoverAudioPlayback(paused = false)
+            return
+        }
+        pauseRequestedAt = 0L
+        lastPlaybackProgress = SystemClock.elapsedRealtime()
         outputRestore = outputRestore?.let { it.first to false }
-        if (mediaplayer.hasMedia() && !mediaplayer.isReleased) mediaplayer.play()
+        if (mediaplayer.hasMedia() && !mediaplayer.isReleased) {
+            if (recoveringInput) watchPlayback()
+            mediaplayer.play()
+        }
     }
 
     fun pause(): Boolean {
         outputRestore = outputRestore?.let { it.first to true }
-        if (isPlaying() && mediaplayer.hasMedia() && pausable) {
+        if ((isPlaying() || recoveringInput) && mediaplayer.hasMedia() && pausable) {
+            if (pauseRequestedAt == 0L) pauseRequestedAt = SystemClock.elapsedRealtime()
             mediaplayer.pause()
             return true
         }
@@ -77,6 +93,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     }
 
     fun stop() {
+        cancelPlaybackWatchdog()
         resetNoiseCancellation()
         if (mediaplayer.hasMedia() && !mediaplayer.isReleased) mediaplayer.stop()
         setPlaybackStopped()
@@ -89,6 +106,9 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
 
     private var mediaplayerEventListener: MediaPlayerEventListener? = null
     internal suspend fun startPlayback(media: IMedia, listener: MediaPlayerEventListener, time: Long) {
+        cancelPlaybackWatchdog()
+        recoveringInput = false
+        reconnectFailed = false
         resetNoiseCancellation()
         mediaplayerEventListener = listener
         resetPlaybackState(time, media.duration)
@@ -114,6 +134,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
 
     @MainThread
     fun restart() {
+        cancelPlaybackWatchdog()
         resetNoiseCancellation()
         val mp = mediaplayer
         val volume:Int? = if (!mp.isReleased) mp.volume else null
@@ -217,6 +238,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     }
 
     fun release(player: MediaPlayer = mediaplayer) {
+        if (player === mediaplayer) cancelPlaybackWatchdog()
         if (player === mediaplayer && noiseOutput != null) {
             resetNoiseCancellation()
             release()
@@ -284,6 +306,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     fun changeNoiseOutput(output: NoiseOutput?): Boolean {
         val old = mediaplayer
         val media = old.media ?: run { output?.close(); return false }
+        cancelPlaybackWatchdog()
         val time = outputRestore?.first ?: old.time.coerceAtLeast(0)
         val paused = outputRestore?.second ?: isPaused()
         val volume = getVolume()
@@ -324,6 +347,70 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
         mediaplayer.setEventListener(this)
         mediaplayer.play()
         return success
+    }
+
+    private fun cancelPlaybackWatchdog() {
+        playbackWatchdog?.cancel()
+        playbackWatchdog = null
+        pauseRequestedAt = 0L
+    }
+
+    private fun watchPlayback() {
+        playbackWatchdog?.cancel()
+        lastPlaybackProgress = SystemClock.elapsedRealtime()
+        val player = mediaplayer
+        playbackWatchdog = launch {
+            while (isActive && player === mediaplayer) {
+                delay(1000)
+                val now = SystemClock.elapsedRealtime()
+                val paused = pauseRequestedAt != 0L
+                val stalled = if (paused) now - pauseRequestedAt >= 2000L
+                    else (isPlaying() || recoveringInput) && now - lastPlaybackProgress >= 30000L
+                if (stalled && !hasRenderer && !isVideoPlaying()) {
+                    recoverAudioPlayback(paused)
+                    return@launch
+                }
+            }
+        }
+    }
+
+    /** A blocked native input can stop processing pause commands without emitting an error. */
+    private fun recoverAudioPlayback(paused: Boolean) {
+        val old = mediaplayer
+        val media = old.media ?: return
+        val time = if (seekable) getCurrentTime() else 0L
+        val volume = getVolume()
+        val rate = old.rate
+        val output = noiseOutput
+        cancelPlaybackWatchdog()
+        eventGeneration++
+        old.setEventListener(null)
+        output?.cancel()
+        noiseOutput = null
+        noiseVolume = null
+        mediaplayer = newMediaPlayer()
+        try {
+            media.addOption(":start-time=${time / 1000.0}")
+            mediaplayer.media = media
+        } finally {
+            media.release()
+        }
+        mediaplayer.volume = volume
+        mediaplayer.rate = rate
+        outputRestore = time to paused
+        mediaplayer.setEventListener(this)
+        // Stopping an unresponsive native input must not block navigation or the replacement player.
+        launch(Dispatchers.IO) {
+            old.stop()
+            output?.close()
+            old.release()
+        }
+        if (output != null) onNoiseReset?.invoke()
+        recoveringInput = true
+        reconnectFailed = false
+        ErrorReporter.error("PlayerController", "Main audio input stalled; reopening player (pause=$paused)")
+        if (paused) onEvent(object : MediaPlayer.Event(MediaPlayer.Event.Paused) {})
+        else play()
     }
 
     override fun onSurfacesCreated(vlcVout: IVLCVout?) {}
@@ -417,18 +504,32 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     private val eventActor = actor<Pair<Long, MediaPlayer.Event>>(capacity = Channel.UNLIMITED, start = CoroutineStart.UNDISPATCHED) {
         for ((generation, event) in channel) {
             if (generation != eventGeneration) continue
-            if (event.type == MediaPlayer.Event.EndReached || event.type == MediaPlayer.Event.EncounteredError || event.type == MediaPlayer.Event.Stopped)
+            // A failed reconnect must retain the track and its position, rather than skip the queue.
+            if (event.type == MediaPlayer.Event.EncounteredError && recoveringInput) {
+                reconnectFailed = true
+                onEvent(object : MediaPlayer.Event(MediaPlayer.Event.Paused) {})
+                continue
+            }
+            if (event.type == MediaPlayer.Event.EndReached || event.type == MediaPlayer.Event.EncounteredError || event.type == MediaPlayer.Event.Stopped) {
+                cancelPlaybackWatchdog()
                 resetNoiseCancellation()
+            }
             when (event.type) {
                 MediaPlayer.Event.Playing -> {
+                    recoveringInput = false
+                    reconnectFailed = false
                     playbackState = PlaybackStateCompat.STATE_PLAYING
+                    watchPlayback()
                     outputRestore?.let { (time, paused) ->
                         outputRestore = null
                         mediaplayer.setTime(time)
-                        if (paused) mediaplayer.pause()
+                        if (paused) pause()
                     }
                 }
-                MediaPlayer.Event.Paused -> playbackState = PlaybackStateCompat.STATE_PAUSED
+                MediaPlayer.Event.Paused -> {
+                    cancelPlaybackWatchdog()
+                    playbackState = PlaybackStateCompat.STATE_PAUSED
+                }
                 MediaPlayer.Event.EncounteredError -> setPlaybackStopped()
                 MediaPlayer.Event.PausableChanged -> pausable = event.pausable
                 MediaPlayer.Event.SeekableChanged -> seekable = event.seekable
@@ -436,6 +537,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
                 MediaPlayer.Event.TimeChanged -> {
                     val time = event.timeChanged
                     if ((time - lastTime).absoluteValue > 950L) {
+                        lastPlaybackProgress = SystemClock.elapsedRealtime()
                         updateProgress(newTime = time)
                         lastTime = time
                     }
