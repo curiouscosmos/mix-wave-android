@@ -31,6 +31,58 @@ import kotlin.math.sin
 /** Exercises the packaged model and the actual LibVLC callbacks, not mocked JNI. */
 @RunWith(AndroidJUnit4::class)
 class NoiseOutputTest {
+    @Test fun levelsChangeLiveSurviveSeekAndResetOnTrackChange() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        AppContextProvider.init(context)
+        val source = waveFile("noise-levels-test.wav")
+        lateinit var controller: PlayerController
+        fun main(block: () -> Unit) = instrumentation.runOnMainSync(block)
+        val listener = object : MediaPlayerEventListener {
+            override suspend fun onEvent(event: MediaPlayer.Event) {}
+        }
+        fun start() = runBlocking {
+            withContext(Dispatchers.Main) {
+                val media = Media(VLCInstance.getInstance(context), Uri.fromFile(source))
+                try { controller.startPlayback(media, listener, 0) } finally { media.release() }
+            }
+        }
+        main { controller = PlayerController(context) }
+        try {
+            start()
+            await { controller.getCurrentTime() > 500 }
+            val output = NoiseOutput.create(context, NoiseCancellationLevel.LOW) { fail("Unexpected filter failure") }
+            main { controller.setVolume(37); assertTrue(controller.changeNoiseOutput(output)) }
+            await { output.processedSamples > 48000 }
+            val player = controller.mediaplayer
+            for (level in listOf(NoiseCancellationLevel.MEDIUM, NoiseCancellationLevel.HIGH, NoiseCancellationLevel.LOW)) {
+                val processed = output.processedSamples
+                main { assertTrue(controller.setNoiseCancellationLevel(level)) }
+                await { output.appliedLevel == level && output.processedSamples > processed }
+                assertSame("Changing level restarted the player", player, controller.mediaplayer)
+                assertEquals(37, controller.getVolume())
+            }
+            main { controller.setTime(5000) }
+            await { controller.getCurrentTime() > 5500 && output.appliedLevel == NoiseCancellationLevel.LOW }
+            main { controller.pause() }
+            await { controller.isPaused() }
+            main { assertTrue(controller.setNoiseCancellationLevel(NoiseCancellationLevel.HIGH)) }
+            assertTrue(controller.isPaused())
+            main { controller.play() }
+            await { output.appliedLevel == NoiseCancellationLevel.HIGH && controller.getCurrentTime() > 6000 }
+            assertSame(player, controller.mediaplayer)
+            val reset = CountDownLatch(1)
+            main { controller.onNoiseReset = { reset.countDown() } }
+            start()
+            assertTrue("Track transition did not reset cancellation", reset.await(5, TimeUnit.SECONDS))
+            main { assertFalse(controller.setNoiseCancellationLevel(NoiseCancellationLevel.MEDIUM)) }
+            await { controller.getCurrentTime() > 500 }
+        } finally {
+            main { controller.stop(); controller.release() }
+            source.delete()
+        }
+    }
+
     @Test fun ordinaryOutputReturnsAfterDisableAndTrackEnd() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext

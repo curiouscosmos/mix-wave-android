@@ -24,6 +24,7 @@ import org.videolan.tools.KEY_EQUALIZER_ENABLED
 import org.videolan.tools.*
 import org.videolan.vlc.*
 import org.videolan.vlc.audio.NoiseOutput
+import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.videolan.vlc.gui.dialogs.VideoTracksDialog
 import org.videolan.vlc.gui.dialogs.adapters.VlcTrack
 import org.videolan.vlc.repository.EqualizerRepository
@@ -304,6 +305,12 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
         mediaplayer = newMediaPlayer()
         mediaplayer.volume = volume
         mediaplayer.rate = rate
+    }
+
+    fun setNoiseCancellationLevel(level: NoiseCancellationLevel): Boolean {
+        val output = noiseOutput ?: return false
+        output.setLevel(level)
+        return true
     }
 
     /** Recreate the player to remove amem options completely when returning to ordinary output. */

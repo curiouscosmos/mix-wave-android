@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="noise_cancellation">Noise cancellation</string>
+    <string name="noise_cancellation_off">Off</string>
+    <string name="noise_cancellation_low">Low</string>
+    <string name="noise_cancellation_medium">Medium</string>
+    <string name="noise_cancellation_high">High</string>
+    <string name="noise_cancellation_state">Noise cancellation: %1$s</string>
     <string name="noise_cancellation_error">Noise cancellation unavailable. Restored normal playback.</string>
 </resources>

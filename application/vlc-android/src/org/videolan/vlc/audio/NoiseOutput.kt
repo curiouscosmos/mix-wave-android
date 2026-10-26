@@ -21,9 +21,16 @@ import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
+enum class NoiseCancellationLevel(val attenuationDb: Float) {
+    OFF(0f), LOW(10f), MEDIUM(20f), HIGH(50f)
+}
+
 /** Owned by one stopped/restarted native player. All inference runs on VLC's audio thread. */
 @Keep
-class NoiseOutput private constructor(private val context: Context, private val onFailure: () -> Unit) {
+class NoiseOutput private constructor(private val context: Context, initialLevel: NoiseCancellationLevel, private val onFailure: () -> Unit) {
+    @Volatile private var requestedLevel = initialLevel
+    @Volatile internal var appliedLevel = initialLevel
+        private set
     private val modelBytes = context.resources.openRawResource(com.kaleyra.noise_filter.R.raw.deep_filter_mobile_model).use { it.readBytes() }
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val outputLock = Any()
@@ -60,18 +67,27 @@ class NoiseOutput private constructor(private val context: Context, private val 
 
     // The upstream default constructor starts an unowned asynchronous load and swallows errors.
     // Inline dispatch plus an already loaded model makes initialization synchronous on our IO caller.
-    private fun newFilter() = NativeDeepFilterNet(context, dispatchers = object : DispatcherProvider {
-        override val main = Dispatchers.Unconfined
-        override val mainImmediate = Dispatchers.Unconfined
-        override val io = Dispatchers.Unconfined
-        override val default = Dispatchers.Unconfined
-    }, modelLoader = object : DeepFilterModelLoader {
-        override suspend fun load(context: Context) = modelBytes
-    }).also {
-        if (it.frameLength !in 2..96000 || it.frameLength % 2 != 0L) {
-            it.release()
-            error("Noise model initialization failed")
+    private fun newFilter(): NativeDeepFilterNet {
+        val level = requestedLevel
+        return NativeDeepFilterNet(context, attenuationLimit = level.attenuationDb, dispatchers = object : DispatcherProvider {
+            override val main = Dispatchers.Unconfined
+            override val mainImmediate = Dispatchers.Unconfined
+            override val io = Dispatchers.Unconfined
+            override val default = Dispatchers.Unconfined
+        }, modelLoader = object : DeepFilterModelLoader {
+            override suspend fun load(context: Context) = modelBytes
+        }).also {
+            if (it.frameLength !in 2..96000 || it.frameLength % 2 != 0L) {
+                it.release()
+                error("Noise model initialization failed")
+            }
+            appliedLevel = level
         }
+    }
+
+    fun setLevel(level: NoiseCancellationLevel) {
+        require(level != NoiseCancellationLevel.OFF)
+        requestedLevel = level
     }
 
     fun install(player: MediaPlayer) {
@@ -112,6 +128,11 @@ class NoiseOutput private constructor(private val context: Context, private val 
     }
 
     private fun process(frame: ByteBuffer, count: Int, epoch: Long) {
+        val level = requestedLevel
+        if (appliedLevel != level) {
+            check(filter.setAttenuationLimit(level.attenuationDb)) { "Noise level update failed" }
+            appliedLevel = level
+        }
         check(filter.processFrame(frame).isFinite()) { "Noise processing failed" }
         processedSamples += count / 2
         frame.position(0)
@@ -215,9 +236,10 @@ class NoiseOutput private constructor(private val context: Context, private val 
     private external fun clock(): Long
 
     companion object {
-        fun create(context: Context, onFailure: () -> Unit): NoiseOutput {
+        fun create(context: Context, level: NoiseCancellationLevel = NoiseCancellationLevel.HIGH, onFailure: () -> Unit): NoiseOutput {
+            require(level != NoiseCancellationLevel.OFF)
             System.loadLibrary("discourse_audio")
-            return NoiseOutput(context.applicationContext, onFailure)
+            return NoiseOutput(context.applicationContext, level, onFailure)
         }
     }
 }

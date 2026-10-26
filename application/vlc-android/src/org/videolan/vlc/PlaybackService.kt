@@ -93,6 +93,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.videolan.libvlc.FactoryManager
 import org.videolan.vlc.audio.NoiseOutput
+import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.videolan.libvlc.MediaPlayer
 import org.videolan.libvlc.RendererItem
 import org.videolan.libvlc.interfaces.IMedia
@@ -2139,7 +2140,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     @MainThread
     fun setRenderer(item: RendererItem?) {
         if (item != null) {
-            if (noiseCancellation.value.enabled) setNoiseCancellation(false)
+            if (noiseCancellation.value.enabled) setNoiseCancellation(NoiseCancellationLevel.OFF)
             resetNoiseCancellationState()
         }
         val wasOnRenderer = hasRenderer()
@@ -2152,7 +2153,9 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         refreshNoiseCancellation()
     }
 
-    data class NoiseCancellationState(val enabled: Boolean = false, val loading: Boolean = false, val available: Boolean = false)
+    data class NoiseCancellationState(val level: NoiseCancellationLevel = NoiseCancellationLevel.OFF, val loading: Boolean = false, val available: Boolean = false) {
+        val enabled get() = level != NoiseCancellationLevel.OFF
+    }
     val noiseCancellation = MutableStateFlow(NoiseCancellationState())
     private var noiseRequest = 0L
 
@@ -2170,12 +2173,19 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     @MainThread
-    fun setNoiseCancellation(enabled: Boolean) {
-        if (noiseCancellation.value.loading || enabled == noiseCancellation.value.enabled) return
-        if (!enabled) {
+    fun setNoiseCancellation(level: NoiseCancellationLevel) {
+        val state = noiseCancellation.value
+        if (level == NoiseCancellationLevel.OFF) {
+            if (!state.enabled && !state.loading) return
             noiseRequest++
-            playlistManager.player.changeNoiseOutput(null)
+            if (state.enabled) playlistManager.player.changeNoiseOutput(null)
             resetNoiseCancellationState()
+            return
+        }
+        if (state.loading || level == state.level) return
+        if (state.enabled) {
+            if (playlistManager.player.setNoiseCancellationLevel(level)) noiseCancellation.value = state.copy(level = level)
+            else resetNoiseCancellationState()
             return
         }
         if (!noiseCancellationAvailable()) return
@@ -2185,9 +2195,9 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             var candidate: NoiseOutput? = null
             try {
                 withContext(NonCancellable + Dispatchers.IO) {
-                    candidate = NoiseOutput.create(this@PlaybackService) {
+                    candidate = NoiseOutput.create(this@PlaybackService, level) {
                         if (noiseRequest == request) {
-                            setNoiseCancellation(false)
+                            setNoiseCancellation(NoiseCancellationLevel.OFF)
                             showToast(getString(R.string.noise_cancellation_error), Toast.LENGTH_SHORT)
                         }
                     }
@@ -2196,7 +2206,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 val output = candidate!!
                 candidate = null // PlayerController owns and releases it even if installation fails.
                 val installed = playlistManager.player.changeNoiseOutput(output)
-                noiseCancellation.value = NoiseCancellationState(enabled = installed, available = noiseCancellationAvailable())
+                noiseCancellation.value = NoiseCancellationState(level = if (installed) level else NoiseCancellationLevel.OFF, available = noiseCancellationAvailable())
                 if (!installed) showToast(getString(R.string.noise_cancellation_error), Toast.LENGTH_SHORT)
             } catch (_: Exception) {
                 if (noiseRequest == request) {
