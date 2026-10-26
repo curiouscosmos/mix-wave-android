@@ -206,7 +206,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun createTrackRow(container: ViewGroup): View {
         val row = layoutInflater.inflate(R.layout.discourse_track, container, false)
         if (container.id == R.id.weekly_tracks_list) {
-            row.layoutParams.width = (320 * resources.displayMetrics.density).toInt()
+            row.layoutParams.width = (420 * resources.displayMetrics.density).toInt()
         }
         row.clipToOutline = true
         row.findViewById<View>(R.id.discourse_track_number).isVisible = false
@@ -217,7 +217,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun addDiscourseCard(container: ViewGroup, discourse: Discourse, metadata: String) {
         val card = layoutInflater.inflate(R.layout.discourse_catalogue_card, container, false)
         if (container.id == R.id.weekly_discourses_list) {
-            card.layoutParams.width = (320 * resources.displayMetrics.density).toInt()
+            card.layoutParams.width = (420 * resources.displayMetrics.density).toInt()
             (card.layoutParams as android.widget.LinearLayout.LayoutParams).marginEnd =
                 (8 * resources.displayMetrics.density).toInt()
         }
