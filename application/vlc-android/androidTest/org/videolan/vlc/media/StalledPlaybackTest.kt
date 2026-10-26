@@ -14,8 +14,6 @@ import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer
 import org.videolan.resources.AppContextProvider
 import org.videolan.resources.VLCInstance
-import org.videolan.resources.VLCOptions
-import org.videolan.medialibrary.interfaces.media.MediaWrapper
 import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -58,8 +56,7 @@ class StalledPlaybackTest {
             runBlocking {
                 withContext(Dispatchers.Main) {
                     val media = Media(VLCInstance.getInstance(context), Uri.fromFile(file))
-                    VLCOptions.setMediaOptions(media, context, MediaWrapper.MEDIA_PAUSED, false)
-                    try { controller.startPlayback(media, listener, 0) } finally { media.release() }
+                    try { controller.startPlayback(media, listener, 0, startPaused = true) } finally { media.release() }
                 }
             }
             await { controller.isPaused() }

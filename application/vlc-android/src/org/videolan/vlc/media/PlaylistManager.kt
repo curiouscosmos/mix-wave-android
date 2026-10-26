@@ -624,6 +624,12 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             }
             //todo restore position as well when we move to VLC 4.0
             val media = mediaFactory.getFromUri(VLCInstance.getInstance(service), uri)
+            // Restored audio is paused by PlayerController once the input reports Playing.
+            // Letting LibVLC keep ":start-paused" makes an early resume lose against that
+            // option and leaves playback silent until the track is switched.
+            val startPaused = !isVideoPlaying && mw.hasFlag(MediaWrapper.MEDIA_PAUSED)
+            val mediaFlags = if (startPaused) (flags or mw.flags) and MediaWrapper.MEDIA_PAUSED.inv()
+                else flags or mw.flags
             //fixme workaround to prevent the issue described in https://code.videolan.org/videolan/vlc-android/-/issues/2106
             if (shouldDisableCookieForwarding) {
                 shouldDisableCookieForwarding = false
@@ -639,7 +645,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             //todo in VLC 4.0, this should be done by using libvlc_media_player_set_time instead of start-time
             media.addOption(":start-time=${start/1000L}")
             media.addOption(":no-sout-chromecast-video")
-            VLCOptions.setMediaOptions(media, ctx, flags or mw.flags, PlaybackService.hasRenderer())
+            VLCOptions.setMediaOptions(media, ctx, mediaFlags, PlaybackService.hasRenderer())
             if (mw.type == MediaWrapper.TYPE_AUDIO) mw.removeFlags(MediaWrapper.MEDIA_PAUSED)
             /* keeping only video during benchmark */
             if (isBenchmark) {
@@ -651,7 +657,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                 }
             }
             media.setEventListener(this@PlaylistManager)
-            player.startPlayback(media, mediaplayerEventListener, start)
+            player.startPlayback(media, mediaplayerEventListener, start, startPaused)
             player.setSlaves(media, mw)
             if (browserAudioActive) player.setVolume(0)
             newMedia = true

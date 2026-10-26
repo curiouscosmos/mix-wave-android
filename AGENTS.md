@@ -23,6 +23,7 @@ Primary goal: keep VLC's local media playback base, but present it as Rajneesh D
 
 - Replaced VLC launcher/onboarding/header icons with the Rajneesh Discourse "Osho" script icon set (`icons/` at repo root is the source drop). The same artwork is used for the app icon, splash, header, onboarding, About, notification, TV channel, widget and default media artwork.
 - Splash screen lives in `application/vlc-android/res/drawable/splash_background.xml`, applied through `Theme.VLC.Splash` on `StartActivity` (Android 12+ attributes in `res/values-v31/styles.xml`).
+- Restored audio must not use LibVLC's `:start-paused` option. Start the input normally and let `PlayerController.outputRestore` apply the pause on the first `Playing` event, so an early user `play()` cancels the pending pause instead of being overridden.
 - Header icon (40dp, `mipmap-*/ic_brand_logo.png`) uses 8dp rounded corners. Avoid `clipToOutline` in XML because min API is 26.
 - `toolbar.xml` no longer contains the app-name title; screens rely on their own ActionBar titles.
 - Do not show the recurring partial file-access snackbar ("cannot access all of your files"); permission management stays available in Settings → Permissions.

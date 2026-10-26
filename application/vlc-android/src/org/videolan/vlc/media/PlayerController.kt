@@ -105,11 +105,15 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     }
 
     private var mediaplayerEventListener: MediaPlayerEventListener? = null
-    internal suspend fun startPlayback(media: IMedia, listener: MediaPlayerEventListener, time: Long) {
+    internal suspend fun startPlayback(media: IMedia, listener: MediaPlayerEventListener, time: Long, startPaused: Boolean = false) {
         cancelPlaybackWatchdog()
         recoveringInput = false
         reconnectFailed = false
         resetNoiseCancellation()
+        // Pause after the input starts instead of relying on LibVLC's start-paused option.
+        // A restored media keeps that option forever, so an early play() while the input is
+        // still opening would be overridden and playback would stay silent.
+        outputRestore = if (startPaused) time to true else null
         mediaplayerEventListener = listener
         resetPlaybackState(time, media.duration)
         mediaplayer.setEventListener(null)
@@ -284,11 +288,11 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     /** A user track transition discards callbacks; internal output restarts bypass this hook. */
     fun resetNoiseCancellation() {
         onNoiseReset?.invoke()
+        outputRestore = null
         val output = noiseOutput ?: return
         val volume = getVolume()
         noiseOutput = null
         noiseVolume = null
-        outputRestore = null
         eventGeneration++
         val old = mediaplayer
         val rate = old.rate
