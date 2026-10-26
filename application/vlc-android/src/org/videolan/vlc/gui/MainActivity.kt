@@ -300,7 +300,7 @@ class MainActivity : ContentActivity(),
 
     private fun updateIncognitoModeIcon() {
         val incognito = Settings.getInstance (this).getBoolean(KEY_INCOGNITO, false)
-        toolbarIcon.setImageDrawable(ContextCompat.getDrawable(this, if (incognito) R.drawable.ic_incognito else R.mipmap.ic_launcher_foreground))
+        toolbarIcon.setImageDrawable(ContextCompat.getDrawable(this, if (incognito) R.drawable.ic_incognito else R.mipmap.ic_brand_logo))
 
     }
 

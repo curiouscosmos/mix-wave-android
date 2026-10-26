@@ -41,7 +41,7 @@ class DiscourseDetailActivity : ContentActivity() {
         toolbar.navigationIcon?.mutate()?.setTint(toolbarForeground)
         (toolbar.layoutParams as AppBarLayout.LayoutParams).scrollFlags = 0
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = getString(R.string.app_name)
+        supportActionBar?.title = ""
         if (supportFragmentManager.findFragmentById(R.id.fragment_placeholder) == null) {
             val discourse = intent.parcelable<Discourse>(ARG_DISCOURSE) ?: run { finish(); return }
             supportFragmentManager.beginTransaction().add(R.id.fragment_placeholder,

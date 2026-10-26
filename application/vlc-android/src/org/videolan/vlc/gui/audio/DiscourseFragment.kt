@@ -91,7 +91,7 @@ class DiscourseFragment : BaseFragment() {
         }
     }
 
-    override fun getTitle() = getString(if (detailOnly) R.string.app_name else R.string.discourse)
+    override fun getTitle() = if (detailOnly) "" else getString(R.string.discourse)
 
     fun openDiscourse(discourse: Discourse) {
         DiscourseDetailActivity.open(requireContext(), discourse)
