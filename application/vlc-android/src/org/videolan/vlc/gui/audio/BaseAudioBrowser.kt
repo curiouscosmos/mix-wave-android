@@ -85,10 +85,15 @@ import org.videolan.vlc.gui.helpers.fillActionMode
 import org.videolan.vlc.gui.view.RecyclerSectionItemDecoration
 import org.videolan.vlc.gui.view.RecyclerSectionItemGridDecoration
 import org.videolan.vlc.interfaces.IEventsHandler
+import org.videolan.vlc.discourse.playDiscourseAudios
+import org.videolan.vlc.discourse.toMediaWrapper
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
 import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.providers.medialibrary.MedialibraryProvider
+import org.videolan.vlc.providers.medialibrary.favouriteAudios
+import org.videolan.vlc.providers.medialibrary.isFavouriteDiscoursesPlaylist
+import org.videolan.vlc.providers.medialibrary.isFavouriteTracksPlaylist
 import org.videolan.vlc.providers.medialibrary.isFavoriteTracksPlaylist
 import org.videolan.vlc.util.ContextOption
 import org.videolan.vlc.util.ContextOption.CTX_ADD_TO_AUDIO_MIXER
@@ -104,6 +109,7 @@ import org.videolan.vlc.util.ContextOption.CTX_GO_TO_ARTIST
 import org.videolan.vlc.util.ContextOption.CTX_GO_TO_FOLDER
 import org.videolan.vlc.util.ContextOption.CTX_INFORMATION
 import org.videolan.vlc.util.ContextOption.CTX_PLAY
+import org.videolan.vlc.util.ContextOption.CTX_PLAY_ALL
 import org.videolan.vlc.util.ContextOption.CTX_PLAY_AS_AUDIO
 import org.videolan.vlc.util.ContextOption.CTX_PLAY_NEXT
 import org.videolan.vlc.util.ContextOption.CTX_PLAY_SHUFFLE
@@ -483,12 +489,14 @@ abstract class BaseAudioBrowser<T : MedialibraryViewModel> : MediaBrowserFragmen
                 }
             }
             MediaLibraryItem.TYPE_PLAYLIST -> {
+                if (isFavouriteDiscoursesPlaylist(item)) return
                 createCtxPlaylistAlbumFlags().apply {
                     add(CTX_PLAY_AS_AUDIO)
                     remove(CTX_GO_TO_ALBUM_ARTIST)
                     remove(CTX_GO_TO_ARTIST)
                     if (item.tracksCount > 2) add(CTX_PLAY_SHUFFLE)
-                    if (isFavoriteTracksPlaylist(item)) removeAll(CTX_DELETE, CTX_RENAME)
+                    if (isFavoriteTracksPlaylist(item) || isFavouriteTracksPlaylist(item))
+                        removeAll(CTX_DELETE, CTX_RENAME, CTX_FAV_ADD, CTX_FAV_REMOVE, CTX_ADD_TO_PLAYLIST, CTX_PLAY_AS_AUDIO)
                     else if (item.isFavorite) add(CTX_FAV_REMOVE) else add(CTX_FAV_ADD)
                 }
             }
@@ -498,6 +506,22 @@ abstract class BaseAudioBrowser<T : MedialibraryViewModel> : MediaBrowserFragmen
     }
 
     override fun onMainActionClick(v: View, position: Int, item: MediaLibraryItem) {
+        if (isFavouriteDiscoursesPlaylist(item)) {
+            startActivity(Intent(activity, FavouriteDiscoursesActivity::class.java))
+            return
+        }
+        if (isFavouriteTracksPlaylist(item)) {
+            val audios = favouriteAudios(requireContext())
+            when (getDefaultActionMediaType().getCurrentPlaybackAction(Settings.getInstance(requireActivity()))) {
+                DefaultPlaybackAction.PLAY, DefaultPlaybackAction.PLAY_ALL ->
+                    requireContext().playDiscourseAudios(audios, 0)
+                DefaultPlaybackAction.ADD_TO_QUEUE ->
+                    MediaUtils.appendMedia(requireContext(), audios.map { it.toMediaWrapper(requireContext()) })
+                DefaultPlaybackAction.INSERT_NEXT ->
+                    MediaUtils.insertNext(requireContext(), audios.map { it.toMediaWrapper(requireContext()) }.toTypedArray())
+            }
+            return
+        }
         when(getDefaultActionMediaType().getCurrentPlaybackAction(Settings.getInstance(requireActivity()))) {
             DefaultPlaybackAction.PLAY -> MediaUtils.openList(activity, listOf(*item.tracks), 0)
             DefaultPlaybackAction.ADD_TO_QUEUE -> MediaUtils.appendMedia(activity, listOf(*item.tracks))
@@ -520,6 +544,19 @@ abstract class BaseAudioBrowser<T : MedialibraryViewModel> : MediaBrowserFragmen
     override fun onCtxAction(position: Int, option: ContextOption) {
         if (position >= getCurrentAdapter()?.itemCount ?: 0) return
         val media = getCurrentAdapter()?.getItem(position) ?: return
+        if (isFavouriteDiscoursesPlaylist(media)) return
+        if (isFavouriteTracksPlaylist(media)) {
+            val audios = favouriteAudios(requireContext())
+            when (option) {
+                CTX_PLAY -> requireContext().playDiscourseAudios(audios, 0)
+                CTX_PLAY_ALL -> requireContext().playDiscourseAudios(audios, 0)
+                CTX_PLAY_SHUFFLE -> requireContext().playDiscourseAudios(audios.shuffled(), 0)
+                CTX_APPEND -> MediaUtils.appendMedia(requireContext(), audios.map { it.toMediaWrapper(requireContext()) })
+                CTX_PLAY_NEXT -> MediaUtils.insertNext(requireContext(), audios.map { it.toMediaWrapper(requireContext()) }.toTypedArray())
+                else -> {}
+            }
+            return
+        }
         when (option) {
             CTX_PLAY -> MediaUtils.playTracks(requireActivity(), media, 0)
             CTX_PLAY_SHUFFLE -> MediaUtils.playTracks(requireActivity(), media, SecureRandom().nextInt(min(media.tracksCount, MEDIALIBRARY_PAGE_SIZE)), true)

@@ -71,6 +71,12 @@ internal fun DiscoursePlaybackIds.webUrl() =
 
 fun MediaWrapper.discourseShareUrl(): String? = discoursePlaybackIds()?.webUrl()
 
+/** Full audio snapshot kept in the media tag. Used to seed favourites from the player. */
+fun MediaWrapper.discourseAudioSnapshot(): DiscourseAudio? {
+    val json = tag?.split(DISCOURSE_TAG_SEPARATOR, limit = 3)?.getOrNull(2) ?: return null
+    return runCatching { playbackAudioAdapter.fromJson(json) }.getOrNull()
+}
+
 internal fun MediaWrapper.recordDiscourseRecentlyPlayed(context: Context) {
     val ids = discoursePlaybackIds() ?: return
     val json = tag?.split(DISCOURSE_TAG_SEPARATOR, limit = 3)?.getOrNull(2) ?: return

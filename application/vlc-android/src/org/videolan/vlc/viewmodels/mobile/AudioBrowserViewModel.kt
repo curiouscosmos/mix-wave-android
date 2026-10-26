@@ -26,6 +26,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.videolan.medialibrary.interfaces.media.Playlist
+import org.videolan.vlc.discourse.DiscourseFavouritesStore
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.providers.medialibrary.PlaylistsProvider
@@ -51,7 +52,16 @@ class AudioBrowserViewModel(context: Context) : MedialibraryViewModel(context) {
         for (i in displayModeKeys.indices) {
             providersInCard[i] = settings.getBoolean(displayModeKeys[i], providersInCard[i])
         }
-
+        viewModelScope.launch {
+            val store = DiscourseFavouritesStore.shared(settings)
+            var last = store.state.value
+            store.state.collect { state ->
+                val changed = state.tracks.map { it.audio.id } != last.tracks.map { it.audio.id } ||
+                    state.discourses.map { it.discourse.id } != last.discourses.map { it.discourse.id }
+                last = state
+                if (changed) playlistsProvider.refresh()
+            }
+        }
     }
 
     override fun refresh() {

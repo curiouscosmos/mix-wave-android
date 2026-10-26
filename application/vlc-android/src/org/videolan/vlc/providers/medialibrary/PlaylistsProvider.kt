@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import org.videolan.medialibrary.interfaces.media.Playlist
 import org.videolan.tools.Settings
 import org.videolan.vlc.R
+import org.videolan.vlc.discourse.DiscourseFavouritesStore
 import org.videolan.vlc.viewmodels.SortableModel
 
 class PlaylistsProvider(context: Context, model: SortableModel, val type: Playlist.Type) : MedialibraryProvider<Playlist>(context, model) {
@@ -34,28 +35,37 @@ class PlaylistsProvider(context: Context, model: SortableModel, val type: Playli
 
     private fun favoriteTracksPlaylist() = FavoriteTracksPlaylist(favoritesTitle).takeIf { it.tracksCount > 0 }
 
-    override fun getAll() : Array<Playlist> = mutableListOf<Playlist>().apply {
-        favoriteTracksPlaylist()?.let { add(it) }
-        addAll(medialibrary.getPlaylists(type, sort, desc, Settings.includeMissing, onlyFavorites))
-    }.toTypedArray()
+    private fun virtualPlaylists(): List<Playlist> {
+        val favourites = DiscourseFavouritesStore.shared(context).state.value
+        return buildList {
+            if (favourites.tracks.isNotEmpty())
+                add(FavouriteTracksPlaylist(context.getString(R.string.favourite_tracks), context))
+            if (favourites.discourses.isNotEmpty())
+                add(FavouriteDiscoursesPlaylist(context.getString(R.string.favourite_discourses), context))
+            favoriteTracksPlaylist()?.let { add(it) }
+        }
+    }
+
+    override fun getAll() : Array<Playlist> =
+        (virtualPlaylists() + medialibrary.getPlaylists(type, sort, desc, Settings.includeMissing, onlyFavorites)).toTypedArray()
 
     override fun getPage(loadSize: Int, startposition: Int)  : Array<Playlist> {
-        val hasFavoriteTracksPlaylist = model.filterQuery == null && favoriteTracksPlaylist() != null
-        val favoriteTracksPlaylist = if (hasFavoriteTracksPlaylist && startposition == 0) favoriteTracksPlaylist() else null
-        val list = if (model.filterQuery == null) {
-            val offset = if (hasFavoriteTracksPlaylist) (startposition - 1).coerceAtLeast(0) else startposition
-            val size = loadSize - if (favoriteTracksPlaylist == null) 0 else 1
-            val playlists = if (size > 0) medialibrary.getPagedPlaylists(type, sort, desc, Settings.includeMissing, onlyFavorites, size, offset) else emptyArray()
-            mutableListOf<Playlist>().apply {
-                favoriteTracksPlaylist?.let { add(it) }
-                addAll(playlists)
-            }.toTypedArray()
-        } else medialibrary.searchPlaylist(model.filterQuery, type, sort, desc, Settings.includeMissing, onlyFavorites, loadSize, startposition)
-        model.viewModelScope.launch { completeHeaders(list, startposition) }
-        return list
+        val virtual = if (model.filterQuery == null) virtualPlaylists() else emptyList()
+        val page = virtual.drop(startposition).take(loadSize).toMutableList()
+        val mediaOffset = (startposition - virtual.size).coerceAtLeast(0)
+        val remaining = loadSize - page.size
+        if (remaining > 0) {
+            val playlists = if (model.filterQuery == null)
+                medialibrary.getPagedPlaylists(type, sort, desc, Settings.includeMissing, onlyFavorites, remaining, mediaOffset)
+            else
+                medialibrary.searchPlaylist(model.filterQuery, type, sort, desc, Settings.includeMissing, onlyFavorites, remaining, mediaOffset)
+            page.addAll(playlists)
+        }
+        model.viewModelScope.launch { completeHeaders(page.toTypedArray(), startposition) }
+        return page.toTypedArray()
     }
 
     override fun getTotalCount() = if (model.filterQuery == null) {
-        medialibrary.getPlaylists(type, sort, desc, Settings.includeMissing, onlyFavorites).size + if (favoriteTracksPlaylist() == null) 0 else 1
+        virtualPlaylists().size + medialibrary.getPlaylists(type, sort, desc, Settings.includeMissing, onlyFavorites).size
     } else medialibrary.getPlaylistsCount(model.filterQuery)
 }

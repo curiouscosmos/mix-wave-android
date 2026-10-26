@@ -15,6 +15,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.videolan.vlc.R
+import org.videolan.vlc.discourse.Discourse
+import org.videolan.vlc.discourse.DiscourseAudio
 import org.videolan.vlc.discourse.DiscourseLikesStore
 import org.videolan.vlc.discourse.DiscourseRepository
 import org.videolan.vlc.discourse.formatDiscourseLikes
@@ -45,7 +47,8 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         }
     }
 
-    fun bind(root: View, id: String, audio: Boolean, title: String, count: Int = 0) {
+    fun bind(root: View, id: String, audio: Boolean, title: String, count: Int = 0,
+             discourse: Discourse? = null, audioItem: DiscourseAudio? = null) {
         val view = root.findViewById<TextView>(R.id.discourse_like)
         val binding = Binding(DiscourseLikesStore.Target(id, audio), title, count)
         bindings[view] = binding
@@ -54,8 +57,8 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         view.setOnClickListener {
             owner.lifecycleScope.launch {
                 try {
-                    if (audio) repository.toggleDiscourseAudioLike(id, count)
-                    else repository.toggleDiscourseLike(id, count)
+                    if (audio) repository.toggleDiscourseAudioLike(id, count, audioItem)
+                    else repository.toggleDiscourseLike(id, count, discourse)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {

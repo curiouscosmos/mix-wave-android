@@ -52,6 +52,7 @@ import org.videolan.vlc.databinding.PlaylistsFragmentBinding
 import org.videolan.vlc.gui.audio.AudioBrowserAdapter
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.gui.audio.BaseAudioBrowser
+import org.videolan.vlc.gui.audio.FavouriteDiscoursesActivity
 import org.videolan.vlc.gui.dialogs.CONFIRM_PLAYLIST_RENAME_DIALOG_RESULT
 import org.videolan.vlc.gui.dialogs.CURRENT_SORT
 import org.videolan.vlc.gui.dialogs.DISPLAY_IN_CARDS
@@ -68,7 +69,11 @@ import org.videolan.vlc.gui.view.FastScroller
 import org.videolan.vlc.gui.view.RecyclerSectionItemDecoration
 import org.videolan.vlc.gui.view.RecyclerSectionItemGridDecoration
 import org.videolan.vlc.media.MediaUtils
+import org.videolan.vlc.discourse.playDiscourseAudios
 import org.videolan.vlc.providers.medialibrary.MedialibraryProvider
+import org.videolan.vlc.providers.medialibrary.favouriteAudios
+import org.videolan.vlc.providers.medialibrary.isFavouriteDiscoursesPlaylist
+import org.videolan.vlc.providers.medialibrary.isFavouriteTracksPlaylist
 import org.videolan.vlc.reloadLibrary
 import org.videolan.vlc.util.ContextOption
 import org.videolan.vlc.util.ContextOption.CTX_PLAY_ALL
@@ -262,6 +267,10 @@ class PlaylistFragment : BaseAudioBrowser<PlaylistsViewModel>(), SwipeRefreshLay
 
     override fun onClick(v: View, position: Int, item: MediaLibraryItem) {
         if (actionMode == null) {
+            if (isFavouriteDiscoursesPlaylist(item)) {
+                startActivity(Intent(activity, FavouriteDiscoursesActivity::class.java))
+                return
+            }
             val i = Intent(activity, HeaderMediaListActivity::class.java)
             i.putExtra(AudioBrowserFragment.TAG_ITEM, item)
             startActivity(i)
@@ -269,6 +278,10 @@ class PlaylistFragment : BaseAudioBrowser<PlaylistsViewModel>(), SwipeRefreshLay
     }
 
     override fun onCtxAction(position: Int, option: ContextOption) {
+        if (option == CTX_PLAY_ALL && isFavouriteTracksPlaylist(getCurrentAdapter()?.getItem(position))) {
+            requireContext().playDiscourseAudios(favouriteAudios(requireContext()), 0)
+            return
+        }
         @Suppress("UNCHECKED_CAST")
         when (option) {
             CTX_PLAY_ALL -> MediaUtils.playAll(activity, viewModel.provider as MedialibraryProvider<MediaWrapper>, position, false)

@@ -91,6 +91,7 @@ import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
 import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
 import org.videolan.vlc.providers.medialibrary.MedialibraryProvider
+import org.videolan.vlc.providers.medialibrary.isFavouriteDiscoursesPlaylist
 import org.videolan.vlc.util.ContextOption
 import org.videolan.vlc.util.ContextOption.CTX_PLAY_ALL
 import org.videolan.vlc.util.ContextOption.CTX_REMOVE_FROM_PLAYLIST
@@ -584,6 +585,10 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
             return
         }
         if (inSearchMode()) UiTools.setKeyboardVisibility(v, false)
+        if (isFavouriteDiscoursesPlaylist(item)) {
+            startActivity(Intent(activity, FavouriteDiscoursesActivity::class.java))
+            return
+        }
         if (currentTab == MIXER_TAB && item is MediaWrapper) {
             if (!item.isPresent) {
                 UiTools.snackerMissing(requireActivity())

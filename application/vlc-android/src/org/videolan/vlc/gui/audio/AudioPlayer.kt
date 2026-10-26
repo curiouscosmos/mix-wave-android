@@ -21,6 +21,7 @@
 package org.videolan.vlc.gui.audio
 
 import org.videolan.vlc.discourse.discoursePlaybackIds
+import org.videolan.vlc.discourse.discourseAudioSnapshot
 
 import android.Manifest
 import android.annotation.TargetApi
@@ -396,8 +397,9 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
-                        repository.toggleDiscourseAudioLike(ids.audioId,
-                            repository.recentlyPlayedAudios.firstOrNull { it.id == ids.audioId }?.totalLikes ?: 0)
+                        val audio = media.discourseAudioSnapshot()
+                            ?: repository.recentlyPlayedAudios.firstOrNull { it.id == ids.audioId }
+                        repository.toggleDiscourseAudioLike(ids.audioId, audio?.totalLikes ?: 0, audio)
                     } catch (error: Exception) {
                         if (error is kotlinx.coroutines.CancellationException) throw error
                         UiTools.snacker(requireActivity(), R.string.player_action_failed)

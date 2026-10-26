@@ -19,9 +19,25 @@ class DiscourseRepository(
     private val appContext = context.applicationContext
     private val settings = Settings.getInstance(context)
     private val likesStore = DiscourseLikesStore.shared(settings)
+    private val favouritesStore = DiscourseFavouritesStore.shared(settings)
     internal val likes get() = likesStore.state
 
-    suspend fun refreshLikes() = safely(Unit) { likesStore.refresh { api.likes(userId) } }
+    suspend fun refreshLikes() {
+        try {
+            likesStore.refresh { api.likes(userId) }
+            // Do not let an older GET overwrite a like that is still being acknowledged.
+            if (likesStore.state.value.pending.isEmpty()) {
+                favouritesStore.reconcile(
+                    likedDiscourses, likedAudios,
+                    recentlyPlayedDiscourses, recentlyPlayedAudios
+                )
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            ErrorReporter.error("DiscourseRepository", "API request failed", error)
+        }
+    }
     private val statsStore = DiscourseStatsStore(appContext)
     private val recentlyPlayedAdapter = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
@@ -113,23 +129,39 @@ class DiscourseRepository(
             } }
         }
 
-    suspend fun toggleDiscourseLike(id: String, totalLikes: Int = 0) {
-        if (id in likedDiscourses) unlikeDiscourse(id, totalLikes) else likeDiscourse(id, totalLikes)
+    suspend fun toggleDiscourseLike(id: String, totalLikes: Int = 0, discourse: Discourse? = null) {
+        if (id in likedDiscourses) {
+            if (unlikeDiscourse(id, totalLikes) != null) favouritesStore.removeDiscourse(id)
+        } else {
+            val result = likeDiscourse(id, totalLikes)
+            if (result != null && discourse != null) {
+                favouritesStore.addDiscourse(discourse.copy(totalLikes = result.totalLikes))
+            }
+        }
     }
 
-    suspend fun toggleDiscourseAudioLike(id: String, totalLikes: Int = 0) {
-        if (id in likedAudios) unlikeDiscourseAudio(id, totalLikes) else likeDiscourseAudio(id, totalLikes)
+    suspend fun toggleDiscourseAudioLike(id: String, totalLikes: Int = 0, audio: DiscourseAudio? = null) {
+        if (id in likedAudios) {
+            if (unlikeDiscourseAudio(id, totalLikes) != null) favouritesStore.removeTrack(id)
+        } else {
+            val result = likeDiscourseAudio(id, totalLikes)
+            if (result != null && audio != null) {
+                favouritesStore.addTrack(audio.copy(totalLikes = result.totalLikes))
+            }
+        }
     }
 
     private fun updateCachedLikeCounts(
         discourseId: String? = null, discourseCount: Int? = null, audioId: String? = null, audioCount: Int? = null
     ) {
         if (discourseId != null && discourseCount != null) {
+            favouritesStore.updateDiscourseCount(discourseId, discourseCount)
             val update: (Discourse) -> Discourse = { if (it.id == discourseId) it.copy(totalLikes = discourseCount) else it }
             updateCachedRecords(KEY_RECENTLY_PLAYED_DISCOURSES, recentlyPlayedAdapter, update)
             updateCachedRecords(KEY_STATS_DISCOURSES, statsDiscoursesAdapter, update)
         }
         if (audioId != null && audioCount != null) {
+            favouritesStore.updateAudioCount(audioId, audioCount)
             val update: (DiscourseAudio) -> DiscourseAudio = { if (it.id == audioId) it.copy(totalLikes = audioCount) else it }
             updateCachedRecords(KEY_RECENTLY_PLAYED_AUDIOS, recentlyPlayedAudiosAdapter, update)
             updateCachedRecords(KEY_STATS_AUDIOS, statsAudiosAdapter, update)

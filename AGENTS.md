@@ -27,6 +27,7 @@ Primary goal: keep VLC's local media playback base, but present it as Rajneesh D
 - Header icon (40dp, `mipmap-*/ic_brand_logo.png`) uses 8dp rounded corners. Avoid `clipToOutline` in XML because min API is 26.
 - `toolbar.xml` no longer contains the app-name title; screens rely on their own ActionBar titles.
 - Do not show the recurring partial file-access snackbar ("cannot access all of your files"); permission management stays available in Settings → Permissions.
+- Liked discourse tracks and discourses are stored locally by `DiscourseFavouritesStore` and exposed as read-only virtual playlists "Favourite Tracks" and "Favourite Discourses" in Music → Playlists. The server only supplies liked IDs (`GET /likes`), so full item snapshots are captured when the like succeeds; there is no fetch-by-ID endpoint yet.
 - Added bottom mini-player on Music, fixed near the bottom like Spotify.
 - Removed Music random/shuffle floating button.
 - Removed file-menu options:

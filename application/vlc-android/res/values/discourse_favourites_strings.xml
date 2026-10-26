@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favourite_tracks">Favourite Tracks</string>
+    <string name="favourite_discourses">Favourite Discourses</string>
+    <string name="favourite_discourses_empty">No favourite discourses yet</string>
+    <plurals name="favourite_discourses_count">
+        <item quantity="one">%1$d discourse</item>
+        <item quantity="other">%1$d discourses</item>
+    </plurals>
+</resources>

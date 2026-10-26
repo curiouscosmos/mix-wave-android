@@ -35,7 +35,10 @@ import org.videolan.medialibrary.media.MediaLibraryItem
 import org.videolan.vlc.gui.HeaderMediaListActivity
 import org.videolan.vlc.providers.medialibrary.MedialibraryProvider
 import org.videolan.vlc.providers.medialibrary.TracksProvider
+import org.videolan.vlc.providers.medialibrary.isFavouriteDiscoursesPlaylist
+import org.videolan.vlc.providers.medialibrary.isFavouriteTracksPlaylist
 import org.videolan.vlc.providers.medialibrary.isFavoriteTracksPlaylist
+import org.videolan.vlc.discourse.DiscourseFavouritesStore
 import org.videolan.vlc.viewmodels.MedialibraryViewModel
 
 class PlaylistViewModel(context: Context, private val initialPlaylist: MediaLibraryItem) : MedialibraryViewModel(context) {
@@ -60,6 +63,11 @@ class PlaylistViewModel(context: Context, private val initialPlaylist: MediaLibr
             else -> watchMedia()
         }
         viewModelScope.registerCallBacks { refresh() }
+        if (initialPlaylist is Playlist && (isFavouriteTracksPlaylist(initialPlaylist) || isFavouriteDiscoursesPlaylist(initialPlaylist))) {
+            viewModelScope.launch {
+                DiscourseFavouritesStore.shared(settings).state.collect { refresh() }
+            }
+        }
         viewModelScope.launch {
             refreshPlaylistItem()
         }
@@ -80,7 +88,8 @@ class PlaylistViewModel(context: Context, private val initialPlaylist: MediaLibr
             when (initialPlaylist) {
                 is Album -> playlistLiveData.postValue(medialibrary.getAlbum(initialPlaylist.id))
                 is Playlist -> {
-                    if (isFavoriteTracksPlaylist(initialPlaylist)) playlistLiveData.postValue(initialPlaylist)
+                    if (isFavoriteTracksPlaylist(initialPlaylist) || isFavouriteTracksPlaylist(initialPlaylist) || isFavouriteDiscoursesPlaylist(initialPlaylist))
+                        playlistLiveData.postValue(initialPlaylist)
                     else playlistLiveData.postValue(medialibrary.getPlaylist(initialPlaylist.id, true, false))
                 }
             }
@@ -100,7 +109,9 @@ class PlaylistViewModel(context: Context, private val initialPlaylist: MediaLibr
     }
 
     suspend fun toggleFavorite() = withContext(Dispatchers.IO) {
-        playlist?.takeUnless { isFavoriteTracksPlaylist(it) }?.let { it.setFavorite(!it.isFavorite) }
+        playlist?.takeUnless {
+            isFavoriteTracksPlaylist(it) || isFavouriteTracksPlaylist(it) || isFavouriteDiscoursesPlaylist(it)
+        }?.let { it.setFavorite(!it.isFavorite) }
     }
 }
 

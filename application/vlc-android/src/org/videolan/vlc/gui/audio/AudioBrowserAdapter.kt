@@ -71,6 +71,7 @@ import org.videolan.vlc.gui.view.MiniVisualizer
 import org.videolan.vlc.interfaces.IEventsHandler
 import org.videolan.vlc.interfaces.IListEventsHandler
 import org.videolan.vlc.interfaces.SwipeDragHelperAdapter
+import org.videolan.vlc.providers.medialibrary.isFavouriteDiscoursesPlaylist
 import org.videolan.vlc.util.LifecycleAwareScheduler
 import org.videolan.vlc.util.isOTG
 import org.videolan.vlc.util.isSD
@@ -478,7 +479,9 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
 
         private fun getSubtitle(context: Context, item: MediaLibraryItem?) = when (item) {
             is MediaWrapper -> if (item.length > 0L) Tools.millisToString(item.length) else null
-            is Playlist -> if (item.duration != 0L) {
+            is Playlist -> if (isFavouriteDiscoursesPlaylist(item)) {
+                context.resources.getQuantityString(R.plurals.favourite_discourses_count, item.tracksCount, item.tracksCount)
+            } else if (item.duration != 0L) {
                 val duration = Tools.millisToString(item.duration)
                 TextUtils.separatedString(context.getString(R.string.track_number, item.tracksCount), if (item.nbDurationUnknown > 0) "$duration+" else duration)
             } else context.getString(R.string.track_number, item.tracksCount)

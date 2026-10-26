@@ -11,6 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import org.videolan.vlc.discourse.DiscoursePlaybackStore
 import org.videolan.vlc.discourse.discoursePlaybackIds
+import org.videolan.vlc.discourse.discourseAudioSnapshot
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -180,7 +181,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             card.findViewById<TextView>(R.id.discourse_track_meta).text =
                 getString(R.string.weekly_plays, audio.plays)
             card.setOnClickListener { requireContext().playDiscourseAudio(audio) }
-            likesUi.bind(card, audio.id, true, audio.title, audio.totalLikes)
+            likesUi.bind(card, audio.id, true, audio.title, audio.totalLikes, audioItem = audio)
             bindProgress(card, audio.id, null)
             audioContainer.addView(card)
         }
@@ -198,7 +199,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         track.discoursePlaybackIds()?.let {
             bindProgress(card, it.audioId, null)
             val audio = DiscourseRepository(requireContext()).recentlyPlayedAudios.firstOrNull { audio -> audio.id == it.audioId }
-            likesUi.bind(card, it.audioId, true, track.title.orEmpty(), audio?.totalLikes ?: 0)
+            likesUi.bind(card, it.audioId, true, track.title.orEmpty(), audio?.totalLikes ?: 0,
+                audioItem = audio ?: track.discourseAudioSnapshot())
         }
         if (track.discoursePlaybackIds() == null) card.findViewById<ProgressBar>(R.id.listening_progress).isVisible = false
         container.addView(card)
@@ -234,7 +236,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         card.findViewById<TextView>(R.id.discourse_title).text = discourse.title
         card.findViewById<TextView>(R.id.discourse_language).text = discourse.language.replaceFirstChar(Char::uppercase)
         card.findViewById<TextView>(R.id.discourse_counts).text = metadata
-        likesUi.bind(card, discourse.id, false, discourse.title, discourse.totalLikes)
+        likesUi.bind(card, discourse.id, false, discourse.title, discourse.totalLikes, discourse = discourse)
         val completed = downloads.downloadedCount(discourse.id)
         card.findViewById<ImageView>(R.id.discourse_download_icon).setColorFilter(
             ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500)

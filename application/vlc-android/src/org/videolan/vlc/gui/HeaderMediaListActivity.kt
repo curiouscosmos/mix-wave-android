@@ -107,7 +107,13 @@ import org.videolan.vlc.interfaces.IEventsHandler
 import org.videolan.vlc.interfaces.IListEventsHandler
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
+import org.videolan.vlc.discourse.playDiscourseAudios
+import org.videolan.vlc.discourse.discoursePlaybackIds
+import org.videolan.vlc.discourse.toMediaWrapper
 import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
+import org.videolan.vlc.providers.medialibrary.favouriteAudios
+import org.videolan.vlc.providers.medialibrary.isFavouriteDiscoursesPlaylist
+import org.videolan.vlc.providers.medialibrary.isFavouriteTracksPlaylist
 import org.videolan.vlc.providers.medialibrary.isFavoriteTracksPlaylist
 import org.videolan.vlc.util.ContextOption
 import org.videolan.vlc.util.ContextOption.CTX_ADD_SHORTCUT
@@ -196,7 +202,7 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
             return
         }
         isPlaylist = playlist.itemType == MediaLibraryItem.TYPE_PLAYLIST
-        isReadOnlyPlaylist = isFavoriteTracksPlaylist(playlist)
+        isReadOnlyPlaylist = isFavoriteTracksPlaylist(playlist) || isFavouriteTracksPlaylist(playlist) || isFavouriteDiscoursesPlaylist(playlist)
         binding.playlist = playlist
         viewModel = getViewModel(playlist)
         viewModel.tracksProvider.pagedList.observe(this) { tracks ->
@@ -437,7 +443,9 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
             invalidateActionMode()
         } else {
             if (searchView.visibility == View.VISIBLE) UiTools.setKeyboardVisibility(v, false)
-            if (isPlaylist)
+            if (isPlaylist && isFavouriteTracksPlaylist(viewModel.playlist))
+                playFavouriteTrack(item, position)
+            else if (isPlaylist)
                 MediaUtils.playTracks(this, viewModel.tracksProvider, position)
             else
                 when(DefaultPlaybackActionMediaType.TRACK.getCurrentPlaybackAction(Settings.getInstance(this))) {
@@ -468,8 +476,10 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
         if (actionMode == null) {
             (item as? MediaWrapper)?.let { media ->
                 val flags = createCtxPlaylistItemFlags().apply {
-                    if (isReadOnlyPlaylist) remove(CTX_DELETE)
-                    if (item.isFavorite) add(CTX_FAV_REMOVE) else add(CTX_FAV_ADD)
+                    if (isReadOnlyPlaylist) removeAll(CTX_DELETE, CTX_ADD_TO_PLAYLIST, CTX_ADD_TO_AUDIO_MIXER, CTX_ADD_SHORTCUT)
+                    if (!isReadOnlyPlaylist) {
+                        if (item.isFavorite) add(CTX_FAV_REMOVE) else add(CTX_FAV_ADD)
+                    }
                     if (media.type == MediaWrapper.TYPE_STREAM || (media.type == MediaWrapper.TYPE_ALL && isSchemeHttpOrHttps(media.uri.scheme)))
                         addAll(CTX_COPY, CTX_RENAME)
                     if (media.type == MediaWrapper.TYPE_AUDIO) {
@@ -509,7 +519,16 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
     }
 
     override fun onMainActionClick(v: View, position: Int, item: MediaLibraryItem) {
-        MediaUtils.openList(this, listOf(*item.tracks), 0)
+        if (isFavouriteTracksPlaylist(viewModel.playlist))
+            playFavouriteTrack(item, position)
+        else MediaUtils.openList(this, listOf(*item.tracks), 0)
+    }
+
+    private fun playFavouriteTrack(item: MediaLibraryItem, position: Int) {
+        val audios = favouriteAudios(this)
+        val audioId = (item as? MediaWrapper)?.discoursePlaybackIds()?.audioId
+        val index = audios.indexOfFirst { it.id == audioId }.takeIf { it >= 0 } ?: position
+        playDiscourseAudios(audios, index)
     }
 
     override fun onStartDrag(viewHolder: RecyclerView.ViewHolder) {
@@ -593,6 +612,16 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
     override fun onCtxAction(position: Int, option: ContextOption) {
         if (position >= audioBrowserAdapter.itemCount) return
         val media = audioBrowserAdapter.getItem(position) as MediaWrapper? ?: return
+        if (isFavouriteTracksPlaylist(viewModel.playlist)) {
+            val audios = favouriteAudios(this)
+            when (option) {
+                CTX_PLAY_ALL -> playDiscourseAudios(audios, position)
+                CTX_APPEND -> MediaUtils.appendMedia(this, audios.map { it.toMediaWrapper(this) })
+                CTX_PLAY_NEXT -> MediaUtils.insertNext(this, audios.map { it.toMediaWrapper(this) }.toTypedArray())
+                else -> {}
+            }
+            return
+        }
         when (option) {
             CTX_INFORMATION -> showInfoDialog(media)
             CTX_DELETE -> lifecycleScope.launch { removeItem(position, media) }
@@ -653,7 +682,9 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
     }
 
     override fun onClick(v: View) {
-        MediaUtils.playTracks(this, viewModel.tracksProvider, 0)
+        if (isFavouriteTracksPlaylist(viewModel.playlist))
+            playDiscourseAudios(favouriteAudios(this), 0)
+        else MediaUtils.playTracks(this, viewModel.tracksProvider, 0)
     }
 
     private fun removeFromPlaylist(list: List<MediaWrapper>, indexes: List<Int>) {
