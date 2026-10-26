@@ -31,6 +31,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
@@ -80,6 +81,9 @@ import org.videolan.vlc.gui.onboarding.startOnboarding
 import org.videolan.vlc.gui.video.VideoPlayerActivity
 import org.videolan.vlc.discourse.OshoUserIdentity
 import org.videolan.vlc.discourse.DiscourseStatsStore
+import org.videolan.vlc.discourse.DiscourseDeepLink
+import org.videolan.vlc.discourse.DiscourseRepository
+import org.videolan.vlc.gui.audio.DiscourseDetailActivity
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.util.FileUtils
 import org.videolan.vlc.util.Permissions
@@ -154,6 +158,12 @@ class StartActivity : FragmentActivity() {
 
         val intent = intent
         val action = intent?.action
+
+        val deepLink = if (Intent.ACTION_VIEW == action) DiscourseDeepLink.parse(intent.data) else null
+        if (deepLink != null) {
+            openDiscourseDeepLink(deepLink)
+            return
+        }
 
         if ((Intent.ACTION_VIEW == action || ACTION_VIEW_ARC == action)
                 && TV_CHANNEL_SCHEME != intent.data?.scheme) {
@@ -295,6 +305,21 @@ class StartActivity : FragmentActivity() {
         }
         if (requestCode == PROPAGATE_RESULT) {
             setResult(resultCode, data)
+            finish()
+        }
+    }
+
+    private fun openDiscourseDeepLink(link: DiscourseDeepLink) {
+        lifecycleScope.launch {
+            val discourse = withContext(Dispatchers.IO) {
+                DiscourseRepository(this@StartActivity).getDiscourseById(link.discourseId)
+            }
+            if (discourse != null) {
+                DiscourseDetailActivity.open(this@StartActivity, discourse, link.audioId)
+            } else {
+                Toast.makeText(this@StartActivity, R.string.discourse_load_failed, Toast.LENGTH_LONG).show()
+                startApplication(showTvUi(), firstRun = false, upgrade = false, target = 0)
+            }
             finish()
         }
     }

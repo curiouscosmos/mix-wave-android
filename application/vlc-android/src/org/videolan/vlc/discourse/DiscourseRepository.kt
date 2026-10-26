@@ -92,6 +92,28 @@ class DiscourseRepository(
     suspend fun getDiscourseAudios(discourseId: String, forceRefresh: Boolean = false) =
         fetch { api.discourseAudios(discourseId, cacheControl(forceRefresh)) }
 
+    /**
+     * Resolves a discourse from its ID for deep links. The API has no fetch-by-ID route, so the
+     * discourse metadata is reconstructed from its track list.
+     */
+    suspend fun getDiscourseById(discourseId: String): Discourse? = safely(null) {
+        val response = api.discourseAudios(discourseId, cacheControl(false))
+        val first = response.data.firstOrNull() ?: return@safely null
+        val tracksCount = maxOf(response.meta.totalRecords, response.data.size)
+        recentlyPlayedDiscourses.firstOrNull { it.id == discourseId }?.copy(totalTracks = tracksCount)
+            ?: Discourse(
+                id = discourseId,
+                title = first.discourseName,
+                thumbnailUrl = first.discourseThumbnailUrl,
+                isAudioCleaned = false,
+                language = first.language,
+                slug = null,
+                createdAt = first.createdAt,
+                updatedAt = first.updatedAt,
+                totalTracks = tracksCount
+            )
+    }
+
     suspend fun getWeeklyDiscourseStats(forceRefresh: Boolean = false): List<Discourse> =
         getWeeklyStats(KEY_STATS_DISCOURSES, statsDiscoursesAdapter, forceRefresh) {
             api.discourseStats(cacheControl = cacheControl(forceRefresh)).data

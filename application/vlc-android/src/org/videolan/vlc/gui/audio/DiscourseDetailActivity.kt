@@ -45,7 +45,9 @@ class DiscourseDetailActivity : ContentActivity() {
         if (supportFragmentManager.findFragmentById(R.id.fragment_placeholder) == null) {
             val discourse = intent.parcelable<Discourse>(ARG_DISCOURSE) ?: run { finish(); return }
             supportFragmentManager.beginTransaction().add(R.id.fragment_placeholder,
-                DiscourseFragment().apply { arguments = bundleOf(ARG_DISCOURSE to discourse) }).commit()
+                DiscourseFragment().apply {
+                    arguments = bundleOf(ARG_DISCOURSE to discourse, ARG_AUDIO_ID to intent.getStringExtra(ARG_AUDIO_ID))
+                }).commit()
         }
     }
 
@@ -58,8 +60,11 @@ class DiscourseDetailActivity : ContentActivity() {
 
     companion object {
         const val ARG_DISCOURSE = "detail_discourse"
-        fun open(context: Context, discourse: Discourse) {
-            context.startActivity(Intent(context, DiscourseDetailActivity::class.java).putExtra(ARG_DISCOURSE, discourse))
+        const val ARG_AUDIO_ID = "detail_audio_id"
+        fun open(context: Context, discourse: Discourse, audioId: String? = null) {
+            context.startActivity(Intent(context, DiscourseDetailActivity::class.java)
+                .putExtra(ARG_DISCOURSE, discourse)
+                .putExtra(ARG_AUDIO_ID, audioId))
         }
     }
 }

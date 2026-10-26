@@ -74,6 +74,7 @@ class DiscourseFragment : BaseFragment() {
     private lateinit var header: View
     private lateinit var headerAdapter: RecyclerView.Adapter<RecyclerView.ViewHolder>
     private var trackAdapter: TrackAdapter? = null
+    private var pendingScrollAudioId: String? = null
     private val detailOnly get() = arguments?.containsKey(DiscourseDetailActivity.ARG_DISCOURSE) == true
     private lateinit var tracks: RecyclerView
     private lateinit var tracksSwipe: SwipeRefreshLayout
@@ -108,6 +109,7 @@ class DiscourseFragment : BaseFragment() {
         likesUi = DiscourseLikesUi(requireContext(), viewLifecycleOwner)
         downloads = DiscourseDownloadStore(requireContext())
         playbackStore = DiscoursePlaybackStore(requireContext())
+        pendingScrollAudioId = arguments?.getString(DiscourseDetailActivity.ARG_AUDIO_ID)
         grid = view.findViewById(R.id.discourse_grid)
         gridSwipe = view.findViewById(R.id.discourse_grid_swipe)
         catalogue = view.findViewById(R.id.discourse_catalogue)
@@ -302,10 +304,24 @@ class DiscourseFragment : BaseFragment() {
                         }
                         concat.addAdapter(trackAdapter!!)
                         refreshDownloadSummary()
+                        tracks.post { scrollToAudioIfNeeded() }
                     }
                 }
             }
         }
+    }
+
+    private fun scrollToAudioIfNeeded() {
+        val audioId = pendingScrollAudioId ?: return
+        val adapter = trackAdapter ?: return
+        pendingScrollAudioId = null
+        val index = adapter.indexOfAudio(audioId) ?: return
+        // Wait for the ConcatAdapter to lay out the newly attached track list, then scroll.
+        // The header is the first item in the ConcatAdapter.
+        val position = index + 1
+        tracks.postDelayed({
+            (tracks.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(position, 0)
+        }, 300)
     }
 
     private fun refreshProgress(change: DiscoursePlaybackStore.Change?) {
@@ -528,6 +544,7 @@ class DiscourseFragment : BaseFragment() {
     ) : RecyclerView.Adapter<DiscourseTrackHolder>() {
         private val positions = items.mapIndexed { index, item -> item.id to index }.toMap()
         init { stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY }
+        fun indexOfAudio(audioId: String) = positions[audioId]
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = DiscourseTrackHolder(
             LayoutInflater.from(parent.context).inflate(R.layout.discourse_track, parent, false).apply {
                 clipToOutline = true

@@ -116,6 +116,22 @@
                     android:scheme="vlclauncher"/>
             </intent-filter>
 
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+
+                <data
+                    android:scheme="https"
+                    android:host="rajneeshdiscourse.com"
+                    android:pathPrefix="/discourses"/>
+                <data
+                    android:scheme="https"
+                    android:host="www.rajneeshdiscourse.com"
+                    android:pathPrefix="/discourses"/>
+            </intent-filter>
+
             <!-- This filter captures protocols without type info -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
