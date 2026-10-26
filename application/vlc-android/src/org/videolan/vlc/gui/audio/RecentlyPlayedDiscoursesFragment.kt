@@ -1,5 +1,6 @@
 package org.videolan.vlc.gui.audio
 
+import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -207,6 +208,10 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         val row = layoutInflater.inflate(R.layout.discourse_track, container, false)
         if (container.id == R.id.weekly_tracks_list) {
             row.layoutParams.width = (420 * resources.displayMetrics.density).toInt()
+            row.findViewById<TextView>(R.id.discourse_track_title).apply {
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+            }
         }
         row.clipToOutline = true
         row.findViewById<View>(R.id.discourse_track_number).isVisible = false
@@ -220,6 +225,10 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             card.layoutParams.width = (420 * resources.displayMetrics.density).toInt()
             (card.layoutParams as android.widget.LinearLayout.LayoutParams).marginEnd =
                 (8 * resources.displayMetrics.density).toInt()
+            card.findViewById<TextView>(R.id.discourse_title).apply {
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+            }
         }
         card.findViewById<View>(R.id.discourse_letter_heading).isVisible = false
         card.findViewById<TextView>(R.id.discourse_title).text = discourse.title
