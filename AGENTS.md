@@ -84,6 +84,7 @@ The backend has no unlike, authentication, user registration, initial like-count
   - Stores `osho_api_user_id`, `osho_api_liked_discourses`, and `osho_api_liked_audios` in the existing app settings.
 - `DiscoursePlayback.kt`
   - `DiscourseAudio.toMediaWrapper()` maps a remote API track into VLC metadata: `audio_url` to the stream URI, seconds to milliseconds, discourse name to album, thumbnail to artwork, track number to queue metadata, and API UUID to `MediaWrapper.tag`.
+  - `MediaWrapper.discourseShareUrl()` builds `https://rajneeshdiscourse.com/discourses/{discourseId}/tracks/{audioId}`; the player's "Share the track info" action appends it to the shared text for discourse tracks.
   - Use `context.playDiscourseAudio(audio)` for one track and `context.playDiscourseAudios(audios, position)` for a queue. These route through `MediaUtils`, so the existing playback service, notification, sticky player, and Audio Mixer synchronization continue to apply.
 
 Retrofit, OkHttp, Moshi, Kotlin coroutines, and Kotlin reflection are already available through the application modules. The project pins Moshi 1.8, whose code generator is incompatible with the current Kotlin compiler; use `KotlinJsonAdapterFactory` rather than adding `@JsonClass(generateAdapter = true)` or Moshi annotation processing.

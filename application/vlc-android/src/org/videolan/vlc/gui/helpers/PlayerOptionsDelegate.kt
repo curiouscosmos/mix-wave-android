@@ -32,6 +32,7 @@ import org.videolan.tools.Settings
 import org.videolan.vlc.PlaybackService
 import org.videolan.vlc.R
 import org.videolan.vlc.databinding.PlayerOptionItemBinding
+import org.videolan.vlc.discourse.discourseShareUrl
 import org.videolan.vlc.gui.AudioPlayerContainerActivity
 import org.videolan.vlc.gui.BaseActivity
 import org.videolan.vlc.gui.DiffUtilAdapter
@@ -281,6 +282,10 @@ class PlayerOptionsDelegate(val activity: FragmentActivity, val service: Playbac
                         if (media.artistName.isNotBlank()) {
                             if (started) append(" ${TextUtils.SEPARATOR} ")
                             append(media.artistName)
+                        }
+                        media.discourseShareUrl()?.let { url ->
+                            if (isNotEmpty()) append('\n')
+                            append(url)
                         }
                     }
                     activity.share("", activity.getString(R.string.share_track, trackInfo))

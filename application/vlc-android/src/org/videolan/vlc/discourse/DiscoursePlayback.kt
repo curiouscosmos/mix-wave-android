@@ -14,6 +14,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 private const val DISCOURSE_TAG_PREFIX = "osho_discourse:"
 private const val DISCOURSE_TAG_SEPARATOR = "|"
+private const val DISCOURSE_WEB_BASE_URL = "https://rajneeshdiscourse.com"
 private val playbackAudioAdapter by lazy {
     Moshi.Builder().add(KotlinJsonAdapterFactory()).build().adapter(DiscourseAudio::class.java)
 }
@@ -64,6 +65,11 @@ fun MediaWrapper.discoursePlaybackIds(): DiscoursePlaybackIds? {
     val ids = value.split(DISCOURSE_TAG_SEPARATOR, limit = 3)
     return if (ids.size >= 2 && ids.take(2).all(String::isNotBlank)) DiscoursePlaybackIds(ids[0], ids[1]) else null
 }
+
+internal fun DiscoursePlaybackIds.webUrl() =
+    "$DISCOURSE_WEB_BASE_URL/discourses/$discourseId/tracks/$audioId"
+
+fun MediaWrapper.discourseShareUrl(): String? = discoursePlaybackIds()?.webUrl()
 
 internal fun MediaWrapper.recordDiscourseRecentlyPlayed(context: Context) {
     val ids = discoursePlaybackIds() ?: return
