@@ -640,6 +640,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             media.addOption(":start-time=${start/1000L}")
             media.addOption(":no-sout-chromecast-video")
             VLCOptions.setMediaOptions(media, ctx, flags or mw.flags, PlaybackService.hasRenderer())
+            if (mw.type == MediaWrapper.TYPE_AUDIO) mw.removeFlags(MediaWrapper.MEDIA_PAUSED)
             /* keeping only video during benchmark */
             if (isBenchmark) {
                 media.addOption(":no-audio")

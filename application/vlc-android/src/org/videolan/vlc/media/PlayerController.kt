@@ -338,6 +338,8 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
             mediaplayer = newMediaPlayer()
             success = false
         }
+        // Internal restarts restore the current pause intent through outputRestore.
+        media.addOption(":no-start-paused")
         media.addOption(":start-time=${time / 1000.0}")
         mediaplayer.media = media
         media.release()
@@ -390,6 +392,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
         noiseVolume = null
         mediaplayer = newMediaPlayer()
         try {
+            media.addOption(":no-start-paused")
             media.addOption(":start-time=${time / 1000.0}")
             mediaplayer.media = media
         } finally {
