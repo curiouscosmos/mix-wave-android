@@ -55,8 +55,6 @@ import org.videolan.tools.KEY_LAST_SESSION_CRASHED
 import org.videolan.tools.KEY_MEDIALIBRARY_AUTO_RESCAN
 import org.videolan.tools.KEY_OBSOLETE_RESTORE_FILE_WARNED
 import org.videolan.tools.KEY_SHOW_UPDATE
-import org.videolan.tools.PERMISSION_NEVER_ASK
-import org.videolan.tools.PERMISSION_NEXT_ASK
 import org.videolan.tools.RESULT_RESCAN
 import org.videolan.tools.RESULT_RESTART
 import org.videolan.tools.RESULT_RESTART_APP
@@ -69,7 +67,6 @@ import org.videolan.vlc.R
 import org.videolan.vlc.StartActivity
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.gui.dialogs.NotificationPermissionManager
-import org.videolan.vlc.gui.dialogs.PermissionListDialog
 import org.videolan.vlc.gui.dialogs.UPDATE_DATE
 import org.videolan.vlc.gui.dialogs.UPDATE_URL
 import org.videolan.vlc.gui.dialogs.UpdateDialog
@@ -91,7 +88,6 @@ import org.videolan.vlc.util.WhatsNewManager
 import org.videolan.vlc.util.WidgetMigration
 import org.videolan.vlc.util.getScreenWidth
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 private const val TAG = "VLC/MainActivity"
 
@@ -209,13 +205,6 @@ class MainActivity : ContentActivity(),
 
     override fun onResume() {
         super.onResume()
-        //Only the partial permission is granted for Android 11+
-        if (!settings.getBoolean(PERMISSION_NEVER_ASK, false) && settings.getLong(PERMISSION_NEXT_ASK, 0L) < System.currentTimeMillis() && Permissions.canReadStorage(this) && !Permissions.hasAllAccess(this)) {
-            UiTools.snackerMessageInfinite(this, getString(R.string.partial_content))?.setAction(R.string.more) {
-                PermissionListDialog.newInstance().show(supportFragmentManager, PermissionListDialog::class.simpleName)
-            }?.show()
-            settings.putSingle(PERMISSION_NEXT_ASK, System.currentTimeMillis() + TimeUnit.DAYS.toMillis(2))
-        }
         updateIncognitoModeIcon()
         configurationChanged(getScreenWidth())
     }

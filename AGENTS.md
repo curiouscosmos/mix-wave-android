@@ -25,6 +25,7 @@ Primary goal: keep VLC's local media playback base, but present it as Rajneesh D
 - Splash screen lives in `application/vlc-android/res/drawable/splash_background.xml`, applied through `Theme.VLC.Splash` on `StartActivity` (Android 12+ attributes in `res/values-v31/styles.xml`).
 - Header icon (40dp, `mipmap-*/ic_brand_logo.png`) uses 8dp rounded corners. Avoid `clipToOutline` in XML because min API is 26.
 - `toolbar.xml` no longer contains the app-name title; screens rely on their own ActionBar titles.
+- Do not show the recurring partial file-access snackbar ("cannot access all of your files"); permission management stays available in Settings → Permissions.
 - Added bottom mini-player on Music, fixed near the bottom like Spotify.
 - Removed Music random/shuffle floating button.
 - Removed file-menu options:
