@@ -1945,7 +1945,9 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         syncAudioMixerWithPlayback()
     }
 
-    private fun canPlayAudioMixer() = currentMediaWrapper?.type == MediaWrapper.TYPE_AUDIO && !isVideoPlaying
+    // Restored audio can have a stream or unknown type while retaining its audio playback flag.
+    private fun canPlayAudioMixer() = !isVideoPlaying &&
+        (currentMediaWrapper?.type == MediaWrapper.TYPE_AUDIO || currentMediaHasFlag(MediaWrapper.MEDIA_FORCE_AUDIO))
 
     private fun syncAudioMixerWithPlayback() {
         mixerStartJob?.cancel()
