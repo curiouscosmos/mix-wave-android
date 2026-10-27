@@ -71,7 +71,6 @@ import org.videolan.resources.ID_PIN_LOCK
 import org.videolan.resources.ID_REFRESH
 import org.videolan.resources.ID_REMOTE_ACCESS
 import org.videolan.resources.ID_SETTINGS
-import org.videolan.resources.ID_SPONSOR
 import org.videolan.television.ui.TvUtil.diffCallback
 import org.videolan.television.ui.TvUtil.metadataDiffCallback
 import org.videolan.television.ui.audioplayer.AudioPlayerActivity
@@ -86,7 +85,6 @@ import org.videolan.vlc.PlaybackService
 import org.videolan.vlc.R
 import org.videolan.vlc.RecommendationsService
 import org.videolan.vlc.StartActivity
-import org.videolan.vlc.gui.helpers.UiTools.showDonations
 import org.videolan.vlc.gui.helpers.hf.PinCodeDelegate
 import org.videolan.vlc.gui.video.VideoPlayerActivity
 import org.videolan.vlc.reloadLibrary
@@ -237,12 +235,6 @@ class MainTvFragment : BrowseSupportFragment(), OnItemViewSelectedListener, OnIt
         }
         if (Permissions.canReadStorage(requireActivity())) otherAdapter.add(GenericCardItem(ID_REFRESH, getString(R.string.refresh), "", R.drawable.ic_scan_big, R.color.tv_card_content_dark))
         otherAdapter.add(GenericCardItem(ID_ABOUT_TV, getString(R.string.about), "${getString(R.string.app_name_full)} ${BuildConfig.VLC_VERSION_NAME}", R.drawable.ic_info_big, R.color.tv_card_content_dark))
-        val donateCard = GenericCardItem(ID_SPONSOR, getString(R.string.tip_jar), "", R.drawable.ic_donate_big, R.color.tv_card_content_dark)
-
-//        VLCBilling.getInstance(requireActivity().application).addStatusListener {
-//            manageDonationVisibility(donateCard)
-//        }
-
         PinCodeDelegate.pinUnlocked.observe(requireActivity()) {
             if (it) {
                 if ((otherAdapter.get(0) as GenericCardItem).id != ID_PIN_LOCK) {
@@ -254,7 +246,6 @@ class MainTvFragment : BrowseSupportFragment(), OnItemViewSelectedListener, OnIt
                 }
             }
         }
-        manageDonationVisibility(donateCard)
         miscRow = ListRow(miscHeader, otherAdapter)
         rowsAdapter.add(miscRow)
 
@@ -272,12 +263,6 @@ class MainTvFragment : BrowseSupportFragment(), OnItemViewSelectedListener, OnIt
     override fun onResume() {
         super.onResume()
         badgeDrawable = ContextCompat.getDrawable(requireContext(), if (Settings.incognitoMode) R.drawable.ic_incognito else R.drawable.icon)
-    }
-
-    private fun manageDonationVisibility(donateCard: GenericCardItem) {
-        if (activity == null) return
-        otherAdapter.remove(donateCard)
-//        if (VLCBilling.getInstance(requireActivity().application).status != BillingStatus.FAILURE && VLCBilling.getInstance(requireActivity().application).skuDetails.isNotEmpty()) otherAdapter.add(1, donateCard)
     }
 
     private fun registerDatasets() {
@@ -416,7 +401,6 @@ class MainTvFragment : BrowseSupportFragment(), OnItemViewSelectedListener, OnIt
                         }
                     }
                     ID_ABOUT_TV -> activity.startActivity(Intent(activity, AboutActivity::class.java))
-                    ID_SPONSOR -> activity.showDonations()
                     ID_PIN_LOCK -> PinCodeDelegate.pinUnlocked.postValue(false)
                     ID_REMOTE_ACCESS -> requireActivity().startActivity(Intent(activity, StartActivity::class.java).apply { action = "vlc.remoteaccess.share" })
 
