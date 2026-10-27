@@ -15,6 +15,8 @@
     <string name="audio_mixer_loop">Loop</string>
     <string name="audio_mixer_clear">Clear Mixer</string>
     <string name="audio_mixer_empty">Add tracks from any file menu to build your mixer.</string>
+    <string name="local_audio_empty">No audio files found.\nAudio files on your device will appear here.</string>
+    <string name="allow_audio_access">Allow audio access</string>
     <string name="audio_mixer_selected_track">Selected: %1$s</string>
     <string name="audio_mixer_added">Added to Audio Mixer</string>
     <string name="audio_mixer_removed">Removed from Audio Mixer</string>

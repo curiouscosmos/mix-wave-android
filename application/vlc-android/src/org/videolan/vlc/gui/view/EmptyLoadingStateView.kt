@@ -67,6 +67,9 @@ class EmptyLoadingStateView : FrameLayout {
     private val normalConstraintSet = ConstraintSet()
     private val compactConstraintSet = ConstraintSet()
     var filterQuery: String? = null
+    var grantPermissionButtonText: String
+        get() = grantPermissionButton.text.toString()
+        set(value) { grantPermissionButton.text = value }
 
     lateinit var container: ConstraintLayout
     var showNoMedia: Boolean = true
@@ -114,9 +117,14 @@ class EmptyLoadingStateView : FrameLayout {
         }
 
     private var noMediaClickListener: (() -> Unit)? = null
+    private var grantPermissionClickListener: (() -> Unit)? = null
 
     fun setOnNoMediaClickListener(l: () -> Unit) {
         noMediaClickListener = l
+    }
+
+    fun setOnGrantPermissionClickListener(l: () -> Unit) {
+        grantPermissionClickListener = l
     }
 
     constructor(context: Context) : super(context)
@@ -156,6 +164,10 @@ class EmptyLoadingStateView : FrameLayout {
             noMediaClickListener?.invoke()
         }
         grantPermissionButton.setOnClickListener {
+            grantPermissionClickListener?.let { listener ->
+                listener()
+                return@setOnClickListener
+            }
             when (state) {
                 EmptyLoadingState.MISSING_AUDIO_PERMISSION -> ActivityCompat.requestPermissions(
                     context as Activity, arrayOf(

@@ -75,6 +75,7 @@ import org.videolan.vlc.gui.dialogs.DEFAULT_ACTIONS
 import org.videolan.vlc.gui.dialogs.DISPLAY_IN_CARDS
 import org.videolan.vlc.gui.dialogs.DisplaySettingsDialog
 import org.videolan.vlc.gui.dialogs.KEY_PERMISSION_CHANGED
+import org.videolan.vlc.gui.dialogs.PermissionListDialog
 import org.videolan.vlc.gui.dialogs.ONLY_FAVS
 import org.videolan.vlc.gui.dialogs.SavePlaylistDialog
 import org.videolan.vlc.gui.dialogs.showContext
@@ -199,6 +200,10 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         })
         adapters.forEach {
             it.onAnyChange { updateEmptyView() }
+        }
+        binding.audioEmptyLoading.grantPermissionButtonText = getString(R.string.allow_audio_access)
+        binding.audioEmptyLoading.setOnGrantPermissionClickListener {
+            PermissionListDialog.newInstance().show(parentFragmentManager, "PermissionListDialog")
         }
         requireActivity().supportFragmentManager.setFragmentResultListener(CONFIRM_PERMISSION_CHANGED, viewLifecycleOwner) { requestKey, bundle ->
             val changed = bundle.getBoolean(KEY_PERMISSION_CHANGED)
@@ -498,7 +503,11 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
     private fun updateEmptyView() {
         if (!isAdded) return
         swipeRefreshLayout.visibility = if (Medialibrary.getInstance().isInitiated) View.VISIBLE else View.GONE
-        binding.audioEmptyLoading.emptyText = viewModel.filterQuery?.let {  getString(R.string.empty_search, it) } ?: if (viewModel.providers[currentTab].onlyFavorites) getString(R.string.nofav) else getString(R.string.nomedia)
+        val emptyTracks = currentTab == TRACKS_TAB && !viewModel.providers[currentTab].onlyFavorites && viewModel.filterQuery.isNullOrEmpty()
+        binding.audioEmptyLoading.emptyText = viewModel.filterQuery?.let { getString(R.string.empty_search, it) }
+            ?: if (viewModel.providers[currentTab].onlyFavorites) getString(R.string.nofav)
+            else if (emptyTracks) getString(R.string.local_audio_empty)
+            else getString(R.string.nomedia)
         if (currentTab == MIXER_TAB && viewModel.filterQuery == null) binding.audioEmptyLoading.emptyText = getString(R.string.audio_mixer_empty)
         binding.audioEmptyLoading.state = when {
             !Permissions.canReadStorage(requireActivity()) && empty -> EmptyLoadingState.MISSING_PERMISSION
