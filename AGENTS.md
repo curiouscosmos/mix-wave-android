@@ -29,6 +29,7 @@ Primary goal: keep VLC's local media playback base, but present it as Rajneesh D
 - Do not show the recurring partial file-access snackbar ("cannot access all of your files"); permission management stays available in Settings → Permissions.
 - Liked discourse tracks and discourses are stored locally by `DiscourseFavouritesStore` and exposed as read-only virtual playlists "Favourite Tracks" and "Favourite Discourses" in Music → Playlists. The server only supplies liked IDs (`GET /likes`), so full item snapshots are captured when the like succeeds; there is no fetch-by-ID endpoint yet.
 - Deep links `https://rajneeshdiscourse.com/discourses/{id}` and `/discourses/{id}/tracks/{audioId}` are handled by `StartActivity` via `DiscourseDeepLink`. Discourse metadata is reconstructed from `GET /discourse-audios?discourse_id=...` because the API has no by-ID route; the audio ID is passed to `DiscourseFragment` to scroll to that track. Android App Links need `/.well-known/assetlinks.json` on the website with the signing fingerprints, otherwise Android shows a chooser.
+- The app does not use an advertising ID. `application/app/src/main/AndroidManifest.xml` removes `com.google.android.gms.permission.AD_ID` and `android.permission.ACCESS_ADSERVICES_AD_ID` with `tools:node="remove"` because Firebase Analytics pulls them in transitively. Keep them removed.
 - Added bottom mini-player on Music, fixed near the bottom like Spotify.
 - Removed Music random/shuffle floating button.
 - Removed file-menu options:
