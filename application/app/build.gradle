@@ -1,6 +1,12 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'com.google.gms.google-services'
+}
+
+// Debug has a separate application ID and needs its own Firebase registration.
+tasks.configureEach {
+    if (name == 'processDebugGoogleServices') enabled = false
 }
 
 def sentryDsn = System.getenv('SENTRY_DSN')?.trim()
@@ -195,6 +201,8 @@ android {
 }
 
 dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-analytics'
     implementation project(':application:vlc-android')
     implementation project(':application:television')
     implementation project(':application:remote-access-server')

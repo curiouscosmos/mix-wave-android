@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "110236275431",
+    "project_id": "osho-android",
+    "storage_bucket": "osho-android.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:110236275431:android:bb8014eacadbbc05860842",
+        "android_client_info": {
+          "package_name": "com.oshodiscourse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUyeNRpq9hhHxKD5KeVxeUzpyzboDH0uY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
