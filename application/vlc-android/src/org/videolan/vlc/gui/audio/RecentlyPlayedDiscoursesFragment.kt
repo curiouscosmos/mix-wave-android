@@ -208,8 +208,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
 
     private fun createTrackRow(container: ViewGroup): View {
         val row = layoutInflater.inflate(R.layout.discourse_track, container, false)
-        if (container.id == R.id.weekly_tracks_list) {
-            row.layoutParams.width = (420 * resources.displayMetrics.density).toInt()
+        if (container.id == R.id.weekly_tracks_list || container.id == R.id.recently_played_tracks_list) {
+            row.layoutParams.width = (if (container.id == R.id.weekly_tracks_list) 420 else 300) * resources.displayMetrics.density.toInt()
             row.findViewById<TextView>(R.id.discourse_track_title).apply {
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
