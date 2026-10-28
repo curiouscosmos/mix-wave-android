@@ -317,6 +317,7 @@ class SavePlaylistDialog : VLCBottomSheetDialogFragment(), View.OnClickListener,
                             medialibrary.addMedia(mw.location, -1L)
                         if (media != null) ids.add(media.id)
                     }
+                    if (media != null && !mw.artworkMrl.isNullOrBlank()) media.setThumbnail(mw.artworkMrl)
                 } else
                     ids.add(id)
             }

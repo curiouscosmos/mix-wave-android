@@ -49,6 +49,12 @@ import org.videolan.vlc.util.ThumbnailsProvider
 import org.videolan.vlc.util.ThumbnailsProvider.obtainBitmap
 import org.videolan.vlc.util.isSchemeHttpOrHttps
 import org.videolan.vlc.util.scope
+import org.videolan.vlc.providers.medialibrary.favouriteAudios
+import org.videolan.vlc.providers.medialibrary.favouriteDiscourses
+import org.videolan.vlc.providers.medialibrary.isFavouriteDiscoursesPlaylist
+import org.videolan.vlc.discourse.DiscourseRepository
+import org.videolan.vlc.discourse.resolveDiscourseUrl
+import org.videolan.vlc.discourse.toMediaWrapper
 
 private val sMedialibrary = Medialibrary.getInstance()
 @Volatile
@@ -276,9 +282,22 @@ private suspend fun getPlaylistOrGenreImage(v: View, item: MediaLibraryItem, bin
     val playlistImage = if (!bindChanged) {
         val tracks = withContext(Dispatchers.IO) { item.tracks.toList() }
         if (item.itemType == MediaLibraryItem.TYPE_PLAYLIST) {
-            tracks.firstOrNull()?.takeIf { !it.artworkMrl.isNullOrBlank() }?.let {
-                if (isSchemeHttpOrHttps(Uri.parse(it.artworkMrl).scheme)) HttpImageLoader.downloadBitmap(it.artworkMrl)
-                else obtainBitmap(it, width)
+            val first = tracks.firstOrNull()
+            val artwork = withContext(Dispatchers.IO) {
+                if (isFavouriteDiscoursesPlaylist(item)) {
+                    resolveDiscourseUrl(favouriteDiscourses(v.context).firstOrNull()?.thumbnailUrl)
+                } else {
+                    first?.artworkMrl?.takeIf { it.isNotBlank() } ?: first?.let { track ->
+                        (favouriteAudios(v.context) + DiscourseRepository(v.context).recentlyPlayedAudios)
+                            .firstOrNull { it.toMediaWrapper(v.context).uri == track.uri }
+                            ?.let { resolveDiscourseUrl(it.discourseThumbnailUrl) }
+                            ?.also { if (track.id != 0L) track.setThumbnail(it) }
+                    }
+                }
+            }
+            artwork?.let {
+                if (isSchemeHttpOrHttps(Uri.parse(it).scheme)) HttpImageLoader.downloadBitmap(it)
+                else first?.let { track -> obtainBitmap(track, width) }
             }
                 ?: UiTools.getDefaultAudioDrawable(v.context).bitmap
         } else {
