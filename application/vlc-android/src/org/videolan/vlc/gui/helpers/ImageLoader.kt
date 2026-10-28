@@ -273,12 +273,19 @@ private suspend fun getPlaylistOrGenreImage(v: View, item: MediaLibraryItem, bin
         binding.addOnRebindCallback(rebindCallbacks!!)
     }
 
-    var playlistImage = if (!bindChanged) {
+    val playlistImage = if (!bindChanged) {
         val tracks = withContext(Dispatchers.IO) { item.tracks.toList() }
-        ThumbnailsProvider.getPlaylistOrGenreImage("${if (item is MediaWrapper && item.type == MediaWrapper.TYPE_PLAYLIST)"playlist" else "genre"}:${item.id}_$width", tracks, width)
+        if (item.itemType == MediaLibraryItem.TYPE_PLAYLIST) {
+            tracks.firstOrNull()?.takeIf { !it.artworkMrl.isNullOrBlank() }?.let {
+                if (isSchemeHttpOrHttps(Uri.parse(it.artworkMrl).scheme)) HttpImageLoader.downloadBitmap(it.artworkMrl)
+                else obtainBitmap(it, width)
+            }
+                ?: UiTools.getDefaultAudioDrawable(v.context).bitmap
+        } else {
+            ThumbnailsProvider.getPlaylistOrGenreImage("genre:${item.id}_$width", tracks, width)
+        }
     } else null
-    if (playlistImage == null) return
-    if (!bindChanged) updateImageView(playlistImage, v, binding, card = card)
+    if (!bindChanged && playlistImage != null) updateImageView(playlistImage, v, binding, card = card)
 
     binding?.removeOnRebindCallback(rebindCallbacks!!)
 }
