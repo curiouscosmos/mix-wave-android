@@ -63,6 +63,10 @@
 
     <application>
 
+        <!-- Clip source download and on-device export; declare dataSync in Play Console. -->
+        <service android:name=".discourse.DiscourseClipService"
+            android:exported="false" android:foregroundServiceType="dataSync" />
+
         <!-- Enable VLC in Samsung multiwindow mode -->
         <meta-data
             android:name="com.samsung.android.sdk.multiwindow.enable"

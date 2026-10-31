@@ -14,6 +14,7 @@ private const val CDN_BASE_URL = "https://osho.b-cdn.net/OSHO/"
 private const val KEY_DOWNLOADS = "osho_api_discourse_downloads"
 private const val KEY_DOWNLOAD_DISCOURSES = "osho_api_discourse_download_discourses"
 private val URL_SCHEME = Regex("[A-Za-z][A-Za-z0-9+.-]*:.*")
+private val downloadsLock = Any()
 
 internal fun resolveDiscourseUrl(value: String?): String? {
     val path = value?.trim()?.takeIf(String::isNotEmpty) ?: return null
@@ -34,6 +35,9 @@ data class DiscourseDownloadProgress(
 
 internal fun isVerifiedDownload(actualSize: Long?, expectedSize: Long?) =
     actualSize != null && actualSize > 0L
+
+internal fun isCompletedDownload(actualSize: Long, successful: Boolean, totalBytes: Long?) =
+    actualSize > 0 && successful && (totalBytes == null || totalBytes <= 0 || totalBytes == actualSize)
 
 internal fun shouldEnqueue(state: DiscourseDownloadState) =
     state != DiscourseDownloadState.DOWNLOADED && state != DiscourseDownloadState.DOWNLOADING
@@ -94,9 +98,9 @@ class DiscourseDownloadStore(context: Context) {
     fun isFullyDownloaded(discourseId: String, totalTracks: Int) =
         totalTracks > 0 && downloadedCount(discourseId) >= totalTracks
 
-    fun download(audio: DiscourseAudio): Boolean {
-        if (!shouldEnqueue(state(audio))) return true
-        val url = resolveDiscourseUrl(audio.audioUrl) ?: return false.also {
+    fun download(audio: DiscourseAudio): Boolean = synchronized(downloadsLock) {
+        if (!shouldEnqueue(state(audio))) return@synchronized true
+        val url = resolveDiscourseUrl(audio.audioUrl) ?: return@synchronized false.also {
             ErrorReporter.error(TAG, "Cannot resolve download URL for track ${audio.id} (${audio.title})")
         }
         remove(audio)
@@ -108,15 +112,15 @@ class DiscourseDownloadStore(context: Context) {
         audio.mimeType?.let(request::setMimeType)
         val id = runCatching { manager.enqueue(request) }
             .onFailure { ErrorReporter.error(TAG, "Failed to enqueue track ${audio.id} (${audio.title})", it) }
-            .getOrNull() ?: return false
+            .getOrNull() ?: return@synchronized false
         save(downloads() + (audio.id to id))
         saveDownloadDiscourses(downloadDiscourses() + (audio.id to audio.discourseId))
-        return true
+        true
     }
 
     fun cancel(audio: DiscourseAudio) = remove(audio)
 
-    fun remove(audio: DiscourseAudio) {
+    fun remove(audio: DiscourseAudio) = synchronized(downloadsLock) {
         val current = downloads().toMutableMap()
         current.remove(audio.id)?.let { manager.remove(it) }
         file(audio).delete()
@@ -124,7 +128,16 @@ class DiscourseDownloadStore(context: Context) {
         saveDownloadDiscourses(downloadDiscourses() - audio.id)
     }
 
-    private fun verifiedFile(audio: DiscourseAudio): File? = file(audio).takeIf { isVerifiedDownload(it.takeIf(File::isFile)?.length(), audio.fileSize) }
+    fun verifiedFile(audio: DiscourseAudio): File? {
+        val file = file(audio)
+        if (!isVerifiedDownload(file.takeIf(File::isFile)?.length(), audio.fileSize)) return null
+        // DownloadManager writes directly into the destination, including while it is incomplete.
+        val id = downloads()[audio.id] ?: return null
+        val info = downloadInfo(id)
+        return file.takeIf {
+            isCompletedDownload(file.length(), info.status == DownloadManager.STATUS_SUCCESSFUL, info.totalBytes)
+        }
+    }
 
     private fun file(audio: DiscourseAudio) = File(context.getExternalFilesDir("discourses") ?: context.filesDir, fileName(audio))
     private fun fileName(audio: DiscourseAudio) = "${audio.id}.audio"

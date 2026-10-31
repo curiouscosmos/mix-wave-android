@@ -158,6 +158,9 @@ private const val TAG = "VLC/AudioPlayer"
 private const val SEARCH_TIMEOUT_MILLIS = 10000L
 
 class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlayerAnimator by AudioPlayerAnimator() {
+    private var clipEditor: ClipEditor? = null
+
+    internal fun refreshClipEditor() { clipEditor?.render() }
 
     private lateinit var binding: AudioPlayerBinding
     private lateinit var playlistAdapter: PlaylistAdapter
@@ -255,6 +258,14 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        clipEditor = ClipEditor(this, binding, savedInstanceState)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                org.videolan.vlc.discourse.DiscourseClipService.results.collect { message ->
+                    UiTools.snacker(requireActivity(), message)
+                }
+            }
+        }
         binding.noiseCancellation.setOnClickListener { button ->
             val service = playlistModel.service
             binding.noiseCancellation.isChecked = service?.noiseCancellation?.value?.enabled == true
@@ -461,6 +472,11 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         }
     }
 
+    override fun onDestroyView() {
+        clipEditor = null
+        super.onDestroyView()
+    }
+
     override fun onDestroy() {
         Settings.removeAudioControlsChangeListener()
         if (::binding.isInitialized) binding.songsList.adapter = null
@@ -519,6 +535,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        clipEditor?.save(outState)
         outState.putInt("player_state", playerState)
         outState.putBoolean("was_playing", wasPlaying)
         outState.putBoolean("show_remaining_time", showRemainingTime)
@@ -666,6 +683,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
 
     private var wasPlaying = true
     private fun updatePlayerActions() {
+        clipEditor?.update()
         val media = playlistModel.currentMediaWrapper ?: return
         val ids = media.discoursePlaybackIds()
         val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
@@ -766,6 +784,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
      * @param progress the progress to be displayed
      */
     private fun updateProgress(progress: PlaybackProgress) {
+        clipEditor?.update()
         if (playlistModel.currentMediaPosition == -1) return
         binding.length.text = if (showRemainingTime) Tools.millisToString(progress.time - progress.length) else progress.lengthText
         binding.timeline.max = progress.length.toInt()

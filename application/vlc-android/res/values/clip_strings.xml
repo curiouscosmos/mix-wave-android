@@ -1,0 +1,25 @@
+<resources>
+    <string name="clip_label">Clip</string>
+    <string name="clip_cut">Cut</string>
+    <string name="clip_share_in_app">Share in App · Coming soon</string>
+    <string name="clip_download">Download Clip</string>
+    <string name="clip_start">Clip start time</string>
+    <string name="clip_end">Clip end time</string>
+    <string name="clip_start_minus">Move clip start back one second</string>
+    <string name="clip_start_plus">Move clip start forward one second</string>
+    <string name="clip_end_minus">Move clip end back one second</string>
+    <string name="clip_end_plus">Move clip end forward one second</string>
+    <string name="clip_duration">Selected: %1$s</string>
+    <string name="clip_frame_note">Cuts align to audio frames and may include a short lead-in. The full track is downloaded first if needed. Clips are saved to Downloads/Rajneesh Discourse.</string>
+    <string name="clip_preparing">Preparing clip…</string>
+    <string name="clip_downloading_source">Downloading the full track…</string>
+    <string name="clip_cutting">Cutting and saving clip…</string>
+    <string name="clip_saved">Clip saved to Downloads/Rajneesh Discourse</string>
+    <string name="clip_failed">Could not save clip</string>
+    <string name="clip_retry">Check your connection and free storage, then try Download Clip again.</string>
+    <string name="clip_unsupported">This audio format does not support fast clipping</string>
+    <string name="clip_busy">A clip is already being downloaded. Check the export notification.</string>
+    <string name="clip_started">Clip download started. You can keep listening.</string>
+    <string name="clip_permission">Storage permission is needed to save clips to Downloads.</string>
+    <string name="clip_invalid">Enter a valid time (m:ss or h:mm:ss) within the track. Select at least one second.</string>
+</resources>

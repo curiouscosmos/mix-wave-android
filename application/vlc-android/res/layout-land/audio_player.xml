@@ -348,10 +348,16 @@
                     android:onClick="@{fragment::onSearchClick}"
                     android:padding="8dp"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toStartOf="@+id/playlist_switch"
+                    app:layout_constraintEnd_toStartOf="@+id/player_discourse"
                     app:layout_constraintTop_toTopOf="parent"
                     app:srcCompat="@drawable/ic_search_audio" />
 
+            <ImageView android:id="@+id/player_discourse"
+                    android:layout_width="@dimen/audio_player_button_size" android:layout_height="@dimen/audio_player_button_size"
+                    android:padding="8dp" android:focusable="true" android:contentDescription="@string/player_view_discourse"
+                    android:background="?attr/selectableItemBackgroundBorderless" app:srcCompat="@drawable/ic_player_discourse"
+                    app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/playlist_switch" />
             <ImageView
                     android:id="@+id/playlist_switch"
                     android:layout_width="@dimen/audio_player_button_size"
@@ -666,6 +672,14 @@
                 tools:visibility="visible" />
 
 
+        <TextView android:id="@+id/player_clip"
+                android:layout_width="64dp" android:layout_height="64dp" android:gravity="center"
+                android:text="@string/clip_label" android:textSize="12sp" android:drawableTop="@drawable/ic_player_clip"
+                android:drawablePadding="8dp" android:focusable="true" android:clickable="true" android:visibility="gone"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toStartOf="@id/noise_cancellation"
+                app:layout_constraintHorizontal_chainStyle="packed" app:layout_goneMarginBottom="48dp"
+                app:layout_constraintBottom_toTopOf="@id/clip_controls" />
         <androidx.appcompat.widget.AppCompatToggleButton
                 android:id="@+id/noise_cancellation"
                 android:layout_width="wrap_content"
@@ -683,10 +697,15 @@
                 android:textColor="@color/noise_action_tint"
                 android:enabled="false"
                 android:visibility="gone"
-                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintStart_toEndOf="@id/player_clip"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toTopOf="@id/time" />
+                app:layout_goneMarginBottom="48dp"
+                app:layout_constraintBottom_toTopOf="@id/clip_controls" />
 
+        <View android:id="@+id/player_timeline_background"
+                android:layout_width="0dp" android:layout_height="48dp" android:layout_marginBottom="28dp"
+                app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/play_pause" />
         <TextView
                 android:id="@+id/time"
                 android:layout_width="wrap_content"
@@ -702,13 +721,20 @@
                 android:text="@string/time_0"
                 android:textColor="?attr/font_default"
                 android:textSize="@dimen/audio_player_time_text_size"
-                app:layout_constraintBottom_toTopOf="@+id/timeline"
-                app:layout_constraintLeft_toLeftOf="@+id/timeline" />
+                app:layout_constraintTop_toTopOf="@id/player_timeline_background"
+                app:layout_constraintBottom_toBottomOf="@id/player_timeline_background"
+                app:layout_constraintLeft_toLeftOf="parent" />
 
+        <include android:id="@+id/clip_controls" layout="@layout/clip_controls"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginHorizontal="16dp" android:visibility="gone"
+                app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginBottom="-56dp"
+                app:layout_constraintBottom_toBottomOf="@id/player_timeline_background" />
         <org.videolan.vlc.gui.view.AccessibleSeekBar
                 android:id="@+id/timeline"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
                 android:elevation="4dp"
                 android:focusable="true"
                 android:maxHeight="@dimen/audio_player_seekbar_height"
@@ -719,10 +745,16 @@
                 android:progressDrawable="?attr/audio_seek_bar"
                 android:splitTrack="false"
                 android:thumb="@drawable/ic_seekbar_thumb_audio"
-                app:layout_constraintBottom_toTopOf="@+id/play_pause"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
+                app:layout_constraintTop_toTopOf="@id/player_timeline_background"
+                app:layout_constraintBottom_toBottomOf="@id/player_timeline_background"
+                app:layout_constraintEnd_toStartOf="@id/length"
+                app:layout_constraintStart_toEndOf="@id/time" />
 
+        <org.videolan.vlc.gui.view.ClipRangeView android:id="@+id/clip_range"
+                android:layout_width="0dp" android:layout_height="48dp" android:elevation="5dp"
+                android:visibility="gone" android:layoutDirection="ltr"
+                app:layout_constraintStart_toStartOf="@id/timeline" app:layout_constraintEnd_toEndOf="@id/timeline"
+                app:layout_constraintTop_toTopOf="@id/timeline" app:layout_constraintBottom_toBottomOf="@id/timeline" />
         <TextView
                 android:id="@+id/length"
                 android:layout_width="wrap_content"
@@ -736,8 +768,9 @@
                 android:text="@string/time_0"
                 android:textColor="?attr/font_default"
                 android:textSize="@dimen/audio_player_time_text_size"
-                app:layout_constraintBottom_toTopOf="@+id/timeline"
-                app:layout_constraintRight_toRightOf="@+id/timeline" />
+                app:layout_constraintTop_toTopOf="@id/player_timeline_background"
+                app:layout_constraintBottom_toBottomOf="@id/player_timeline_background"
+                app:layout_constraintRight_toRightOf="parent" />
 
         <ImageView
                 android:id="@+id/shuffle"

@@ -145,6 +145,7 @@ android {
         manifest.srcFile 'androidTest/AndroidManifest.xml'
         java.srcDirs = ['androidTest', 'test-common']
         assets.srcDirs = ['flavors/debug/assets']
+        assets.srcDirs += ['androidTest/assets']
         assets.srcDirs += files("$projectDir/assets/schemas".toString())
     }
     namespace = 'org.videolan.vlc'

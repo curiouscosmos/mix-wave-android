@@ -173,6 +173,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
 
         hidePlaylistConstraint.setVisibility(R.id.songs_list, View.GONE)
         if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.noise_cancellation, View.VISIBLE)
+        if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.player_clip, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.audio_rewind_10, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.audio_rewind_text, View.VISIBLE)
@@ -196,6 +197,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
 
         hidePlaylistLandscapeConstraint.setVisibility(R.id.songs_list, View.GONE)
         if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.noise_cancellation, View.VISIBLE)
+        if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.player_clip, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.audio_rewind_10, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.audio_rewind_text, View.VISIBLE)
@@ -286,6 +288,22 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.backgroundView.alpha = slideOffset * if (binding.expandedActions != null) 0.55f else 1f
         binding.expandedActions?.alpha = slideOffset
         binding.noiseCancellation.alpha = if (binding.expandedActions == null) slideOffset else 1f
+        if (binding.expandedActions == null) {
+            binding.playerClip.alpha = slideOffset
+            val actionsVisibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
+            binding.playerClip.visibility = actionsVisibility
+            binding.noiseCancellation.visibility = actionsVisibility
+        }
+        if (binding.expandedQueue != null) {
+            binding.expandedQueue?.alpha = slideOffset
+            binding.expandedQueue?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
+            binding.playerDiscourse?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
+            binding.playerDiscourse?.alpha = slideOffset
+        } else {
+            binding.playerDiscourse?.alpha = slideOffset
+            binding.playerDiscourse?.visibility = if (slideOffset > 0F) View.VISIBLE else View.GONE
+        }
+        audioPlayer.refreshClipEditor()
         binding.topGradient.alpha = slideOffset
         binding.bottomGradient.alpha = slideOffset
         binding.progressBar.alpha = 1 - slideOffset
@@ -300,6 +318,13 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.playlistSearch.visibility = if (showCover && slideOffset > 0F) View.GONE else View.VISIBLE
         binding.playlistSwitch.visibility = if (showCover && slideOffset > 0F) View.GONE else View.VISIBLE
         binding.advFunction.visibility = if (showCover && slideOffset > 0F) View.GONE else View.VISIBLE
+        if (binding.expandedActions == null) {
+            binding.playlistSwitch.alpha = slideOffset
+            binding.advFunction.alpha = slideOffset
+            val headerVisibility = if (slideOffset > 0F) View.VISIBLE else View.GONE
+            binding.playlistSwitch.visibility = headerVisibility
+            binding.advFunction.visibility = headerVisibility
+        }
         binding.expandedBack?.alpha = if (showCover) slideOffset else 0F
         binding.expandedTitle?.alpha = if (showCover) slideOffset else 0F
         binding.expandedMore?.alpha = if (showCover) slideOffset else 0F

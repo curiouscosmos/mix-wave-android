@@ -6,6 +6,16 @@ import org.junit.Test
 
 class DiscourseDownloadsTest {
     @Test
+    fun partiallyWrittenFilesAreNeverAvailableForClippingOrPlayback() {
+        assertEquals(false, isCompletedDownload(100, false, 200))
+        assertEquals(false, isCompletedDownload(100, false, null))
+        assertEquals(false, isCompletedDownload(100, true, 200))
+        assertEquals(false, isCompletedDownload(0, true, null))
+        assertEquals(true, isCompletedDownload(200, true, 200))
+        assertEquals(true, isCompletedDownload(200, true, -1))
+    }
+
+    @Test
     fun usesDownloadManagerTotalWhenAvailable() {
         assertEquals(25, downloadPercent(250L, 1_000L, 2_000L))
     }

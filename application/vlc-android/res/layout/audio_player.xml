@@ -118,19 +118,33 @@
 
         <TextView
                 android:id="@+id/expanded_title"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="38dp"
+                android:maxLines="1" android:ellipsize="end"
                 android:fontFamily="sans-serif-medium"
                 android:text="@string/music_player"
                 android:textColor="?attr/font_default"
                 android:textSize="20sp"
                 android:visibility="gone"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/player_discourse"
+                app:layout_constraintStart_toEndOf="@id/expanded_back"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:visibility="visible" />
 
+        <ImageView android:id="@+id/player_discourse"
+                android:layout_width="48dp" android:layout_height="56dp" android:layout_marginTop="24dp"
+                android:padding="12dp" android:focusable="true" android:elevation="6dp" android:visibility="gone"
+                android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="@string/player_view_discourse"
+                app:srcCompat="@drawable/ic_player_discourse" app:tint="?attr/player_icon_color"
+                app:layout_constraintTop_toTopOf="parent" app:layout_constraintEnd_toStartOf="@id/expanded_queue" />
+        <ImageView android:id="@+id/expanded_queue"
+                android:layout_width="48dp" android:layout_height="56dp" android:layout_marginTop="24dp"
+                android:padding="12dp" android:focusable="true" android:elevation="6dp" android:visibility="gone"
+                android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="@string/show_playlist"
+                android:onClick="@{fragment::onPlaylistSwitchClick}"
+                app:srcCompat="@drawable/ic_playlist_audio" app:tint="?attr/player_icon_color"
+                app:layout_constraintTop_toTopOf="parent" app:layout_constraintEnd_toStartOf="@id/expanded_more" />
         <ImageView
                 android:id="@+id/expanded_more"
                 android:layout_width="56dp"
@@ -543,12 +557,13 @@
                 android:layout_height="64dp"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginBottom="36dp"
+                app:layout_goneMarginBottom="84dp"
                 android:orientation="horizontal"
                 android:gravity="center"
                 android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toTopOf="@id/player_timeline_background">
+                app:layout_constraintBottom_toTopOf="@id/clip_controls">
             <TextView
                 android:id="@+id/player_like"
                 android:layout_width="0dp"
@@ -569,15 +584,15 @@
                 android:layout_height="48dp"
                 android:background="?attr/default_divider" />
             <TextView
-                android:id="@+id/player_discourse"
+                android:id="@+id/player_add_playlist"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:text="@string/player_view_discourse"
+                android:text="@string/player_playlist_label"
                 android:textColor="?attr/font_default"
                 android:textSize="12sp"
-                android:drawableTop="@drawable/ic_player_discourse"
+                android:drawableTop="@drawable/ic_add_to_playlist"
                 android:drawableTint="?attr/player_icon_color"
                 android:drawablePadding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -588,15 +603,15 @@
                 android:layout_height="48dp"
                 android:background="?attr/default_divider" />
             <TextView
-                android:id="@+id/player_add_playlist"
+                android:id="@+id/player_clip"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:text="@string/player_playlist_label"
+                android:text="@string/clip_label"
                 android:textColor="?attr/font_default"
                 android:textSize="12sp"
-                android:drawableTop="@drawable/ic_add_to_playlist"
+                android:drawableTop="@drawable/ic_player_clip"
                 android:drawableTint="?attr/player_icon_color"
                 android:drawablePadding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -797,6 +812,11 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/timeline" />
 
+        <include android:id="@+id/clip_controls" layout="@layout/clip_controls"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginHorizontal="16dp" android:visibility="gone"
+                app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginBottom="-56dp"
+                app:layout_constraintBottom_toBottomOf="@id/player_timeline_background" />
         <org.videolan.vlc.gui.view.AccessibleSeekBar
                 android:id="@+id/timeline"
                 android:layout_width="0dp"
@@ -818,6 +838,11 @@
                 app:layout_constraintStart_toEndOf="@+id/time"
                 app:layout_constraintTop_toTopOf="@+id/player_timeline_background" />
 
+        <org.videolan.vlc.gui.view.ClipRangeView android:id="@+id/clip_range"
+                android:layout_width="0dp" android:layout_height="48dp" android:elevation="5dp"
+                android:visibility="gone" android:layoutDirection="ltr"
+                app:layout_constraintStart_toStartOf="@id/timeline" app:layout_constraintEnd_toEndOf="@id/timeline"
+                app:layout_constraintTop_toTopOf="@id/timeline" app:layout_constraintBottom_toBottomOf="@id/timeline" />
         <TextView
                 android:id="@+id/length"
                 android:layout_width="wrap_content"
