@@ -696,7 +696,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
             if (liked) android.graphics.Color.parseColor("#EF3831") else requireContext().getColor(R.color.player_like_outline_tint))
         val count = repository.likes.value.counts[target]
             ?: repository.recentlyPlayedAudios.firstOrNull { it.id == ids?.audioId }?.totalLikes ?: 0
-        binding.playerLike?.text = if (ids == null) getString(R.string.player_like_label)
+        binding.playerLike?.text = if (ids == null) ""
             else org.videolan.vlc.discourse.formatDiscourseLikes(count)
         binding.playerLike?.contentDescription = if (ids == null) getString(R.string.player_like_label) else getString(
             if (liked) R.string.discourse_unlike_description else R.string.discourse_like_description,

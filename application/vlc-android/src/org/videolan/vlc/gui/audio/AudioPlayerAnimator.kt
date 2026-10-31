@@ -326,10 +326,8 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
             binding.advFunction.visibility = headerVisibility
         }
         binding.expandedBack?.alpha = if (showCover) slideOffset else 0F
-        binding.expandedTitle?.alpha = if (showCover) slideOffset else 0F
         binding.expandedMore?.alpha = if (showCover) slideOffset else 0F
         binding.expandedBack?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
-        binding.expandedTitle?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
         binding.expandedMore?.visibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
         //views disappearing in full player
         val disappearingViews = arrayOf(binding.headerPlayPause, binding.headerTime, binding.headerShuffle, binding.headerPrevious, binding.headerLargePlayPause, binding.headerNext, binding.headerRepeat)
@@ -344,7 +342,6 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.playlistSwitch.translationY = -(1 - translationOffset) * 48.dp
         binding.advFunction.translationY = -(1 - translationOffset) * 48.dp
         binding.expandedBack?.translationY = -(1 - translationOffset) * 48.dp
-        binding.expandedTitle?.translationY = -(1 - translationOffset) * 48.dp
         binding.expandedMore?.translationY = -(1 - translationOffset) * 48.dp
         disappearingViews.forEach {
             it.translationY = translationOffset * 48.dp
