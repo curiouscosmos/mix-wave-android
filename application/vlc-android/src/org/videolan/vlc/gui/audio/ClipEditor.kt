@@ -27,11 +27,9 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
 
     init {
         binding.playerClip.setBackgroundResource(R.drawable.clip_action_background)
-        val normalIcon = binding.playerClip.compoundDrawableTintList?.defaultColor ?: android.graphics.Color.WHITE
-        binding.playerClip.compoundDrawableTintList = android.content.res.ColorStateList(
+        val normalIcon = binding.playerClip.supportImageTintList?.defaultColor ?: android.graphics.Color.WHITE
+        binding.playerClip.supportImageTintList = android.content.res.ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()), intArrayOf(android.graphics.Color.WHITE, normalIcon))
-        binding.playerClip.setTextColor(android.content.res.ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()), intArrayOf(android.graphics.Color.WHITE, binding.playerClip.currentTextColor)))
         binding.playerClip.setOnClickListener {
             val progress = player.playlistModel.progress.value ?: return@setOnClickListener
             if (range == null && duration >= 1_000) {

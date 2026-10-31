@@ -116,6 +116,12 @@
                 android:rotation="270"
                 />
 
+        <ImageView android:id="@+id/player_add_playlist"
+                android:layout_width="48dp" android:layout_height="56dp" android:layout_marginTop="24dp"
+                android:padding="12dp" android:focusable="true" android:elevation="6dp" android:visibility="gone"
+                android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="@string/player_playlist_label"
+                app:srcCompat="@drawable/ic_add_to_playlist" app:tint="?attr/player_icon_color"
+                app:layout_constraintTop_toTopOf="parent" app:layout_constraintEnd_toStartOf="@id/player_discourse" />
         <ImageView android:id="@+id/player_discourse"
                 android:layout_width="48dp" android:layout_height="56dp" android:layout_marginTop="24dp"
                 android:padding="12dp" android:focusable="true" android:elevation="6dp" android:visibility="gone"
@@ -548,58 +554,41 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintBottom_toTopOf="@id/clip_controls">
+            <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1">
             <TextView
                 android:id="@+id/player_like"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
+                android:gravity="center" android:layout_gravity="center"
+                android:minWidth="48dp" android:paddingHorizontal="8dp" android:includeFontPadding="false"
                 android:contentDescription="@string/player_like_label"
                 android:textColor="?attr/font_default"
                 android:textSize="12sp"
-                android:drawableTop="@drawable/ic_header_media_favorite_outline"
+                android:drawableStart="@drawable/ic_header_media_favorite_outline"
                 android:drawableTint="@color/player_like_outline_tint"
                 android:drawablePadding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true" />
+            </FrameLayout>
             <View
                 android:layout_width="1dp"
                 android:layout_height="48dp"
                 android:background="?attr/default_divider" />
-            <TextView
-                android:id="@+id/player_add_playlist"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:contentDescription="@string/player_playlist_label"
-                android:textColor="?attr/font_default"
-                android:textSize="0sp"
-                android:includeFontPadding="false"
-                android:drawableTop="@drawable/ic_add_to_playlist"
-                android:drawableTint="?attr/player_icon_color"
-                android:drawablePadding="0dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true" />
+            <include android:id="@+id/player_download" layout="@layout/player_track_download"
+                android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
             <View
                 android:layout_width="1dp"
                 android:layout_height="48dp"
                 android:background="?attr/default_divider" />
-            <TextView
-                android:id="@+id/player_clip"
+            <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/player_clip" android:scaleType="center"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:gravity="center"
                 android:contentDescription="@string/clip_label"
-                android:textColor="?attr/font_default"
-                android:textSize="0sp"
-                android:includeFontPadding="false"
-                android:drawableTop="@drawable/ic_player_clip"
-                android:drawableTint="?attr/player_icon_color"
-                android:drawablePadding="0dp"
+                android:src="@drawable/ic_player_clip"
+                app:tint="?attr/player_icon_color"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true" />
@@ -607,25 +596,16 @@
                 android:layout_width="1dp"
                 android:layout_height="48dp"
                 android:background="?attr/default_divider" />
-            <androidx.appcompat.widget.AppCompatToggleButton
-                android:id="@+id/noise_cancellation"
+            <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/noise_cancellation" android:scaleType="center"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:gravity="center"
-                android:text=""
-                android:textOn=""
-                android:textOff=""
-                android:textAllCaps="false"
                 android:contentDescription="@string/noise_cancellation"
                 android:enabled="false"
                 android:padding="0dp"
-                android:textColor="@color/noise_action_tint"
-                android:textSize="0sp"
-                android:includeFontPadding="false"
-                android:drawableTop="@drawable/ic_player_noise"
-                android:drawableTint="@color/noise_action_tint"
-                android:drawablePadding="0dp"
+                android:src="@drawable/ic_player_noise"
+                app:tint="@color/noise_action_tint"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true" />

@@ -24,6 +24,8 @@ import androidx.appcompat.widget.PopupMenu
 import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.videolan.vlc.discourse.discoursePlaybackIds
 import org.videolan.vlc.discourse.discourseAudioSnapshot
+import org.videolan.vlc.discourse.DiscourseDownloadStore
+import org.videolan.vlc.discourse.DiscourseDownloadState
 
 import android.Manifest
 import android.annotation.TargetApi
@@ -159,6 +161,7 @@ private const val SEARCH_TIMEOUT_MILLIS = 10000L
 
 class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlayerAnimator by AudioPlayerAnimator() {
     private var clipEditor: ClipEditor? = null
+    private val trackDownloads by lazy { DiscourseDownloadStore(requireContext()) }
 
     internal fun refreshClipEditor() { clipEditor?.render() }
 
@@ -261,14 +264,20 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         clipEditor = ClipEditor(this, binding, savedInstanceState)
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                org.videolan.vlc.discourse.DiscourseClipService.results.collect { message ->
-                    UiTools.snacker(requireActivity(), message)
+                launch {
+                    org.videolan.vlc.discourse.DiscourseClipService.results.collect { message ->
+                        UiTools.snacker(requireActivity(), message)
+                    }
+                }
+                while (true) {
+                    updateTrackDownload()
+                    delay(1_000)
                 }
             }
         }
         binding.noiseCancellation.setOnClickListener { button ->
             val service = playlistModel.service
-            binding.noiseCancellation.isChecked = service?.noiseCancellation?.value?.enabled == true
+            binding.noiseCancellation.isSelected = service?.noiseCancellation?.value?.enabled == true
             if (service != null) {
                 PopupMenu(requireContext(), button).apply {
                     NoiseCancellationLevel.values().forEach { level ->
@@ -290,11 +299,11 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 PlaybackService.serviceFlow.collectLatest { service ->
                     if (service == null) {
-                        binding.noiseCancellation.isChecked = false
+                        binding.noiseCancellation.isSelected = false
                         binding.noiseCancellation.isEnabled = false
                         binding.noiseCancellation.contentDescription = getString(R.string.noise_cancellation_state, noiseLevelLabel(NoiseCancellationLevel.OFF))
                     } else service.noiseCancellation.collect { state ->
-                        binding.noiseCancellation.isChecked = state.enabled
+                        binding.noiseCancellation.isSelected = state.enabled
                         binding.noiseCancellation.isEnabled = !state.loading && (state.available || state.enabled)
                         binding.noiseCancellation.contentDescription = getString(R.string.noise_cancellation_state, noiseLevelLabel(state.level))
                     }
@@ -408,6 +417,27 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         binding.songSubtitle?.setOnClickListener { coverMediaSwitcherListener.onTextClicked() }
         binding.playerAddPlaylist?.setOnClickListener {
             playlistModel.currentMediaWrapper?.let { requireActivity().addToPlaylist(listOf(it)) }
+        }
+        binding.root.findViewById<View>(R.id.player_download).setOnClickListener { button ->
+            val audio = playlistModel.currentMediaWrapper?.discourseAudioSnapshot() ?: return@setOnClickListener
+            try {
+                when (trackDownloads.state(audio)) {
+                    DiscourseDownloadState.MISSING, DiscourseDownloadState.FAILED ->
+                        if (!trackDownloads.download(audio)) UiTools.snacker(requireActivity(), R.string.discourse_download_failed)
+                    DiscourseDownloadState.DOWNLOADING -> trackDownloads.cancel(audio)
+                    DiscourseDownloadState.DOWNLOADED -> PopupMenu(requireContext(), button).apply {
+                        menu.add(R.string.discourse_remove_download).setOnMenuItemClickListener {
+                            trackDownloads.remove(audio)
+                            updateTrackDownload()
+                            true
+                        }
+                        show()
+                    }
+                }
+                updateTrackDownload()
+            } catch (_: Exception) {
+                UiTools.snacker(requireActivity(), R.string.discourse_download_failed)
+            }
         }
         binding.playerDiscourse?.setOnClickListener {
             val media = playlistModel.currentMediaWrapper ?: return@setOnClickListener
@@ -682,16 +712,49 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     }
 
     private var wasPlaying = true
+    private fun updateTrackDownload() {
+        if (view == null) return
+        val button = binding.root.findViewById<View>(R.id.player_download)
+        val icon = button.findViewById<android.widget.ImageView>(R.id.player_download_icon)
+        val spinner = button.findViewById<android.widget.ProgressBar>(R.id.player_download_spinner)
+        val audio = playlistModel.currentMediaWrapper?.discourseAudioSnapshot()
+        val progress = audio?.let(trackDownloads::progress)
+        val downloading = progress?.state == DiscourseDownloadState.DOWNLOADING
+        button.isEnabled = audio != null
+        button.alpha = if (audio != null) 1f else 0.4f
+        icon.visibility = if (downloading) View.GONE else View.VISIBLE
+        icon.imageTintList = android.content.res.ColorStateList.valueOf(
+            if (progress?.state == DiscourseDownloadState.DOWNLOADED) requireContext().getColor(R.color.green500)
+            else UiTools.getColorFromAttribute(requireContext(), R.attr.player_icon_color))
+        val indeterminate = progress?.percent == null
+        if (spinner.isIndeterminate != indeterminate) {
+            spinner.visibility = View.GONE
+            spinner.isIndeterminate = indeterminate
+        }
+        spinner.progress = progress?.percent ?: 0
+        spinner.visibility = if (downloading) View.VISIBLE else View.GONE
+        button.contentDescription = when (progress?.state) {
+            DiscourseDownloadState.DOWNLOADED -> getString(R.string.discourse_downloaded)
+            DiscourseDownloadState.DOWNLOADING -> {
+                val status = progress.percent?.let { getString(R.string.discourse_downloading_percent, it) }
+                    ?: getString(R.string.discourse_downloading)
+                "$status. ${getString(R.string.cancel)}"
+            }
+            else -> getString(R.string.download)
+        }
+    }
+
     private fun updatePlayerActions() {
         clipEditor?.update()
+        updateTrackDownload()
         val media = playlistModel.currentMediaWrapper ?: return
         val ids = media.discoursePlaybackIds()
         val repository = org.videolan.vlc.discourse.DiscourseRepository(requireContext())
         val target = ids?.let { org.videolan.vlc.discourse.DiscourseLikesStore.Target(it.audioId, true) }
         val liked = if (ids == null) media.isFavorite else ids.audioId in repository.likedAudios
         binding.playerLike?.isEnabled = target !in repository.likes.value.pending
-        binding.playerLike?.setCompoundDrawablesRelativeWithIntrinsicBounds(0,
-            if (liked) R.drawable.ic_header_media_favorite else R.drawable.ic_header_media_favorite_outline, 0, 0)
+        binding.playerLike?.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            if (liked) R.drawable.ic_header_media_favorite else R.drawable.ic_header_media_favorite_outline, 0, 0, 0)
         binding.playerLike?.compoundDrawableTintList = android.content.res.ColorStateList.valueOf(
             if (liked) android.graphics.Color.parseColor("#EF3831") else requireContext().getColor(R.color.player_like_outline_tint))
         val count = repository.likes.value.counts[target]
