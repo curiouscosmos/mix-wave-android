@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -20,6 +21,9 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.button.MaterialButton
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.ClipRange
+import org.videolan.vlc.discourse.ClipExportOptions
+import org.videolan.vlc.audio.NoiseCancellationLevel
+import org.json.JSONObject
 import org.videolan.vlc.discourse.DiscourseAudio
 import org.videolan.vlc.discourse.DiscourseClipService
 import org.videolan.vlc.discourse.clipTimestamp
@@ -37,7 +41,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val context = requireContext()
         val padding = (24 * resources.displayMetrics.density).toInt()
-        return LinearLayout(context).apply {
+        val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
             val args = requireArguments()
@@ -51,7 +55,24 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
                 text = "${clipTimestamp(args.getLong("start"))} — ${clipTimestamp(args.getLong("end"))}"
                 setPadding(0, 0, 0, padding / 2)
             })
-            addView(TextView(context).apply { setText(R.string.clip_frame_note); setPadding(0, 0, 0, padding) })
+            val options = exportOptions()
+            addView(TextView(context).apply {
+                val level = getString(when (options.noiseLevel) {
+                    NoiseCancellationLevel.OFF -> R.string.noise_cancellation_off
+                    NoiseCancellationLevel.LOW -> R.string.noise_cancellation_low
+                    NoiseCancellationLevel.MEDIUM -> R.string.noise_cancellation_medium
+                    NoiseCancellationLevel.HIGH -> R.string.noise_cancellation_high
+                })
+                text = getString(R.string.noise_cancellation_state, level) + "\n" + (options.mixer?.let {
+                    getString(R.string.clip_mixer_summary, it.title, it.volume,
+                        getString(if (it.loop) R.string.clip_loop_on else R.string.clip_loop_off))
+                } ?: getString(R.string.clip_mixer_off))
+                setPadding(0, 0, 0, padding / 2)
+            })
+            addView(TextView(context).apply {
+                setText(if (options.processed) R.string.clip_processed_note else R.string.clip_frame_note)
+                setPadding(0, 0, 0, padding)
+            })
             status = TextView(context)
             addView(status)
             addView(MaterialButton(context).apply { setText(R.string.clip_share_in_app); isEnabled = false },
@@ -69,6 +90,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
             }
             addView(download, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
+        return NestedScrollView(context).apply { addView(content) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -87,7 +109,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         try {
             val args = requireArguments()
             val audio = DiscourseClipService.audioAdapter.fromJson(args.getString("audio").orEmpty()) ?: return
-            val started = DiscourseClipService.start(requireContext(), audio, ClipRange(args.getLong("start"), args.getLong("end")))
+            val started = DiscourseClipService.start(requireContext(), audio, ClipRange(args.getLong("start"), args.getLong("end")), exportOptions())
             UiTools.snacker(requireActivity(), if (started) R.string.clip_started else R.string.clip_busy)
             dismiss()
         } catch (_: Exception) {
@@ -99,12 +121,15 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     override fun needToManageOrientation() = false
     override fun initialFocusedView(): View = download
 
+    private fun exportOptions() = ClipExportOptions.fromJson(requireArguments().getString("options")?.let(::JSONObject))
+
     companion object {
-        fun newInstance(audio: DiscourseAudio, range: ClipRange) = ClipDownloadDialog().apply {
+        internal fun newInstance(audio: DiscourseAudio, range: ClipRange, options: ClipExportOptions) = ClipDownloadDialog().apply {
             arguments = Bundle().apply {
                 putString("audio", DiscourseClipService.audioAdapter.toJson(audio))
                 putLong("start", range.startMs)
                 putLong("end", range.endMs)
+                putString("options", options.toJson().toString())
             }
         }
     }

@@ -1,0 +1,32 @@
+package org.videolan.vlc.discourse
+
+import org.json.JSONObject
+import org.videolan.vlc.audio.NoiseCancellationLevel
+
+internal data class ClipMixerOptions(val uri: String, val title: String, val volume: Int, val loop: Boolean) {
+    init { require(uri.isNotBlank() && volume in 0..100) }
+}
+
+/** Captured at Cut; independent of the service's subsequent playback settings. */
+internal data class ClipExportOptions(
+    val noiseLevel: NoiseCancellationLevel = NoiseCancellationLevel.OFF,
+    val mixer: ClipMixerOptions? = null
+) {
+    val processed get() = noiseLevel != NoiseCancellationLevel.OFF || mixer != null
+
+    fun toJson() = JSONObject().apply {
+        put("noise", noiseLevel.name)
+        mixer?.let {
+            put("mixer", JSONObject().apply {
+                put("uri", it.uri); put("title", it.title); put("volume", it.volume); put("loop", it.loop)
+            })
+        }
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject?) = if (json == null) ClipExportOptions() else ClipExportOptions(
+            NoiseCancellationLevel.valueOf(json.getString("noise")),
+            json.optJSONObject("mixer")?.let { ClipMixerOptions(it.getString("uri"), it.getString("title"), it.getInt("volume"), it.getBoolean("loop")) }
+        )
+    }
+}

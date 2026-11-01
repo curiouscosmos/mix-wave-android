@@ -14,14 +14,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.videolan.tools.Settings
 import org.videolan.vlc.R
+import org.videolan.vlc.audio.NoiseCancellationLevel
 import java.io.File
 import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = 29)
 class DiscourseClipServiceTest {
+    @Test fun backgroundExportReusesCompletedDownloadAndPublishesClip() = checkExport(false)
+    @Test fun processedExportPublishesM4aAndPreservesOfflineSource() = checkExport(true)
+
     @Suppress("DEPRECATION")
-    @Test fun backgroundExportReusesCompletedDownloadAndPublishesClip() = runBlocking<Unit> {
+    private fun checkExport(processed: Boolean) = runBlocking<Unit> {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val id = UUID.randomUUID().toString()
@@ -39,18 +43,21 @@ class DiscourseClipServiceTest {
                 "https://example.invalid/unused.mp3", 6.0, source.length(), "audio/mpeg", 1, "", "")
             assertEquals(DiscourseDownloadState.DOWNLOADED, DiscourseDownloadStore(context).state(audio))
             instrumentation.uiAutomation.adoptShellPermissionIdentity()
-            assertTrue(DiscourseClipService.start(context, audio, ClipRange(2_000, 4_000)))
+            val options = if (processed) ClipExportOptions(NoiseCancellationLevel.LOW,
+                ClipMixerOptions(android.net.Uri.fromFile(source).toString(), "Background", 37, true)) else ClipExportOptions()
+            assertTrue(DiscourseClipService.start(context, audio, ClipRange(2_000, 4_000), options))
             // The request is persisted before starting the service and removed only after completion.
             val preferences = context.getSharedPreferences("discourse_clip_export", Context.MODE_PRIVATE)
             withTimeout(30_000) { while (preferences.contains("request")) delay(100) }
             assertEquals(R.string.clip_saved, DiscourseClipService.status.value?.message)
             assertTrue(source.isFile)
             context.contentResolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.IS_PENDING),
+                arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.IS_PENDING, MediaStore.MediaColumns.MIME_TYPE),
                 "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?", arrayOf("Clip test $id%"), null)!!.use { cursor ->
                 assertTrue("No public clip was published", cursor.moveToFirst())
                 assertTrue(cursor.getLong(1) > 0)
                 assertEquals(0, cursor.getInt(2))
+                assertEquals(if (processed) "audio/mp4" else "audio/mpeg", cursor.getString(3))
                 val uri = android.content.ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(0))
                 context.contentResolver.delete(uri, null, null)
             }

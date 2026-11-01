@@ -22,4 +22,13 @@
     <string name="clip_started">Clip download started. You can keep listening.</string>
     <string name="clip_permission">Storage permission is needed to save clips to Downloads.</string>
     <string name="clip_invalid">Enter a valid time (m:ss or h:mm:ss) within the track. Select at least one second.</string>
+    <string name="clip_noise_loading">Wait for noise cancellation to finish loading, then tap Cut again.</string>
+    <string name="clip_mixer_summary">Background: %1$s · %2$d%% · %3$s\nStarts from the beginning.</string>
+    <string name="clip_mixer_off">Background music: Off</string>
+    <string name="clip_loop_on">Loop on</string>
+    <string name="clip_loop_off">Loop off</string>
+    <string name="clip_processed_note">The selected effects will be included in an M4A file saved to Downloads/Rajneesh Discourse. Processing may take a while. The file may include brief encoder padding.</string>
+    <string name="clip_processing">Processing and saving clip…</string>
+    <string name="clip_processing_failed">Could not process clip. Check that the source and selected background file are available, then try Download Clip again.</string>
+    <string name="clip_processing_unsupported">This audio format cannot be processed on this device. Choose another background file or turn off export effects, then try again.</string>
 </resources>

@@ -12,10 +12,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.Keep
-import com.kaleyra.noise_filter.dispatcher.DispatcherProvider
-import com.kaleyra.noise_filter.model_loader.DeepFilterModelLoader
 import com.rikorose.deepfilternet.NativeDeepFilterNet
-import kotlinx.coroutines.Dispatchers
 import org.videolan.libvlc.MediaPlayer
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
@@ -65,22 +62,9 @@ class NoiseOutput private constructor(private val context: Context, initialLevel
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) { invalidate() }
     }
 
-    // The upstream default constructor starts an unowned asynchronous load and swallows errors.
-    // Inline dispatch plus an already loaded model makes initialization synchronous on our IO caller.
     private fun newFilter(): NativeDeepFilterNet {
         val level = requestedLevel
-        return NativeDeepFilterNet(context, attenuationLimit = level.attenuationDb, dispatchers = object : DispatcherProvider {
-            override val main = Dispatchers.Unconfined
-            override val mainImmediate = Dispatchers.Unconfined
-            override val io = Dispatchers.Unconfined
-            override val default = Dispatchers.Unconfined
-        }, modelLoader = object : DeepFilterModelLoader {
-            override suspend fun load(context: Context) = modelBytes
-        }).also {
-            if (it.frameLength !in 2..96000 || it.frameLength % 2 != 0L) {
-                it.release()
-                error("Noise model initialization failed")
-            }
+        return createNoiseFilter(context, level, modelBytes).also {
             appliedLevel = level
         }
     }

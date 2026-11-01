@@ -49,6 +49,7 @@ class DiscourseClipService : Service() {
     private val notifications by lazy { getSystemService(NotificationManager::class.java) }
     private val wakeLock by lazy {
         getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:clip-export")
+            .apply { setReferenceCounted(false) }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -71,13 +72,17 @@ class DiscourseClipService : Service() {
         if (job == null) {
             finished = false
             job = scope.launch {
+                var processing = false
                 try {
                     cleanupOutput()
                     val request = JSONObject(preferences.getString(REQUEST, null) ?: return@launch)
                     val audio = audioAdapter.fromJson(request.getString("audio")) ?: error("Missing audio")
                     val range = ClipRange(request.getLong("start"), request.getLong("end"))
+                    val options = ClipExportOptions.fromJson(request.optJSONObject("options"))
+                    processing = options.processed
                     require(range.startMs >= 0 && range.endMs - range.startMs >= 1_000)
                     val downloads = DiscourseDownloadStore(this@DiscourseClipService)
+                    if (processing) check(downloads.verifiedFile(audio) != null) { "Offline discourse is no longer available" }
                     check(downloads.download(audio)) { "Cannot download source" }
                     var source = downloads.verifiedFile(audio)
                     while (source == null) {
@@ -91,10 +96,14 @@ class DiscourseClipService : Service() {
                     }
                     wakeLock.acquire(10 * 60 * 1_000L)
                     val temporary = File(cacheDir, "discourse-clip-export.tmp")
-                    val mime = DiscourseClipExporter.export(source, range, temporary) { percent ->
-                        mutableStatus.value = ClipExportStatus(R.string.clip_cutting, percent)
-                        notifications.notify(NOTIFICATION, notification(getString(R.string.clip_cutting), percent).build())
+                    val message = if (processing) R.string.clip_processing else R.string.clip_cutting
+                    val onProgress: (Int) -> Unit = { percent ->
+                        wakeLock.acquire(10 * 60 * 1_000L)
+                        mutableStatus.value = ClipExportStatus(message, percent)
+                        notifications.notify(NOTIFICATION, notification(getString(message), percent).build())
                     }
+                    val mime = if (processing) ProcessedClipExporter.export(this@DiscourseClipService, source, range, options, temporary, onProgress)
+                        else DiscourseClipExporter.export(source, range, temporary, onProgress)
                     ensureActive()
                     val uri = publish(temporary, audio.title, range, mime)
                     val open = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
@@ -110,13 +119,9 @@ class DiscourseClipService : Service() {
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
-                    ErrorReporter.error("DiscourseClip", "Clip export failed", error)
-                    val message = if (error is UnsupportedClipFormat) R.string.clip_unsupported else R.string.clip_failed
-                    mutableStatus.value = ClipExportStatus(message, running = false)
-                    mutableResults.tryEmit(message)
-                    notifications.notify(RESULT_NOTIFICATION, NotificationCompat.Builder(this@DiscourseClipService, CHANNEL)
-                        .setSmallIcon(R.drawable.ic_player_clip).setContentTitle(getString(message))
-                        .setContentText(getString(R.string.clip_retry)).setAutoCancel(true).build())
+                    reportFailure(error, processing)
+                } catch (error: LinkageError) {
+                    reportFailure(error, processing)
                 } finally {
                     if (wakeLock.isHeld) wakeLock.release()
                     cleanupOutput()
@@ -126,6 +131,18 @@ class DiscourseClipService : Service() {
             }
         }
         return START_STICKY
+    }
+
+    private fun reportFailure(error: Throwable, processing: Boolean) {
+        ErrorReporter.error("DiscourseClip", "Clip export failed", error)
+        val message = if (processing) {
+            if (error is UnsupportedClipFormat) R.string.clip_processing_unsupported else R.string.clip_processing_failed
+        } else if (error is UnsupportedClipFormat) R.string.clip_unsupported else R.string.clip_failed
+        mutableStatus.value = ClipExportStatus(message, running = false)
+        mutableResults.tryEmit(message)
+        notifications.notify(RESULT_NOTIFICATION, NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(R.drawable.ic_player_clip).setContentTitle(getString(message))
+            .setContentText(getString(R.string.clip_retry)).setAutoCancel(true).build())
     }
 
     private fun notification(message: String, percent: Int? = null): NotificationCompat.Builder {
@@ -233,7 +250,7 @@ class DiscourseClipService : Service() {
 
         /** Returns false if another export is already active. */
         @Synchronized
-        fun start(context: Context, audio: DiscourseAudio, range: ClipRange): Boolean {
+        internal fun start(context: Context, audio: DiscourseAudio, range: ClipRange, options: ClipExportOptions = ClipExportOptions()): Boolean {
             val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             if (preferences.contains(REQUEST)) {
                 // Also wakes a persisted request after an interrupted process restart.
@@ -242,6 +259,7 @@ class DiscourseClipService : Service() {
             }
             check(preferences.edit().putString(REQUEST, JSONObject().apply {
                 put("audio", audioAdapter.toJson(audio)); put("start", range.startMs); put("end", range.endMs)
+                put("options", options.toJson())
             }.toString()).commit())
             try {
                 ContextCompat.startForegroundService(context, Intent(context, DiscourseClipService::class.java))
