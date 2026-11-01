@@ -1,6 +1,8 @@
 package org.videolan.vlc.gui.audio
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -10,6 +12,7 @@ import androidx.appcompat.app.AlertDialog
 import org.videolan.vlc.discourse.DiscourseDownloadStore
 import org.videolan.vlc.discourse.DiscourseDownloadState
 import org.videolan.vlc.R
+import org.videolan.vlc.PlaybackService
 import org.videolan.vlc.databinding.AudioPlayerBinding
 import org.videolan.vlc.discourse.ClipRange
 import org.videolan.vlc.discourse.ClipExportOptions
@@ -33,6 +36,20 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
     private var pendingPosition: Long? = if (saved?.getBoolean("clip_pending") == true) saved.getLong("clip_position") else null
     private var awaitingDownload = saved?.getBoolean("clip_awaiting_download") == true
     private var downloadPrompt: AlertDialog? = null
+    private val previewHandler = Handler(Looper.getMainLooper())
+    private val previewCheck = object : Runnable {
+        override fun run() {
+            val selected = range
+            val service = player.playlistModel.service
+            if (selected != null && service != null &&
+                player.playlistModel.currentMediaWrapper?.discourseAudioSnapshot()?.id == audioId &&
+                !service.mediaplayer.isReleased) {
+                // UI progress is throttled to one second; use the native clock for the bracket.
+                pauseClipPreviewAtEnd(service, selected, service.mediaplayer.time)
+            }
+            previewHandler.postDelayed(this, 50)
+        }
+    }
 
     init {
         binding.playerClip.setBackgroundResource(R.drawable.clip_action_background)
@@ -95,6 +112,7 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
                 ClipDownloadDialog.newInstance(audio, selected, options).show(player.parentFragmentManager, "clip_download")
         }
         update()
+        previewHandler.post(previewCheck)
     }
 
     private fun requestDownload(position: Long) {
@@ -120,7 +138,11 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             }.show()
     }
 
-    fun dispose() { downloadPrompt?.dismiss(); downloadPrompt = null }
+    fun dispose() {
+        previewHandler.removeCallbacks(previewCheck)
+        downloadPrompt?.dismiss()
+        downloadPrompt = null
+    }
 
     private fun select(value: ClipRange, startChanged: Boolean) {
         if (range == value) return
@@ -138,6 +160,13 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             return false
         }
         finishEditing()
+        range?.let { selected ->
+            player.playlistModel.service?.let { service ->
+                val time = if (service.mediaplayer.isReleased) service.getTime() else service.mediaplayer.time
+                if (time < selected.startMs || time >= selected.endMs)
+                    service.seek(selected.startMs, fromUser = true)
+            }
+        }
         render()
         return true
     }
@@ -158,7 +187,8 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             range = null
             pendingPosition = null
             awaitingDownload = false
-            dispose()
+            downloadPrompt?.dismiss()
+            downloadPrompt = null
             audioId = audio?.id
         }
         duration = length
@@ -223,5 +253,12 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
         pendingPosition?.let { out.putLong("clip_position", it) }
         out.putBoolean("clip_open", range != null)
         range?.let { out.putLong("clip_start", it.startMs); out.putLong("clip_end", it.endMs) }
+    }
+}
+
+internal fun pauseClipPreviewAtEnd(service: PlaybackService, range: ClipRange, timeMs: Long) {
+    if (service.isPlaying && timeMs >= range.endMs) {
+        service.pause()
+        service.seek(range.endMs, fromUser = true)
     }
 }

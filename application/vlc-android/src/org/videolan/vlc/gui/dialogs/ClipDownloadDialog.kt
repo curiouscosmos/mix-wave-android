@@ -10,6 +10,9 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ProgressBar
+import androidx.fragment.app.DialogFragment
+import androidx.core.view.isVisible
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.widget.NestedScrollView
@@ -17,7 +20,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.button.MaterialButton
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.ClipRange
@@ -29,9 +31,29 @@ import org.videolan.vlc.discourse.DiscourseClipService
 import org.videolan.vlc.discourse.clipTimestamp
 import org.videolan.vlc.gui.helpers.UiTools
 
-class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
+class ClipDownloadDialog : DialogFragment() {
     private lateinit var download: Button
     private lateinit var status: TextView
+    private lateinit var progress: ProgressBar
+    private lateinit var cancel: Button
+    private lateinit var details: LinearLayout
+    private var exporting = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NO_TITLE, R.style.Theme_VLC_Black)
+        exporting = savedInstanceState?.getBoolean("exporting") == true
+    }
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("exporting", exporting)
+    }
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (Build.VERSION.SDK_INT >= 29 || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
             export()
@@ -43,20 +65,25 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         val padding = (24 * resources.displayMetrics.density).toInt()
         val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding(padding, padding, padding, padding)
+            details = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+            addView(details)
             val args = requireArguments()
             val audio = DiscourseClipService.audioAdapter.fromJson(args.getString("audio").orEmpty())!!
-            addView(TextView(context).apply {
+            details.addView(TextView(context).apply {
                 text = audio.title
                 textSize = 20f
                 setPadding(0, 0, 0, padding / 2)
             })
-            addView(TextView(context).apply {
+            details.addView(TextView(context).apply {
                 text = "${clipTimestamp(args.getLong("start"))} — ${clipTimestamp(args.getLong("end"))}"
                 setPadding(0, 0, 0, padding / 2)
             })
             val options = exportOptions()
-            addView(TextView(context).apply {
+            details.addView(TextView(context).apply {
                 val level = getString(when (options.noiseLevel) {
                     NoiseCancellationLevel.OFF -> R.string.noise_cancellation_off
                     NoiseCancellationLevel.LOW -> R.string.noise_cancellation_low
@@ -69,13 +96,19 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
                 } ?: getString(R.string.clip_mixer_off))
                 setPadding(0, 0, 0, padding / 2)
             })
-            addView(TextView(context).apply {
+            details.addView(TextView(context).apply {
                 setText(if (options.processed) R.string.clip_processed_note else R.string.clip_frame_note)
                 setPadding(0, 0, 0, padding)
             })
             status = TextView(context)
+            status.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             addView(status)
-            addView(MaterialButton(context).apply { setText(R.string.clip_share_in_app); isEnabled = false },
+            progress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = 100
+                isVisible = false
+            }
+            addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            details.addView(MaterialButton(context).apply { setText(R.string.clip_share_in_app); isEnabled = false },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             download = MaterialButton(context).apply {
                 setText(R.string.clip_download)
@@ -89,8 +122,18 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
                 }
             }
             addView(download, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            cancel = MaterialButton(context).apply {
+                setText(R.string.cancel)
+                setOnClickListener {
+                    if (exporting && DiscourseClipService.status.value?.running == true) {
+                        DiscourseClipService.cancel(context)
+                        isEnabled = false
+                    } else dismiss()
+                }
+            }
+            addView(cancel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        return NestedScrollView(context).apply { addView(content) }
+        return NestedScrollView(context).apply { isFillViewport = true; addView(content) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -100,6 +143,17 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
                 DiscourseClipService.status.collect { state ->
                     status.text = state?.let { getString(it.message) + (it.percent?.let { percent -> " $percent%" } ?: "") }.orEmpty()
                     download.isEnabled = state?.running != true
+                    val running = state?.running == true
+                    if (running) exporting = true
+                    isCancelable = !running
+                    details.isVisible = !exporting
+                    download.isVisible = !exporting
+                    progress.isVisible = running
+                    progress.isIndeterminate = state?.percent == null
+                    progress.progress = state?.percent ?: 0
+                    cancel.setText(if (running || !exporting) R.string.cancel else android.R.string.ok)
+                    if (!running) cancel.isEnabled = true
+                    if (exporting && state == null) dismiss()
                 }
             }
         }
@@ -111,15 +165,11 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
             val audio = DiscourseClipService.audioAdapter.fromJson(args.getString("audio").orEmpty()) ?: return
             val started = DiscourseClipService.start(requireContext(), audio, ClipRange(args.getLong("start"), args.getLong("end")), exportOptions())
             UiTools.snacker(requireActivity(), if (started) R.string.clip_started else R.string.clip_busy)
-            dismiss()
+            exporting = true
         } catch (_: Exception) {
             UiTools.snacker(requireActivity(), R.string.clip_failed)
         }
     }
-
-    override fun getDefaultState() = BottomSheetBehavior.STATE_EXPANDED
-    override fun needToManageOrientation() = false
-    override fun initialFocusedView(): View = download
 
     private fun exportOptions() = ClipExportOptions.fromJson(requireArguments().getString("options")?.let(::JSONObject))
 

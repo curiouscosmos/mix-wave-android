@@ -248,6 +248,10 @@ class DiscourseClipService : Service() {
         private val mutableResults = MutableSharedFlow<Int>(extraBufferCapacity = 1)
         internal val results = mutableResults.asSharedFlow()
 
+        internal fun cancel(context: Context) {
+            context.startService(Intent(context, DiscourseClipService::class.java).setAction(CANCEL))
+        }
+
         /** Returns false if another export is already active. */
         @Synchronized
         internal fun start(context: Context, audio: DiscourseAudio, range: ClipRange, options: ClipExportOptions = ClipExportOptions()): Boolean {
@@ -262,8 +266,10 @@ class DiscourseClipService : Service() {
                 put("options", options.toJson())
             }.toString()).commit())
             try {
+                mutableStatus.value = ClipExportStatus(R.string.clip_preparing)
                 ContextCompat.startForegroundService(context, Intent(context, DiscourseClipService::class.java))
             } catch (error: Exception) {
+                mutableStatus.value = null
                 preferences.edit().remove(REQUEST).commit()
                 throw error
             }
