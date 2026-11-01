@@ -3,6 +3,7 @@
         tools:ignore="MissingTranslation">
 
     <!-- Main Rajneesh Discourse Interface -->
+    <string name="clip_requires_offline">The track must be available offline for clipping.</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="app_name" translatable="false">Rajneesh Discourse</string>

@@ -271,6 +271,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
                 }
                 while (true) {
                     updateTrackDownload()
+                    clipEditor?.update()
                     delay(1_000)
                 }
             }
@@ -503,6 +504,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     }
 
     override fun onDestroyView() {
+        clipEditor?.dispose()
         clipEditor = null
         super.onDestroyView()
     }
@@ -917,6 +919,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     }
 
     fun onPlayPauseClick(@Suppress("UNUSED_PARAMETER") view: View?) {
+        if (playlistModel.service?.isPlaying != true && clipEditor?.preparePlay() == false) return
         if (playlistModel.service?.isPausable == false) {
             UiTools.snackerConfirm(requireActivity(), getString(R.string.stop_unpaubale), true) {
                 playlistModel.stop()

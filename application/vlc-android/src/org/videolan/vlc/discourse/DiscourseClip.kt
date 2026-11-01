@@ -4,6 +4,7 @@ import java.util.Locale
 
 /** Times are source timestamps, independent of playback speed and audio effects. */
 data class ClipRange(val startMs: Long, val endMs: Long) {
+    fun previewPosition(startChanged: Boolean): Long = if (startChanged) startMs else maxOf(startMs, endMs - 10_000)
     fun isValid(durationMs: Long) = startMs >= 0 && endMs <= durationMs && endMs - startMs >= 1_000
 
     companion object {

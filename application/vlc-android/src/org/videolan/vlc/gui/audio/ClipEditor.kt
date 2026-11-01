@@ -6,6 +6,9 @@ import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.appcompat.app.AlertDialog
+import org.videolan.vlc.discourse.DiscourseDownloadStore
+import org.videolan.vlc.discourse.DiscourseDownloadState
 import org.videolan.vlc.R
 import org.videolan.vlc.databinding.AudioPlayerBinding
 import org.videolan.vlc.discourse.ClipRange
@@ -24,6 +27,10 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
     private var range: ClipRange? = if (saved?.getBoolean("clip_open") == true)
         ClipRange(saved.getLong("clip_start"), saved.getLong("clip_end")) else null
     private var duration = 0L
+    private val downloads = DiscourseDownloadStore(player.requireContext())
+    private var pendingPosition: Long? = if (saved?.getBoolean("clip_pending") == true) saved.getLong("clip_position") else null
+    private var awaitingDownload = saved?.getBoolean("clip_awaiting_download") == true
+    private var downloadPrompt: AlertDialog? = null
 
     init {
         binding.playerClip.setBackgroundResource(R.drawable.clip_action_background)
@@ -31,16 +38,20 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
         binding.playerClip.supportImageTintList = android.content.res.ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()), intArrayOf(android.graphics.Color.WHITE, normalIcon))
         binding.playerClip.setOnClickListener {
+            player.playlistModel.service?.pause()
+            pendingPosition = null
             val progress = player.playlistModel.progress.value ?: return@setOnClickListener
             if (range == null && duration >= 1_000) {
-                range = ClipRange.initial(progress.time, duration)
+                val audio = player.playlistModel.currentMediaWrapper?.discourseAudioSnapshot() ?: return@setOnClickListener
+                if (downloads.verifiedFile(audio) != null) range = ClipRange.initial(progress.time, duration)
+                else requestDownload(progress.time)
             } else range = null
             finishEditing()
             render()
         }
-        binding.clipRange.onRangeChanged = {
+        binding.clipRange.onRangeChanged = { value, startChanged ->
             if (start.hasFocus() || end.hasFocus()) finishEditing()
-            range = it
+            select(value, startChanged)
             render()
         }
         listOf(R.id.clip_start_minus to Pair(true, -1_000L), R.id.clip_start_plus to Pair(true, 1_000L),
@@ -48,8 +59,8 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             controls.findViewById<View>(id).setOnClickListener {
                 if (!commitTimes()) return@setOnClickListener
                 val current = range ?: return@setOnClickListener
-                range = if (adjustment.first) current.copy(startMs = (current.startMs + adjustment.second).coerceIn(0, current.endMs - 1_000))
-                    else current.copy(endMs = (current.endMs + adjustment.second).coerceIn(current.startMs + 1_000, duration))
+                select(if (adjustment.first) current.copy(startMs = (current.startMs + adjustment.second).coerceIn(0, current.endMs - 1_000))
+                    else current.copy(endMs = (current.endMs + adjustment.second).coerceIn(current.startMs + 1_000, duration)), adjustment.first)
                 finishEditing(); render()
             }
         }
@@ -63,10 +74,61 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             finishEditing()
             val audio = player.playlistModel.currentMediaWrapper?.discourseAudioSnapshot() ?: return@setOnClickListener
             val selected = range ?: return@setOnClickListener
+            if (downloads.verifiedFile(audio) == null) {
+                range = null
+                requestDownload(selected.startMs)
+                render()
+                return@setOnClickListener
+            }
             if (player.parentFragmentManager.findFragmentByTag("clip_download") == null)
                 ClipDownloadDialog.newInstance(audio, selected).show(player.parentFragmentManager, "clip_download")
         }
         update()
+    }
+
+    private fun requestDownload(position: Long) {
+        val audio = player.playlistModel.currentMediaWrapper?.discourseAudioSnapshot() ?: return
+        pendingPosition = position
+        awaitingDownload = true
+        downloadPrompt = AlertDialog.Builder(player.requireContext())
+            .setMessage(R.string.clip_requires_offline)
+            .setNegativeButton(R.string.cancel) { _, _ -> pendingPosition = null; awaitingDownload = false }
+            .setOnCancelListener { pendingPosition = null; awaitingDownload = false }
+            .setPositiveButton(R.string.download) { _, _ ->
+                downloadPrompt = null
+                awaitingDownload = false
+                if (player.playlistModel.currentMediaWrapper?.discourseAudioSnapshot()?.id != audio.id) return@setPositiveButton
+                player.playlistModel.service?.pause()
+                if (downloads.download(audio)) {
+                    pendingPosition = position
+                    update()
+                } else {
+                    pendingPosition = null
+                    UiTools.snacker(player.requireActivity(), R.string.discourse_download_failed)
+                }
+            }.show()
+    }
+
+    fun dispose() { downloadPrompt?.dismiss(); downloadPrompt = null }
+
+    private fun select(value: ClipRange, startChanged: Boolean) {
+        if (range == value) return
+        range = value
+        player.playlistModel.service?.let { service ->
+            service.pause()
+            service.seek(value.previewPosition(startChanged), fromUser = true)
+        }
+    }
+
+    fun preparePlay(): Boolean {
+        if (range == null) return true
+        if (!commitTimes()) {
+            player.playlistModel.service?.pause()
+            return false
+        }
+        finishEditing()
+        render()
+        return true
     }
 
     private fun finishEditing() {
@@ -81,8 +143,26 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
         val audio = media?.discourseAudioSnapshot()
         val length = player.playlistModel.progress.value?.length?.takeIf { it > 0 }
             ?: media?.length?.takeIf { it > 0 } ?: audio?.durationSeconds?.times(1_000)?.toLong() ?: 0
-        if (audioId != audio?.id) { range = null; audioId = audio?.id }
+        if (audioId != audio?.id) {
+            range = null
+            pendingPosition = null
+            awaitingDownload = false
+            dispose()
+            audioId = audio?.id
+        }
         duration = length
+        pendingPosition?.let { position ->
+            if (awaitingDownload) {
+                if (downloadPrompt?.isShowing != true) requestDownload(position)
+            } else if (audio != null && downloads.verifiedFile(audio) != null && duration >= 1_000) {
+                player.playlistModel.service?.pause()
+                range = ClipRange.initial(position, duration)
+                pendingPosition = null
+            } else if (audio == null || downloads.state(audio) != DiscourseDownloadState.DOWNLOADING) {
+                pendingPosition = null
+                UiTools.snacker(player.requireActivity(), R.string.discourse_download_failed)
+            }
+        }
         if (range?.isValid(duration) == false) range = null
         binding.playerClip.isEnabled = audio != null && duration >= 1_000
         binding.playerClip.alpha = if (binding.playerClip.isEnabled) 1f else 0.4f
@@ -98,7 +178,7 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             UiTools.snacker(player.requireActivity(), R.string.clip_invalid)
             return false
         }
-        range = ClipRange(a, b)
+        select(ClipRange(a, b), a != current.startMs)
         return true
     }
 
@@ -126,6 +206,9 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
 
     fun save(out: Bundle) {
         out.putString("clip_audio", audioId)
+        out.putBoolean("clip_pending", pendingPosition != null)
+        out.putBoolean("clip_awaiting_download", awaitingDownload)
+        pendingPosition?.let { out.putLong("clip_position", it) }
         out.putBoolean("clip_open", range != null)
         range?.let { out.putLong("clip_start", it.startMs); out.putLong("clip_end", it.endMs) }
     }

@@ -29,7 +29,7 @@ class ClipRangeView @JvmOverloads constructor(context: Context, attrs: Attribute
     var timelinePadding = 0
     var range = ClipRange(0, 1_000)
         private set
-    var onRangeChanged: ((ClipRange) -> Unit)? = null
+    var onRangeChanged: ((ClipRange, Boolean) -> Unit)? = null
 
     init {
         setWillNotDraw(false)
@@ -128,6 +128,6 @@ class ClipRangeView @JvmOverloads constructor(context: Context, attrs: Attribute
         val value = if (index == 0) range.copy(startMs = time.coerceIn(0, range.endMs - 1_000))
             else range.copy(endMs = time.coerceIn(range.startMs + 1_000, durationMs))
         setRange(value)
-        onRangeChanged?.invoke(value)
+        onRangeChanged?.invoke(value, index == 0)
     }
 }

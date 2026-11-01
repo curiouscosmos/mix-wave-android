@@ -4,6 +4,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DiscourseClipTest {
+    @Test fun endpointPreviewsStayWithinSelection() {
+        listOf(1_000L, 10_000L, 60_000L).forEach { length ->
+            val range = ClipRange(5_000, 5_000 + length)
+            assertEquals(5_000L, range.previewPosition(true))
+            assertEquals(maxOf(5_000L, range.endMs - 10_000), range.previewPosition(false))
+        }
+        assertEquals(0L, ClipRange(0, 1_000).previewPosition(false))
+        assertEquals(90_000L, ClipRange(0, 100_000).previewPosition(false))
+    }
+
     @Test fun initialRangeStartsAtPlaybackAndClampsAtEnd() {
         assertEquals(ClipRange(12_345, 72_345), ClipRange.initial(12_345, 100_000))
         assertEquals(ClipRange(90_000, 100_000), ClipRange.initial(90_000, 100_000))
