@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="clip_export_background_top">#2E191A</color>
+    <color name="clip_export_background_bottom">#241112</color>
+    <color name="clip_export_surface_top">#3A2424</color>
+    <color name="clip_export_surface_bottom">#2B1819</color>
+    <color name="clip_export_border">#593534</color>
+    <color name="clip_export_divider">#46302F</color>
+    <color name="clip_export_accent">#F45B54</color>
+    <color name="clip_export_accent_pressed">#E04A44</color>
+    <color name="clip_export_text">#F6F2F2</color>
+    <color name="clip_export_text_secondary">#B9A7A5</color>
+    <color name="clip_export_icon">#B9A7A5</color>
+    <color name="clip_export_chip">#3B2A2A</color>
+    <color name="clip_export_chip_text">#E6DEDD</color>
+    <color name="clip_export_handle">#7A6A6A</color>
+    <color name="clip_export_close_background">#5A4A4A</color>
+    <color name="clip_export_switch_track_off">#5A5A5A</color>
+    <color name="clip_export_switch_thumb">#FFFFFF</color>
+</resources>

@@ -4,50 +4,52 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.ProgressBar
-import androidx.fragment.app.DialogFragment
-import androidx.core.view.isVisible
+import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import androidx.core.widget.NestedScrollView
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
 import kotlinx.coroutines.launch
-import com.google.android.material.button.MaterialButton
-import org.videolan.vlc.R
-import org.videolan.vlc.discourse.ClipRange
-import org.videolan.vlc.discourse.ClipExportOptions
-import org.videolan.vlc.discourse.ClipOutput
-import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.json.JSONObject
+import org.videolan.tools.HttpImageLoader
+import org.videolan.vlc.R
+import org.videolan.vlc.audio.NoiseCancellationLevel
+import org.videolan.vlc.databinding.DialogClipExportBinding
+import org.videolan.vlc.discourse.ClipExportOptions
+import org.videolan.vlc.discourse.ClipExportStatus
+import org.videolan.vlc.discourse.ClipOutput
+import org.videolan.vlc.discourse.ClipRange
 import org.videolan.vlc.discourse.DiscourseAudio
 import org.videolan.vlc.discourse.DiscourseClipService
 import org.videolan.vlc.discourse.clipTimestamp
+import org.videolan.vlc.discourse.resolveDiscourseUrl
+import org.videolan.vlc.discourse.webUrl
 import org.videolan.vlc.gui.helpers.UiTools
 
-class ClipDownloadDialog : DialogFragment() {
-    private lateinit var download: Button
-    private lateinit var video: Button
+class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
+    private lateinit var binding: DialogClipExportBinding
+    private lateinit var audio: DiscourseAudio
     private var output = ClipOutput.AUDIO
     private var visualUri: String? = null
-    private lateinit var status: TextView
-    private lateinit var progress: ProgressBar
-    private lateinit var cancel: Button
-    private lateinit var details: LinearLayout
     private var exporting = false
+
+    override fun getDefaultState() = STATE_EXPANDED
+
+    override fun needToManageOrientation() = false
+
+    override fun initialFocusedView(): View = binding.clipExportClose
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(STYLE_NO_TITLE, R.style.Theme_VLC_Black)
         exporting = savedInstanceState?.getBoolean("exporting") == true
         output = ClipOutput.valueOf(savedInstanceState?.getString("output") ?: "AUDIO")
         visualUri = savedInstanceState?.getString("visual_uri")
@@ -55,7 +57,8 @@ class ClipDownloadDialog : DialogFragment() {
 
     override fun onStart() {
         super.onStart()
-        dialog?.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        dialog?.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+            ?.setBackgroundColor(Color.TRANSPARENT)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -64,6 +67,7 @@ class ClipDownloadDialog : DialogFragment() {
         outState.putString("output", output.name)
         outState.putString("visual_uri", visualUri)
     }
+
     private val visualPicker = registerForActivityResult(object : ActivityResultContracts.OpenDocument() {
         override fun createIntent(context: Context, input: Array<String>) = super.createIntent(context, input)
             .putExtra(Intent.EXTRA_LOCAL_ONLY, true)
@@ -86,113 +90,92 @@ class ClipDownloadDialog : DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val context = requireContext()
-        val padding = (24 * resources.displayMetrics.density).toInt()
-        val content = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(padding, padding, padding, padding)
-            details = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-            }
-            addView(details)
-            val args = requireArguments()
-            val audio = DiscourseClipService.audioAdapter.fromJson(args.getString("audio").orEmpty())!!
-            details.addView(TextView(context).apply {
-                text = audio.title
-                textSize = 20f
-                setPadding(0, 0, 0, padding / 2)
-            })
-            details.addView(TextView(context).apply {
-                text = "${clipTimestamp(args.getLong("start"))} — ${clipTimestamp(args.getLong("end"))}"
-                setPadding(0, 0, 0, padding / 2)
-            })
-            val options = exportOptions()
-            details.addView(TextView(context).apply {
-                val level = getString(when (options.noiseLevel) {
-                    NoiseCancellationLevel.OFF -> R.string.noise_cancellation_off
-                    NoiseCancellationLevel.LOW -> R.string.noise_cancellation_low
-                    NoiseCancellationLevel.MEDIUM -> R.string.noise_cancellation_medium
-                    NoiseCancellationLevel.HIGH -> R.string.noise_cancellation_high
-                })
-                text = getString(R.string.noise_cancellation_state, level) + "\n" + (options.mixer?.let {
-                    getString(R.string.clip_mixer_summary, it.title, it.volume,
-                        getString(if (it.loop) R.string.clip_loop_on else R.string.clip_loop_off))
-                } ?: getString(R.string.clip_mixer_off))
-                setPadding(0, 0, 0, padding / 2)
-            })
-            details.addView(TextView(context).apply {
-                setText(if (options.processed) R.string.clip_processed_note else R.string.clip_frame_note)
-                setPadding(0, 0, 0, padding)
-            })
-            details.addView(TextView(context).apply {
-                setText(R.string.clip_video_note)
-                setPadding(0, 0, 0, padding)
-            })
-            status = TextView(context)
-            status.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-            addView(status)
-            progress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-                max = 100
-                isVisible = false
-            }
-            addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            details.addView(MaterialButton(context).apply { setText(R.string.clip_share_in_app); isEnabled = false },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            download = MaterialButton(context).apply {
-                setText(R.string.clip_download)
-                setOnClickListener {
-                    output = ClipOutput.AUDIO
-                    visualUri = null
-                    requestExport()
-                }
-            }
-            addView(download, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            video = MaterialButton(context).apply {
-                setText(R.string.clip_create_video)
-                setOnClickListener {
-                    output = ClipOutput.VIDEO
-                    visualPicker.launch(arrayOf("image/*", "video/*"))
-                }
-            }
-            addView(video, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            cancel = MaterialButton(context).apply {
-                setText(R.string.cancel)
-                setOnClickListener {
-                    if (exporting && DiscourseClipService.status.value?.running == true) {
-                        DiscourseClipService.cancel(context)
-                        isEnabled = false
-                    } else dismiss()
-                }
-            }
-            addView(cancel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        binding = DialogClipExportBinding.inflate(inflater, container, false)
+        val args = requireArguments()
+        audio = DiscourseClipService.audioAdapter.fromJson(args.getString("audio").orEmpty())
+            ?: throw IllegalArgumentException("Missing audio")
+        binding.clipExportTitle.text = audio.title.ifBlank { audio.discourseName }
+        binding.clipExportRange.text = getString(
+            R.string.clip_range,
+            clipTimestamp(args.getLong("start")),
+            clipTimestamp(args.getLong("end"))
+        )
+        val options = exportOptions()
+        binding.clipExportNoiseSwitch.isChecked = options.noiseLevel != NoiseCancellationLevel.OFF
+        binding.clipExportMusicSwitch.isChecked = options.mixer != null
+        binding.clipExportClose.setOnClickListener { dismiss() }
+        binding.clipExportShare.setOnClickListener { shareClip() }
+        binding.clipExportDownload.setOnClickListener {
+            output = ClipOutput.AUDIO
+            visualUri = null
+            requestExport()
         }
-        return NestedScrollView(context).apply { isFillViewport = true; addView(content) }
+        binding.clipExportVideo.setOnClickListener {
+            output = ClipOutput.VIDEO
+            visualPicker.launch(arrayOf("image/*", "video/*"))
+        }
+        binding.clipExportCancel.setOnClickListener {
+            if (exporting && DiscourseClipService.status.value?.running == true) {
+                DiscourseClipService.cancel(requireContext())
+                binding.clipExportCancel.isEnabled = false
+            } else dismiss()
+        }
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        loadArtwork()
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                DiscourseClipService.status.collect { state ->
-                    status.text = state?.let { getString(it.message) + (it.percent?.let { percent -> " $percent%" } ?: "") }.orEmpty()
-                    download.isEnabled = state?.running != true
-                    video.isEnabled = state?.running != true
-                    val running = state?.running == true
-                    if (running) exporting = true
-                    isCancelable = !running
-                    details.isVisible = !exporting
-                    download.isVisible = !exporting
-                    video.isVisible = !exporting
-                    progress.isVisible = running
-                    progress.isIndeterminate = state?.percent == null
-                    progress.progress = state?.percent ?: 0
-                    cancel.setText(if (running || !exporting) R.string.cancel else android.R.string.ok)
-                    if (!running) cancel.isEnabled = true
-                    if (exporting && state == null) dismiss()
-                }
+                DiscourseClipService.status.collect { renderStatus(it) }
             }
         }
+    }
+
+    private fun loadArtwork() {
+        binding.clipExportArtwork.setImageDrawable(UiTools.getDefaultAudioDrawable(requireContext()))
+        val url = resolveDiscourseUrl(audio.discourseThumbnailUrl) ?: return
+        binding.clipExportArtwork.tag = url
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bitmap = HttpImageLoader.downloadBitmap(url)
+            if (binding.clipExportArtwork.tag == url && bitmap != null) binding.clipExportArtwork.setImageBitmap(bitmap)
+        }
+    }
+
+    private fun shareClip() {
+        val args = requireArguments()
+        val range = ClipRange(args.getLong("start"), args.getLong("end"))
+        val text = getString(
+            R.string.clip_share_text,
+            audio.title.ifBlank { audio.discourseName },
+            audio.webUrl(),
+            getString(R.string.clip_range, clipTimestamp(range.startMs), clipTimestamp(range.endMs))
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, audio.title)
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.clip_share_link)))
+    }
+
+    private fun renderStatus(state: ClipExportStatus?) {
+        binding.clipExportStatus.text = state?.let { getString(it.message) + (it.percent?.let { percent -> " $percent%" } ?: "") }.orEmpty()
+        val running = state?.running == true
+        if (running) exporting = true
+        isCancelable = !running
+        binding.clipExportMedia.isVisible = !exporting
+        binding.clipExportEffects.isVisible = !exporting
+        binding.clipExportActions.isVisible = !exporting
+        binding.clipExportClose.isVisible = !exporting
+        binding.clipExportProgressGroup.isVisible = exporting
+        binding.clipExportProgress.isVisible = running
+        binding.clipExportProgress.isIndeterminate = state?.percent == null
+        binding.clipExportProgress.progress = state?.percent ?: 0
+        binding.clipExportCancel.setText(if (running || !exporting) R.string.cancel else android.R.string.ok)
+        if (!running) binding.clipExportCancel.isEnabled = true
+        if (exporting && state == null) dismiss()
     }
 
     private fun requestExport() {
@@ -208,7 +191,6 @@ class ClipDownloadDialog : DialogFragment() {
     private fun export() {
         try {
             val args = requireArguments()
-            val audio = DiscourseClipService.audioAdapter.fromJson(args.getString("audio").orEmpty()) ?: return
             val started = DiscourseClipService.start(requireContext(), audio, ClipRange(args.getLong("start"), args.getLong("end")),
                 exportOptions().copy(output = output, visualUri = visualUri))
             UiTools.snacker(requireActivity(), if (started) R.string.clip_started else R.string.clip_busy)

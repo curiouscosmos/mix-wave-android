@@ -16,8 +16,11 @@ import androidx.test.espresso.intent.Intents.intended
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.isEnabled
+import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.espresso.matcher.RootMatchers.isDialog
+import org.hamcrest.Matchers.not
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertFalse
@@ -52,6 +55,9 @@ class ClipDownloadDialogTest {
                 for (orientation in listOf(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)) {
                     scenario.onActivity { it.requestedOrientation = orientation }
                     awaitDialog(scenario, orientation)
+                    onView(withText(R.string.clip_export_title)).inRoot(isDialog()).check(matches(isDisplayed()))
+                    onView(withId(R.id.clip_export_noise_switch)).inRoot(isDialog()).check(matches(not(isEnabled())))
+                    onView(withId(R.id.clip_export_music_switch)).inRoot(isDialog()).check(matches(not(isEnabled())))
                     onView(withText(R.string.clip_download)).inRoot(isDialog()).perform(scrollTo()).check(matches(isDisplayed()))
                     onView(withText(R.string.clip_create_video)).inRoot(isDialog()).perform(scrollTo(), click())
                     onView(withText(R.string.clip_create_video)).inRoot(isDialog()).check(matches(isDisplayed()))
@@ -62,6 +68,19 @@ class ClipDownloadDialogTest {
                 onView(withText(R.string.clip_download)).inRoot(isDialog()).perform(scrollTo()).check(matches(isDisplayed()))
             }
             intended(hasAction(Intent.ACTION_OPEN_DOCUMENT), androidx.test.espresso.intent.VerificationModes.times(2))
+        } finally { Intents.release() }
+    }
+
+    @Test fun shareClipLinkOpensChooser() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        Intents.init()
+        try {
+            intending(hasAction(Intent.ACTION_CHOOSER)).respondWith(Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null))
+            ActivityScenario.launch<ClipDialogTestActivity>(Intent(context, ClipDialogTestActivity::class.java)).use { scenario ->
+                awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                onView(withId(R.id.clip_export_share)).inRoot(isDialog()).perform(scrollTo(), click())
+                intended(hasAction(Intent.ACTION_CHOOSER))
+            }
         } finally { Intents.release() }
     }
 

@@ -70,6 +70,9 @@ fun MediaWrapper.discoursePlaybackIds(): DiscoursePlaybackIds? {
 internal fun DiscoursePlaybackIds.webUrl() =
     "$DISCOURSE_WEB_BASE_URL/discourses/$discourseId/tracks/$audioId"
 
+internal fun DiscourseAudio.webUrl() =
+    "$DISCOURSE_WEB_BASE_URL/discourses/$discourseId/tracks/$id"
+
 fun MediaWrapper.discourseShareUrl(): String? = discoursePlaybackIds()?.webUrl()
 
 internal fun MediaWrapper.configureDiscourseInput(media: IMedia) {
