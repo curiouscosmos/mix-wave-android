@@ -78,8 +78,11 @@ class DiscourseDownloadStore(context: Context) {
     suspend fun refresh(audios: List<DiscourseAudio>): Set<String> = withContext(Dispatchers.IO) {
         val changed = mutableSetOf<String>()
         audios.forEach { audio ->
+            // Settled states are only recomputed after invalidation; active downloads keep polling.
+            val previous = synchronized(cache) { cache[audio.id] }
+            if (previous != null && previous.state != DiscourseDownloadState.DOWNLOADING) return@forEach
             val next = compute(audio)
-            val previous = synchronized(cache) { cache.put(audio.id, next) }
+            synchronized(cache) { cache[audio.id] = next }
             if (previous != next) changed.add(audio.id)
         }
         changed
