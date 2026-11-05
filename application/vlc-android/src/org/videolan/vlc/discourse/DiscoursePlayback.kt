@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import org.videolan.libvlc.interfaces.IMedia
 
 private const val DISCOURSE_TAG_PREFIX = "osho_discourse:"
 private const val DISCOURSE_TAG_SEPARATOR = "|"
@@ -70,6 +71,11 @@ internal fun DiscoursePlaybackIds.webUrl() =
     "$DISCOURSE_WEB_BASE_URL/discourses/$discourseId/tracks/$audioId"
 
 fun MediaWrapper.discourseShareUrl(): String? = discoursePlaybackIds()?.webUrl()
+
+internal fun MediaWrapper.configureDiscourseInput(media: IMedia) {
+    // The native MPEG ES reader estimates VBR seek times, drifting away from timed captions.
+    if (discoursePlaybackIds() != null) media.addOption(":demux=avformat,any")
+}
 
 /** Full audio snapshot kept in the media tag. Used to seed favourites from the player. */
 fun MediaWrapper.discourseAudioSnapshot(): DiscourseAudio? {

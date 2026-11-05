@@ -101,6 +101,7 @@ import org.videolan.vlc.discourse.restoreDiscourseMetadata
 import org.videolan.vlc.discourse.discourseContinuation
 import org.videolan.vlc.discourse.toMediaWrapper
 import org.videolan.vlc.discourse.discoursePlaybackIds
+import org.videolan.vlc.discourse.configureDiscourseInput
 import org.videolan.vlc.discourse.recordDiscourseRecentlyPlayed
 import org.videolan.vlc.discourse.discourseCheckpointDue
 import org.videolan.vlc.util.FileUtils
@@ -632,6 +633,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             }
             //todo restore position as well when we move to VLC 4.0
             val media = mediaFactory.getFromUri(VLCInstance.getInstance(service), uri)
+            mw.configureDiscourseInput(media)
             // Restored audio is paused by PlayerController once the input reports Playing.
             // Letting LibVLC keep ":start-paused" makes an early resume lose against that
             // option and leaves playback silent until the track is switched.

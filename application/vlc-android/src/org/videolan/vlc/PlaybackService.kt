@@ -184,6 +184,7 @@ import org.videolan.vlc.discourse.DiscourseRepository
 import org.videolan.vlc.discourse.DiscourseDownloadStore
 import org.videolan.vlc.discourse.discourseAudioSnapshot
 import org.videolan.vlc.discourse.discoursePlaybackIds
+import org.videolan.vlc.discourse.configureDiscourseInput
 import org.videolan.vlc.media.MediaSessionBrowser
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.NO_LENGTH_PROGRESS_MAX
@@ -323,6 +324,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                     generation != playlistManager.player.inputGeneration ||
                     offlineHandoffAttempt == attempt || hasRenderer() || isVideoPlaying || (!isPlaying && !isPaused)) return@launch
                 val media = mediaFactory.getFromUri(VLCInstance.getInstance(this@PlaybackService), Uri.fromFile(file))
+                current.configureDiscourseInput(media)
                 try {
                     offlineHandoffAttempt = attempt
                     val replaced = playlistManager.player.replaceAudioSource(media) {
