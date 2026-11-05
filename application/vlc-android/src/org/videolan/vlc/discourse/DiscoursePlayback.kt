@@ -77,6 +77,18 @@ fun MediaWrapper.discourseAudioSnapshot(): DiscourseAudio? {
     return runCatching { playbackAudioAdapter.fromJson(json) }.getOrNull()
 }
 
+/**
+ * Saved queues store downloaded tracks as local file URIs, so a rebuilt wrapper gets the file
+ * name (the API UUID) as its title. Restore the metadata captured in the discourse tag.
+ */
+fun MediaWrapper.restoreDiscourseMetadata() {
+    val audio = discourseAudioSnapshot() ?: return
+    setDisplayTitle(audio.title)
+    setArtist("Osho")
+    setArtworkURL(resolveDiscourseUrl(audio.discourseThumbnailUrl))
+    audio.durationSeconds?.takeIf { it.isFinite() && it > 0 }?.let { setLength((it * 1000).toLong()) }
+}
+
 internal fun MediaWrapper.recordDiscourseRecentlyPlayed(context: Context) {
     val ids = discoursePlaybackIds() ?: return
     val json = tag?.split(DISCOURSE_TAG_SEPARATOR, limit = 3)?.getOrNull(2) ?: return

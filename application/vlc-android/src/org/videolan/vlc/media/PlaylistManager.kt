@@ -95,6 +95,7 @@ import org.videolan.vlc.gui.video.VideoPlayerActivity
 import org.videolan.vlc.discourse.DiscoursePlaybackStore
 import org.videolan.vlc.discourse.DiscoursePlaybackIds
 import org.videolan.vlc.discourse.DiscourseRepository
+import org.videolan.vlc.discourse.restoreDiscourseMetadata
 import org.videolan.vlc.discourse.discourseContinuation
 import org.videolan.vlc.discourse.toMediaWrapper
 import org.videolan.vlc.discourse.discoursePlaybackIds
@@ -303,6 +304,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             updated.forEachIndexed { index, media ->
                 original.getOrNull(index)?.discoursePlaybackIds()?.let { ids ->
                     media.tag = original[index].tag
+                    media.restoreDiscourseMetadata()
                     media.time = discoursePlaybackStore.position(ids.audioId) ?: original[index].time
                 }
             }
@@ -388,6 +390,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                 locations.asSequence().mapTo(ArrayList(locations.size)) {
                     MLServiceLocator.getAbstractMediaWrapper(it.toUri()).apply {
                         tag = tags.optString(it, null)
+                        restoreDiscourseMetadata()
                     }
                 }
             }
