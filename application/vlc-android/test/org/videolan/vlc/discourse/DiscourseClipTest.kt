@@ -15,7 +15,8 @@ class DiscourseClipTest {
     }
 
     @Test fun initialRangeStartsAtPlaybackAndClampsAtEnd() {
-        assertEquals(ClipRange(12_345, 72_345), ClipRange.initial(12_345, 100_000))
+        assertEquals(ClipRange(12_345, 612_345), ClipRange.initial(12_345, 1_000_000))
+        assertEquals(ClipRange(0, 100_000), ClipRange.initial(0, 100_000))
         assertEquals(ClipRange(90_000, 100_000), ClipRange.initial(90_000, 100_000))
         assertEquals(ClipRange(99_000, 100_000), ClipRange.initial(100_000, 100_000))
         assertEquals(ClipRange(0, 1_000), ClipRange.initial(0, 1_000))

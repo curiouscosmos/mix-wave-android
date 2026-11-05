@@ -11,7 +11,7 @@ data class ClipRange(val startMs: Long, val endMs: Long) {
         fun initial(positionMs: Long, durationMs: Long): ClipRange {
             require(durationMs >= 1_000)
             val start = positionMs.coerceIn(0, durationMs - 1_000)
-            return ClipRange(start, (start + 60_000).coerceAtMost(durationMs))
+            return ClipRange(start, (start + 600_000).coerceAtMost(durationMs))
         }
     }
 }
