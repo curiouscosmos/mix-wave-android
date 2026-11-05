@@ -217,6 +217,8 @@ class DiscourseFragment : BaseFragment() {
     }
 
     override fun onStop() {
+        downloadPollingJob?.cancel()
+        downloadPollingJob = null
         requireContext().unregisterReceiver(downloadReceiver)
         super.onStop()
     }
@@ -391,23 +393,19 @@ class DiscourseFragment : BaseFragment() {
     }
 
     private fun refreshDownloadIndicators(completedDownloadId: Long? = null) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            if (completedDownloadId != null && completedDownloadId > 0) {
-                downloads.invalidateDownload(completedDownloadId)
-            }
-            val audios = (model.state.value as? DiscourseViewModel.State.Detail)?.tracks.orEmpty()
-            val changed = if (audios.isEmpty()) emptySet()
-            else withContext(Dispatchers.IO) { downloads.refresh(audios) }
-            trackAdapter?.refreshDownloads(changed)
-            (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
-            refreshDownloadSummary()
-            if (audios.isNotEmpty()) startDownloadPolling()
+        if (completedDownloadId != null && completedDownloadId > 0) {
+            downloads.invalidateDownload(completedDownloadId)
+        } else {
+            // Another screen may have started or removed a download while we were stopped.
+            downloads.invalidate()
         }
+        (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
+        startDownloadPolling()
     }
 
     /** Populates the download cache off the UI thread and polls only while a download is active. */
     private fun startDownloadPolling() {
-        downloadPollingJob?.cancel()
+        if (downloadPollingJob?.isActive == true) return
         downloadPollingJob = viewLifecycleOwner.lifecycleScope.launch {
             while (isActive) {
                 val audios = (model.state.value as? DiscourseViewModel.State.Detail)?.tracks.orEmpty()

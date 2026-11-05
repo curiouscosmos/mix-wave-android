@@ -271,12 +271,16 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         captions?.onSlide(captionSlideOffset)
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                trackDownloads.invalidate()
                 launch {
                     org.videolan.vlc.discourse.DiscourseClipService.results.collect { message ->
                         UiTools.snacker(requireActivity(), message)
                     }
                 }
                 while (true) {
+                    playlistModel.currentMediaWrapper?.discourseAudioSnapshot()?.let {
+                        trackDownloads.refresh(listOf(it))
+                    }
                     updateTrackDownload()
                     clipEditor?.update()
                     captions?.update()
@@ -731,7 +735,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         val icon = button.findViewById<android.widget.ImageView>(R.id.player_download_icon)
         val spinner = button.findViewById<android.widget.ProgressBar>(R.id.player_download_spinner)
         val audio = playlistModel.currentMediaWrapper?.discourseAudioSnapshot()
-        val progress = audio?.let(trackDownloads::progress)
+        val progress = audio?.let(trackDownloads::cachedProgress)
         val downloading = progress?.state == DiscourseDownloadState.DOWNLOADING
         button.isEnabled = audio != null
         button.alpha = if (audio != null) 1f else 0.4f
