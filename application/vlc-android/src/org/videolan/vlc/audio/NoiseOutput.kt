@@ -74,6 +74,10 @@ class NoiseOutput private constructor(private val context: Context, initialLevel
         requestedLevel = level
     }
 
+    internal val level get() = requestedLevel
+
+    internal fun recreate() = create(context, requestedLevel, onFailure)
+
     fun install(player: MediaPlayer) {
         check(handle == 0L)
         handle = attach(player.instance)

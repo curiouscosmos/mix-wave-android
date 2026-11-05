@@ -14,6 +14,8 @@ import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer
 import org.videolan.resources.AppContextProvider
 import org.videolan.resources.VLCInstance
+import org.videolan.vlc.audio.NoiseCancellationLevel
+import org.videolan.vlc.audio.NoiseOutput
 import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -40,6 +42,100 @@ class StalledPlaybackTest {
     @Test fun pausedLocalRecoveryResumesWithOnePlay() = exerciseRestoredLocalTrack(paused = true)
 
     @Test fun restoredLocalTrackKeepsPlayingAfterOutputRestart() = exerciseRestoredLocalTrack(paused = false, outputRestart = true)
+
+    @Test fun downloadedInputPreservesPlayingPositionVolumeAndSpeed() = exerciseDownloadSwitch()
+
+    @Test fun downloadedInputKeepsPausedPlaybackPaused() = exerciseDownloadSwitch(paused = true)
+
+    @Test fun playWhileDownloadedInputOpensCancelsPendingPause() = exerciseDownloadSwitch(paused = true, earlyPlay = true)
+
+    @Test fun invalidOfflineInputRestoresStreamWithoutSkipping() = exerciseDownloadSwitch(invalid = true)
+
+    @Test fun downloadedInputPreservesNoiseCancellation() = exerciseDownloadSwitch(filtered = true)
+
+    private fun exerciseDownloadSwitch(paused: Boolean = false, earlyPlay: Boolean = false, invalid: Boolean = false, filtered: Boolean = false) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        AppContextProvider.init(context)
+        val server = StallingServer()
+        val file = File(context.cacheDir, "download-handoff.wav").apply {
+            writeBytes(if (invalid) "invalid audio".toByteArray() else waveAudio())
+        }
+        lateinit var controller: PlayerController
+        fun main(block: () -> Unit) = instrumentation.runOnMainSync(block)
+        val events = Collections.synchronizedList(mutableListOf<Int>())
+        val listener = object : MediaPlayerEventListener {
+            override suspend fun onEvent(event: MediaPlayer.Event) { events.add(event.type) }
+        }
+        main { controller = PlayerController(context) }
+        try {
+            runBlocking {
+                withContext(Dispatchers.Main) {
+                    val media = Media(VLCInstance.getInstance(context), server.uri)
+                    media.addOption(":network-caching=100")
+                    try { controller.startPlayback(media, listener, 0) } finally { media.release() }
+                }
+            }
+            await { controller.getCurrentTime() > 500 }
+            if (filtered) {
+                val output = NoiseOutput.create(context, NoiseCancellationLevel.LOW) { fail("Noise output failed") }
+                main { assertTrue(controller.changeNoiseOutput(output)) }
+                await { output.processedSamples > 24000 }
+            }
+            main { controller.setVolume(37); controller.setRate(1.25f, false) }
+            if (paused) {
+                main { controller.pause() }
+                await { controller.isPaused() }
+            }
+            val old = controller.mediaplayer
+            val position = old.time
+            val pausesBefore = synchronized(events) { events.count { it == MediaPlayer.Event.Paused } }
+            runBlocking {
+                withContext(Dispatchers.Main) {
+                    val media = Media(VLCInstance.getInstance(context), Uri.fromFile(file))
+                    try {
+                        assertFalse("A stale handoff must not replace the input", controller.replaceAudioSource(media) { false })
+                        assertSame(old, controller.mediaplayer)
+                        assertTrue(controller.replaceAudioSource(media) { true })
+                        if (earlyPlay) controller.play()
+                    } finally { media.release() }
+                }
+            }
+            assertNotSame(old, controller.mediaplayer)
+            await {
+                val media = controller.mediaplayer.media
+                val expected = if (invalid) server.uri else Uri.fromFile(file)
+                val matches = try { media?.uri == expected } finally { media?.release() }
+                matches && if (paused && !earlyPlay) controller.isPaused() &&
+                    synchronized(events) { events.count { it == MediaPlayer.Event.Paused } > pausesBefore }
+                else controller.isPlaying() && controller.getCurrentTime() > position
+            }
+            assertEquals(37, controller.getVolume())
+            assertEquals(1.25f, controller.getRate(), 0.01f)
+            if (!invalid) server.close()
+            if (paused && !earlyPlay) {
+                assertTrue("Handoff moved the paused position from $position to ${controller.mediaplayer.time}",
+                    kotlin.math.abs(controller.mediaplayer.time - position) < 500)
+                val stoppedAt = controller.mediaplayer.time
+                SystemClock.sleep(600)
+                assertTrue(kotlin.math.abs(controller.mediaplayer.time - stoppedAt) < 100)
+                main { controller.play() }
+            }
+            await { controller.getCurrentTime() > position + 1000 }
+            if (filtered) {
+                val field = PlayerController::class.java.getDeclaredField("noiseOutput").apply { isAccessible = true }
+                val output = field.get(controller) as NoiseOutput
+                await { output.processedSamples > 24000 }
+                assertEquals(NoiseCancellationLevel.LOW, output.appliedLevel)
+            }
+            assertFalse(events.contains(MediaPlayer.Event.EncounteredError))
+            assertFalse(events.contains(MediaPlayer.Event.EndReached))
+        } finally {
+            server.close()
+            main { controller.stop(); controller.release() }
+            file.delete()
+        }
+    }
 
     private fun exerciseRestoredLocalTrack(paused: Boolean, outputRestart: Boolean = false) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()

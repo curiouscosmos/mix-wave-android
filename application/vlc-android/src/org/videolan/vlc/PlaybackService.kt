@@ -181,6 +181,8 @@ import org.videolan.vlc.gui.preferences.PreferencesActivity
 import org.videolan.vlc.gui.video.PopupManager
 import org.videolan.vlc.gui.video.VideoPlayerActivity
 import org.videolan.vlc.discourse.DiscourseRepository
+import org.videolan.vlc.discourse.DiscourseDownloadStore
+import org.videolan.vlc.discourse.discourseAudioSnapshot
 import org.videolan.vlc.discourse.discoursePlaybackIds
 import org.videolan.vlc.media.MediaSessionBrowser
 import org.videolan.vlc.media.MediaUtils
@@ -292,6 +294,52 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     var mixerLoop = true
         private set
     private lateinit var carConnection: CarConnection
+    private var offlineHandoffJob: Job? = null
+    private var offlineHandoffSession = Any()
+    private var offlineHandoffAttempt: String? = null
+    private val downloadReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE &&
+                intent.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -1) >= 0) switchToDownloadedDiscourse()
+        }
+    }
+
+    private fun switchToDownloadedDiscourse() {
+        if (offlineHandoffJob?.isActive == true || hasRenderer() || isVideoPlaying || (!isPlaying && !isPaused)) return
+        val current = currentMediaWrapper ?: return
+        val audio = current.discourseAudioSnapshot() ?: return
+        val native = mediaplayer
+        val generation = playlistManager.player.inputGeneration
+        if (native.isReleased) return
+        val input = native.media ?: return
+        val remote = try { input.uri.scheme in listOf("http", "https") } finally { input.release() }
+        if (!remote) return
+        val session = offlineHandoffSession
+        offlineHandoffJob = lifecycleScope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) { DiscourseDownloadStore(this@PlaybackService).verifiedFile(audio) } ?: return@launch
+                val attempt = "${audio.id}|${file.path}|${file.lastModified()}|${file.length()}"
+                if (session !== offlineHandoffSession || currentMediaWrapper !== current || native !== mediaplayer ||
+                    generation != playlistManager.player.inputGeneration ||
+                    offlineHandoffAttempt == attempt || hasRenderer() || isVideoPlaying || (!isPlaying && !isPaused)) return@launch
+                val media = mediaFactory.getFromUri(VLCInstance.getInstance(this@PlaybackService), Uri.fromFile(file))
+                try {
+                    offlineHandoffAttempt = attempt
+                    val replaced = playlistManager.player.replaceAudioSource(media) {
+                        session === offlineHandoffSession && currentMediaWrapper === current && native === mediaplayer &&
+                            generation == playlistManager.player.inputGeneration
+                    }
+                    if (!replaced && session === offlineHandoffSession) offlineHandoffAttempt = null
+                } finally { media.release() }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                ErrorReporter.error("PlaybackService", "Cannot switch to downloaded discourse", error)
+            } catch (error: LinkageError) {
+                ErrorReporter.error("PlaybackService", "Cannot switch to downloaded discourse", error)
+            }
+        }
+    }
 
     /**
      * Binds a [MediaBrowserCompat] to the service to allow receiving the
@@ -361,6 +409,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 startPlaybackHistoryTimer()
                 nbErrors = 0
                 syncAudioMixerWithPlayback()
+                switchToDownloadedDiscourse()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     NetworkConnectionManager.isMetered.value?.let {
                         checkMetered(it)
@@ -833,6 +882,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             addAction(CUSTOM_ACTION)
         }
         registerReceiverCompat(receiver, filter, false)
+        registerReceiverCompat(downloadReceiver, IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE), true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             carConnection = CarConnection(this)
             carConnection.type.observeForever {
@@ -977,6 +1027,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         stop(systemExit = true)
 
         unregisterReceiver(receiver)
+        unregisterReceiver(downloadReceiver)
         playlistManager.onServiceDestroyed()
     }
 
@@ -1207,7 +1258,12 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         NotificationManagerCompat.from(this@PlaybackService).cancel(NotificationIds.PLAYBACK.id)
     }
 
-    fun onNewPlayback() = mediaSession.setSessionActivity(sessionPendingIntent)
+    fun onNewPlayback() {
+        offlineHandoffJob?.cancel()
+        offlineHandoffSession = Any()
+        offlineHandoffAttempt = null
+        mediaSession.setSessionActivity(sessionPendingIntent)
+    }
 
     fun onPlaylistLoaded() {
         notifyTrackChanged()

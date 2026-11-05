@@ -95,6 +95,8 @@ import org.videolan.vlc.gui.video.VideoPlayerActivity
 import org.videolan.vlc.discourse.DiscoursePlaybackStore
 import org.videolan.vlc.discourse.DiscoursePlaybackIds
 import org.videolan.vlc.discourse.DiscourseRepository
+import org.videolan.vlc.discourse.DiscourseDownloadStore
+import org.videolan.vlc.discourse.discourseAudioSnapshot
 import org.videolan.vlc.discourse.restoreDiscourseMetadata
 import org.videolan.vlc.discourse.discourseContinuation
 import org.videolan.vlc.discourse.toMediaWrapper
@@ -592,7 +594,10 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
 
         if (mw.type != MediaWrapper.TYPE_VIDEO || isVideoPlaying || player.hasRenderer
                 || mw.hasFlag(MediaWrapper.MEDIA_FORCE_AUDIO)) {
-            var uri = withContext(Dispatchers.IO) { FileUtils.getUri(mw.uri) }
+            var uri = withContext(Dispatchers.IO) {
+                val offline = if (!player.hasRenderer) mw.discourseAudioSnapshot()?.let { DiscourseDownloadStore(ctx).verifiedFile(it) } else null
+                FileUtils.getUri(offline?.let(android.net.Uri::fromFile) ?: mw.uri)
+            }
             if (uri == null) {
                 skipMedia()
                 return
@@ -1394,7 +1399,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                     }
                 }
                 MediaPlayer.Event.SeekableChanged -> {
-                    if (event.seekable)
+                    if (event.seekable && !player.preserveSpeedOnInput)
                         getCurrentMedia()?.let { media ->
                             restoreSpeed(media)
                         }
