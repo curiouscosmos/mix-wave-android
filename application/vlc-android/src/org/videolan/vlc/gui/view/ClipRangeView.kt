@@ -30,6 +30,18 @@ class ClipRangeView @JvmOverloads constructor(context: Context, attrs: Attribute
     var range = ClipRange(0, 1_000)
         private set
     var onRangeChanged: ((ClipRange, Boolean) -> Unit)? = null
+    var onHandleSelected: ((Boolean) -> Unit)? = null
+    var startActive = true
+        set(value) {
+            field = value
+            handles.forEachIndexed { index, view -> view.isSelected = (index == 0) == value }
+            invalidate()
+        }
+
+    private fun activate(index: Int) {
+        startActive = index == 0
+        onHandleSelected?.invoke(startActive)
+    }
 
     init {
         setWillNotDraw(false)
@@ -37,6 +49,9 @@ class ClipRangeView @JvmOverloads constructor(context: Context, attrs: Attribute
         handles.forEachIndexed { index, handle ->
             addView(handle, LayoutParams((48 * density).toInt(), (48 * density).toInt()))
             handle.isFocusable = true
+            handle.isSelected = index == 0
+            handle.setOnClickListener { activate(index) }
+            handle.setOnFocusChangeListener { _, focused -> if (focused) activate(index) }
             handle.setOnKeyListener { _, key, event ->
                 if (event.action != KeyEvent.ACTION_DOWN || key !in listOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)) false
                 else { move(index, if (key == KeyEvent.KEYCODE_DPAD_RIGHT) 1_000 else -1_000); true }
@@ -85,8 +100,8 @@ class ClipRangeView @JvmOverloads constructor(context: Context, attrs: Attribute
         paint.color = Color.rgb(239, 56, 49)
         paint.strokeWidth = 4 * density
         canvas.drawLine(x(range.startMs), height / 2f, x(range.endMs), height / 2f, paint)
-        paint.color = Color.WHITE
-        listOf(range.startMs, range.endMs).forEach {
+        listOf(range.startMs, range.endMs).forEachIndexed { index, it ->
+            paint.color = if ((index == 0) == startActive) Color.rgb(239, 56, 49) else Color.WHITE
             canvas.drawRoundRect(x(it) - 4 * density, height / 2f - 14 * density,
                 x(it) + 4 * density, height / 2f + 14 * density, 4 * density, 4 * density, paint)
         }
@@ -99,6 +114,7 @@ class ClipRangeView @JvmOverloads constructor(context: Context, attrs: Attribute
             dragging = if (minOf(startDistance, endDistance) <= 24 * density) {
                 if (startDistance <= endDistance) 0 else 1
             } else -1
+            if (dragging >= 0) activate(dragging)
         }
         return dragging >= 0
     }
@@ -125,6 +141,7 @@ class ClipRangeView @JvmOverloads constructor(context: Context, attrs: Attribute
     private fun move(index: Int, delta: Long) = change(index, (if (index == 0) range.startMs else range.endMs) + delta)
 
     private fun change(index: Int, time: Long) {
+        activate(index)
         val value = if (index == 0) range.copy(startMs = time.coerceIn(0, range.endMs - 1_000))
             else range.copy(endMs = time.coerceIn(range.startMs + 1_000, durationMs))
         setRange(value)

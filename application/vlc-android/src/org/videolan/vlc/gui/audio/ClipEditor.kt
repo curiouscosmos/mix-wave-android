@@ -32,6 +32,9 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
     private var range: ClipRange? = if (saved?.getBoolean("clip_open") == true)
         ClipRange(saved.getLong("clip_start"), saved.getLong("clip_end")) else null
     private var duration = 0L
+    private var startActive = saved?.getBoolean("clip_start_active", true) ?: true
+    val selection get() = range
+    val isOpen get() = range != null
     private val downloads = DiscourseDownloadStore(player.requireContext())
     private var pendingPosition: Long? = if (saved?.getBoolean("clip_pending") == true) saved.getLong("clip_position") else null
     private var awaitingDownload = saved?.getBoolean("clip_awaiting_download") == true
@@ -57,6 +60,10 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
         binding.playerClip.supportImageTintList = android.content.res.ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()), intArrayOf(android.graphics.Color.WHITE, normalIcon))
         binding.playerClip.setOnClickListener {
+            if (range == null) {
+                startActive = true
+                player.openCaptionsForClip()
+            }
             player.playlistModel.service?.pause()
             pendingPosition = null
             val progress = player.playlistModel.progress.value ?: return@setOnClickListener
@@ -69,13 +76,20 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             render()
         }
         binding.clipRange.onRangeChanged = { value, startChanged ->
+            startActive = startChanged
             if (start.hasFocus() || end.hasFocus()) finishEditing()
             select(value, startChanged)
+            render()
+        }
+        binding.clipRange.onHandleSelected = {
+            startActive = it
+            if (start.hasFocus() || end.hasFocus()) finishEditing()
             render()
         }
         listOf(R.id.clip_start_minus to Pair(true, -1_000L), R.id.clip_start_plus to Pair(true, 1_000L),
             R.id.clip_end_minus to Pair(false, -1_000L), R.id.clip_end_plus to Pair(false, 1_000L)).forEach { (id, adjustment) ->
             controls.findViewById<View>(id).setOnClickListener {
+                startActive = adjustment.first
                 if (!commitTimes()) return@setOnClickListener
                 val current = range ?: return@setOnClickListener
                 select(if (adjustment.first) current.copy(startMs = (current.startMs + adjustment.second).coerceIn(0, current.endMs - 1_000))
@@ -84,6 +98,10 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             }
         }
         listOf(start, end).forEach { field ->
+            field.setOnClickListener { startActive = field === start; render() }
+            field.setOnFocusChangeListener { _, focused ->
+                if (focused) { startActive = field === start; render() }
+            }
             field.setOnEditorActionListener { _, action, _ ->
                 if (action == EditorInfo.IME_ACTION_DONE) { if (commitTimes()) { finishEditing(); render() }; true } else false
             }
@@ -172,18 +190,23 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
     }
 
     private fun finishEditing() {
+        val selectedStart = startActive
         start.clearFocus()
         end.clearFocus()
+        startActive = selectedStart
         (player.requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
             .hideSoftInputFromWindow(binding.root.windowToken, 0)
     }
 
     fun update() {
         val media = player.playlistModel.currentMediaWrapper
+        // Activity recreation can render before the playback service reconnects.
+        if (media == null) { binding.playerClip.isEnabled = false; render(); return }
         val audio = media?.discourseAudioSnapshot()
         val length = player.playlistModel.progress.value?.length?.takeIf { it > 0 }
             ?: media?.length?.takeIf { it > 0 } ?: audio?.durationSeconds?.times(1_000)?.toLong() ?: 0
         if (audioId != audio?.id) {
+            startActive = true
             range = null
             pendingPosition = null
             awaitingDownload = false
@@ -225,6 +248,7 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
     }
 
     fun render() {
+        binding.clipRange.startActive = startActive
         val visible = range != null && player.isShowingCover()
         controls.isVisible = visible
         binding.clipRange.isVisible = visible
@@ -236,6 +260,7 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             timelineBackground.layoutParams = timelineParams
         }
         binding.playerClip.isSelected = range != null
+        player.refreshCaptionRange()
         range?.let {
             if (!start.hasFocus()) start.setText(clipTimestamp(it.startMs))
             if (!end.hasFocus()) end.setText(clipTimestamp(it.endMs))
@@ -247,12 +272,25 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
     }
 
     fun save(out: Bundle) {
+        out.putBoolean("clip_start_active", startActive)
         out.putString("clip_audio", audioId)
         out.putBoolean("clip_pending", pendingPosition != null)
         out.putBoolean("clip_awaiting_download", awaitingDownload)
         pendingPosition?.let { out.putLong("clip_position", it) }
         out.putBoolean("clip_open", range != null)
         range?.let { out.putLong("clip_start", it.startMs); out.putLong("clip_end", it.endMs) }
+    }
+
+    fun selectCaption(cue: org.videolan.vlc.discourse.CaptionCue) {
+        val current = range ?: return
+        val value = org.videolan.vlc.discourse.captionRange(current, cue, startActive, duration)
+        if (value == null) {
+            UiTools.snacker(player.requireActivity(), R.string.caption_invalid_range)
+            return
+        }
+        finishEditing()
+        select(value, startActive)
+        render()
     }
 }
 

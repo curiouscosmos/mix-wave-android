@@ -41,7 +41,9 @@ data class DiscourseAudio(
     @Json(name = "created_at") val createdAt: String,
     @Json(name = "updated_at") val updatedAt: String,
     @Json(name = "total_likes") val totalLikes: Int = 0,
-    val plays: Int = 0
+    val plays: Int = 0,
+    @Json(name = "has_cc") val hasCc: Boolean? = false,
+    @Json(name = "cc_path") val ccPath: String? = null
 )
 
 data class PageResponse<T>(val data: List<T>, val meta: PaginationMeta)

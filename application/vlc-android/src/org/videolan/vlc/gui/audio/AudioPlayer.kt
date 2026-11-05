@@ -161,6 +161,11 @@ private const val SEARCH_TIMEOUT_MILLIS = 10000L
 
 class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlayerAnimator by AudioPlayerAnimator() {
     private var clipEditor: ClipEditor? = null
+    private var captions: PlayerCaptions? = null
+    private var captionSlideOffset = 0f
+    internal fun openCaptionsForClip() { captions?.openForClip() }
+    internal fun refreshCaptionRange() { captions?.render() }
+    internal fun slideCaptions(offset: Float) { captionSlideOffset = offset; captions?.onSlide(offset) }
     private val trackDownloads by lazy { DiscourseDownloadStore(requireContext()) }
 
     internal fun refreshClipEditor() { clipEditor?.render() }
@@ -262,6 +267,8 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         clipEditor = ClipEditor(this, binding, savedInstanceState)
+        captions = PlayerCaptions(this, binding, clipEditor!!, savedInstanceState)
+        captions?.onSlide(captionSlideOffset)
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
@@ -272,6 +279,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
                 while (true) {
                     updateTrackDownload()
                     clipEditor?.update()
+                    captions?.update()
                     delay(1_000)
                 }
             }
@@ -504,6 +512,8 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     }
 
     override fun onDestroyView() {
+        captions?.dispose()
+        captions = null
         clipEditor?.dispose()
         clipEditor = null
         super.onDestroyView()
@@ -568,6 +578,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         clipEditor?.save(outState)
+        captions?.save(outState)
         outState.putInt("player_state", playerState)
         outState.putBoolean("was_playing", wasPlaying)
         outState.putBoolean("show_remaining_time", showRemainingTime)
@@ -747,6 +758,7 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     }
 
     private fun updatePlayerActions() {
+        captions?.update()
         clipEditor?.update()
         updateTrackDownload()
         val media = playlistModel.currentMediaWrapper ?: return

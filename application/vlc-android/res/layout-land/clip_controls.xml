@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:padding="8dp" android:background="@drawable/clip_panel_background">
+    <!-- Keep the native timeline above a single row of bracket and export controls. -->
+    <Space android:layout_width="match_parent" android:layout_height="48dp" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:gravity="center_vertical" android:orientation="horizontal">
+        <Button android:id="@+id/clip_start_minus" style="?android:attr/borderlessButtonStyle" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:padding="0dp" android:text="−" android:contentDescription="@string/clip_start_minus" />
+        <EditText android:id="@+id/clip_start" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:gravity="center" android:padding="0dp" android:singleLine="true" android:textSize="14sp" android:inputType="datetime|time" android:imeOptions="actionDone" android:selectAllOnFocus="true" android:contentDescription="@string/clip_start" />
+        <Button android:id="@+id/clip_start_plus" style="?android:attr/borderlessButtonStyle" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:padding="0dp" android:text="+" android:contentDescription="@string/clip_start_plus" />
+        <Button android:id="@+id/clip_end_minus" style="?android:attr/borderlessButtonStyle" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:padding="0dp" android:text="−" android:contentDescription="@string/clip_end_minus" />
+        <EditText android:id="@+id/clip_end" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:gravity="center" android:padding="0dp" android:singleLine="true" android:textSize="14sp" android:inputType="datetime|time" android:imeOptions="actionDone" android:selectAllOnFocus="true" android:contentDescription="@string/clip_end" />
+        <Button android:id="@+id/clip_end_plus" style="?android:attr/borderlessButtonStyle" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:padding="0dp" android:text="+" android:contentDescription="@string/clip_end_plus" />
+        <TextView android:id="@+id/clip_duration" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="8dp" android:gravity="center" android:textSize="14sp" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/clip_cut" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/clip_cut" android:textAllCaps="false" android:textColor="@android:color/white" android:backgroundTint="#EF3831" app:icon="@drawable/ic_player_clip" app:iconTint="@android:color/white" app:cornerRadius="24dp" />
+    </LinearLayout>
+</LinearLayout>

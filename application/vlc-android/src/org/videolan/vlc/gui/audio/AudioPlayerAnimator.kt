@@ -309,6 +309,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
             binding.playerDiscourse?.visibility = if (slideOffset > 0F) View.VISIBLE else View.GONE
         }
         audioPlayer.refreshClipEditor()
+        audioPlayer.slideCaptions(slideOffset)
         binding.topGradient.alpha = slideOffset
         binding.bottomGradient.alpha = slideOffset
         binding.progressBar.alpha = 1 - slideOffset

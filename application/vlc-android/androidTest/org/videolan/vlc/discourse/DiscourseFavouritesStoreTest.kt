@@ -40,7 +40,8 @@ class DiscourseFavouritesStoreTest {
 
     @Test
     fun likedItemsCreatePlaylistsAndSurviveRestart() {
-        store.addTrack(audio("audio-a"))
+        val captioned = audio("audio-a").copy(hasCc = true, ccPath = "/Hindi captions.srt")
+        store.addTrack(captioned)
         store.addDiscourse(discourse("discourse-a"))
 
         assertEquals(listOf("audio-a"), store.state.value.tracks.map { it.audio.id })
@@ -48,6 +49,7 @@ class DiscourseFavouritesStoreTest {
 
         val reloaded = DiscourseFavouritesStore(prefs)
         assertEquals(listOf("audio-a"), reloaded.state.value.tracks.map { it.audio.id })
+        assertEquals(captioned, reloaded.state.value.tracks.single().audio)
         assertEquals(listOf("discourse-a"), reloaded.state.value.discourses.map { it.discourse.id })
 
         store.removeTrack("audio-a")

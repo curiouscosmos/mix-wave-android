@@ -30,7 +30,9 @@ class DiscoursePlaybackMetadataTest {
             mimeType = "audio/mpeg",
             trackNumber = 4,
             createdAt = "",
-            updatedAt = ""
+            updatedAt = "",
+            hasCc = true,
+            ccPath = "/Hindi captions.srt"
         )
         val json = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
             .adapter(DiscourseAudio::class.java).toJson(audio)
@@ -45,5 +47,8 @@ class DiscoursePlaybackMetadataTest {
         assertEquals("The Real Track Title", media.title)
         assertEquals("Osho", media.artistName)
         assertEquals(60_000L, media.length)
+        assertEquals(audio, media.discourseAudioSnapshot())
+        media.updateCaptionSnapshot(audio.copy(title = "Different title", ccPath = "/refreshed.vtt"))
+        assertEquals(audio.copy(ccPath = "/refreshed.vtt"), media.discourseAudioSnapshot())
     }
 }

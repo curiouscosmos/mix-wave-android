@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="caption_label">Captions</string>
+    <string name="caption_loading">Loading captions…</string>
+    <string name="caption_empty">No timed captions available.</string>
+    <string name="caption_error">Could not load captions.</string>
+    <string name="caption_retry">Retry</string>
+    <string name="caption_follow">Follow playback</string>
+    <string name="caption_invalid_range">Keep Start before End and select at least one second. The other bracket has not changed.</string>
+</resources>
