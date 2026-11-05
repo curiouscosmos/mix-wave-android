@@ -56,7 +56,7 @@ class DiscourseClipService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        notifications.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.clip_download), NotificationManager.IMPORTANCE_LOW))
+        notifications.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.clip_export_title), NotificationManager.IMPORTANCE_LOW))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -73,13 +73,20 @@ class DiscourseClipService : Service() {
             finished = false
             job = scope.launch {
                 var processing = false
+                var video = false
                 try {
                     cleanupOutput()
                     val request = JSONObject(preferences.getString(REQUEST, null) ?: return@launch)
                     val audio = audioAdapter.fromJson(request.getString("audio")) ?: error("Missing audio")
                     val range = ClipRange(request.getLong("start"), request.getLong("end"))
                     val options = ClipExportOptions.fromJson(request.optJSONObject("options"))
+                    video = options.output == ClipOutput.VIDEO
                     processing = options.processed
+                    if (video) {
+                        require(!options.visualUri.isNullOrBlank())
+                        contentResolver.openAssetFileDescriptor(Uri.parse(options.visualUri), "r")?.use { }
+                            ?: error("Selected visual is inaccessible")
+                    }
                     require(range.startMs >= 0 && range.endMs - range.startMs >= 1_000)
                     val downloads = DiscourseDownloadStore(this@DiscourseClipService)
                     if (processing) check(downloads.verifiedFile(audio) != null) { "Offline discourse is no longer available" }
@@ -96,13 +103,19 @@ class DiscourseClipService : Service() {
                     }
                     wakeLock.acquire(10 * 60 * 1_000L)
                     val temporary = File(cacheDir, "discourse-clip-export.tmp")
-                    val message = if (processing) R.string.clip_processing else R.string.clip_cutting
+                    val message = if (video) R.string.clip_video_processing else if (processing) R.string.clip_processing else R.string.clip_cutting
                     val onProgress: (Int) -> Unit = { percent ->
                         wakeLock.acquire(10 * 60 * 1_000L)
                         mutableStatus.value = ClipExportStatus(message, percent)
                         notifications.notify(NOTIFICATION, notification(getString(message), percent).build())
                     }
-                    val mime = if (processing) ProcessedClipExporter.export(this@DiscourseClipService, source, range, options, temporary, onProgress)
+                    val mime = if (video) {
+                        val prepared = File(cacheDir, "discourse-clip-audio.tmp")
+                        ProcessedClipExporter.export(this@DiscourseClipService, source, range, options, prepared) { onProgress(it / 3) }
+                        ClipVideoExporter.export(this@DiscourseClipService, Uri.parse(options.visualUri), prepared, temporary) {
+                            onProgress(33 + it * 66 / 100)
+                        }
+                    } else if (processing) ProcessedClipExporter.export(this@DiscourseClipService, source, range, options, temporary, onProgress)
                         else DiscourseClipExporter.export(source, range, temporary, onProgress)
                     ensureActive()
                     val uri = publish(temporary, audio.title, range, mime)
@@ -119,13 +132,14 @@ class DiscourseClipService : Service() {
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
-                    reportFailure(error, processing)
+                    reportFailure(error, processing, video)
                 } catch (error: LinkageError) {
-                    reportFailure(error, processing)
+                    reportFailure(error, processing, video)
                 } finally {
                     if (wakeLock.isHeld) wakeLock.release()
                     cleanupOutput()
                     File(cacheDir, "discourse-clip-export.tmp").delete()
+                    File(cacheDir, "discourse-clip-audio.tmp").delete()
                     finish()
                 }
             }
@@ -133,9 +147,9 @@ class DiscourseClipService : Service() {
         return START_STICKY
     }
 
-    private fun reportFailure(error: Throwable, processing: Boolean) {
+    private fun reportFailure(error: Throwable, processing: Boolean, video: Boolean) {
         ErrorReporter.error("DiscourseClip", "Clip export failed", error)
-        val message = if (processing) {
+        val message = if (video) R.string.clip_visual_failed else if (processing) {
             if (error is UnsupportedClipFormat) R.string.clip_processing_unsupported else R.string.clip_processing_failed
         } else if (error is UnsupportedClipFormat) R.string.clip_unsupported else R.string.clip_failed
         mutableStatus.value = ClipExportStatus(message, running = false)
@@ -149,13 +163,13 @@ class DiscourseClipService : Service() {
         val cancel = PendingIntent.getService(this, 0, Intent(this, DiscourseClipService::class.java).setAction(CANCEL),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_player_clip)
-            .setContentTitle(getString(R.string.clip_download)).setContentText(message)
+            .setContentTitle(getString(R.string.clip_export_title)).setContentText(message)
             .setOngoing(true).setOnlyAlertOnce(true).setProgress(100, percent ?: 0, percent == null)
             .addAction(0, getString(android.R.string.cancel), cancel)
     }
 
     private suspend fun publish(source: File, title: String, range: ClipRange, mime: String): Uri {
-        val extension = if (mime == "audio/mpeg") "mp3" else "m4a"
+        val extension = if (mime == "video/mp4") "mp4" else if (mime == "audio/mpeg") "mp3" else "m4a"
         val safeTitle = title.replace(Regex("[\\p{Cntrl}/\\\\:*?\"<>|]"), "_").take(80).ifBlank { "Discourse" }
         val name = "${safeTitle}_${clipTimestamp(range.startMs).replace(':', '-')}-${clipTimestamp(range.endMs).replace(':', '-')}_${UUID.randomUUID().toString().take(8)}.$extension"
         val uri: Uri

@@ -1,6 +1,8 @@
 package org.videolan.vlc.gui.dialogs
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -24,6 +26,7 @@ import com.google.android.material.button.MaterialButton
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.ClipRange
 import org.videolan.vlc.discourse.ClipExportOptions
+import org.videolan.vlc.discourse.ClipOutput
 import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.json.JSONObject
 import org.videolan.vlc.discourse.DiscourseAudio
@@ -33,6 +36,9 @@ import org.videolan.vlc.gui.helpers.UiTools
 
 class ClipDownloadDialog : DialogFragment() {
     private lateinit var download: Button
+    private lateinit var video: Button
+    private var output = ClipOutput.AUDIO
+    private var visualUri: String? = null
     private lateinit var status: TextView
     private lateinit var progress: ProgressBar
     private lateinit var cancel: Button
@@ -43,6 +49,8 @@ class ClipDownloadDialog : DialogFragment() {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NO_TITLE, R.style.Theme_VLC_Black)
         exporting = savedInstanceState?.getBoolean("exporting") == true
+        output = ClipOutput.valueOf(savedInstanceState?.getString("output") ?: "AUDIO")
+        visualUri = savedInstanceState?.getString("visual_uri")
     }
 
     override fun onStart() {
@@ -53,6 +61,23 @@ class ClipDownloadDialog : DialogFragment() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("exporting", exporting)
+        outState.putString("output", output.name)
+        outState.putString("visual_uri", visualUri)
+    }
+    private val visualPicker = registerForActivityResult(object : ActivityResultContracts.OpenDocument() {
+        override fun createIntent(context: Context, input: Array<String>) = super.createIntent(context, input)
+            .putExtra(Intent.EXTRA_LOCAL_ONLY, true)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+    }) { uri ->
+        if (uri != null) {
+            try {
+                requireContext().contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                visualUri = uri.toString()
+                requestExport()
+            } catch (_: Exception) {
+                UiTools.snacker(requireActivity(), R.string.clip_visual_failed)
+            }
+        }
     }
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (Build.VERSION.SDK_INT >= 29 || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
@@ -100,6 +125,10 @@ class ClipDownloadDialog : DialogFragment() {
                 setText(if (options.processed) R.string.clip_processed_note else R.string.clip_frame_note)
                 setPadding(0, 0, 0, padding)
             })
+            details.addView(TextView(context).apply {
+                setText(R.string.clip_video_note)
+                setPadding(0, 0, 0, padding)
+            })
             status = TextView(context)
             status.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             addView(status)
@@ -113,15 +142,20 @@ class ClipDownloadDialog : DialogFragment() {
             download = MaterialButton(context).apply {
                 setText(R.string.clip_download)
                 setOnClickListener {
-                    val needed = mutableListOf<String>()
-                    if (Build.VERSION.SDK_INT < 29 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-                        needed.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-                        needed.add(Manifest.permission.POST_NOTIFICATIONS)
-                    if (needed.isEmpty()) export() else permissions.launch(needed.toTypedArray())
+                    output = ClipOutput.AUDIO
+                    visualUri = null
+                    requestExport()
                 }
             }
             addView(download, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            video = MaterialButton(context).apply {
+                setText(R.string.clip_create_video)
+                setOnClickListener {
+                    output = ClipOutput.VIDEO
+                    visualPicker.launch(arrayOf("image/*", "video/*"))
+                }
+            }
+            addView(video, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             cancel = MaterialButton(context).apply {
                 setText(R.string.cancel)
                 setOnClickListener {
@@ -143,11 +177,13 @@ class ClipDownloadDialog : DialogFragment() {
                 DiscourseClipService.status.collect { state ->
                     status.text = state?.let { getString(it.message) + (it.percent?.let { percent -> " $percent%" } ?: "") }.orEmpty()
                     download.isEnabled = state?.running != true
+                    video.isEnabled = state?.running != true
                     val running = state?.running == true
                     if (running) exporting = true
                     isCancelable = !running
                     details.isVisible = !exporting
                     download.isVisible = !exporting
+                    video.isVisible = !exporting
                     progress.isVisible = running
                     progress.isIndeterminate = state?.percent == null
                     progress.progress = state?.percent ?: 0
@@ -159,11 +195,22 @@ class ClipDownloadDialog : DialogFragment() {
         }
     }
 
+    private fun requestExport() {
+        val context = requireContext()
+        val needed = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT < 29 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            needed.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+            needed.add(Manifest.permission.POST_NOTIFICATIONS)
+        if (needed.isEmpty()) export() else permissions.launch(needed.toTypedArray())
+    }
+
     private fun export() {
         try {
             val args = requireArguments()
             val audio = DiscourseClipService.audioAdapter.fromJson(args.getString("audio").orEmpty()) ?: return
-            val started = DiscourseClipService.start(requireContext(), audio, ClipRange(args.getLong("start"), args.getLong("end")), exportOptions())
+            val started = DiscourseClipService.start(requireContext(), audio, ClipRange(args.getLong("start"), args.getLong("end")),
+                exportOptions().copy(output = output, visualUri = visualUri))
             UiTools.snacker(requireActivity(), if (started) R.string.clip_started else R.string.clip_busy)
             exporting = true
         } catch (_: Exception) {

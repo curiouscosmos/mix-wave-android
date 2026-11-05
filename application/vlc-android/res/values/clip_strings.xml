@@ -2,7 +2,12 @@
     <string name="clip_label">Clip</string>
     <string name="clip_cut">Cut</string>
     <string name="clip_share_in_app">Share in App · Coming soon</string>
-    <string name="clip_download">Download Clip</string>
+    <string name="clip_download">Download Clip Audio</string>
+    <string name="clip_create_video">Create Video From Clip</string>
+    <string name="clip_export_title">Export clip</string>
+    <string name="clip_video_note">Choose one photo or video for an MP4. Photos stay still; videos trim or loop to fit the clip. Original video sound is removed.</string>
+    <string name="clip_video_processing">Creating and saving video…</string>
+    <string name="clip_visual_failed">Cannot use the selected photo or video. Check file access and choose supported SDR media.</string>
     <string name="clip_start">Clip start time</string>
     <string name="clip_end">Clip end time</string>
     <string name="clip_start_minus">Move clip start back one second</string>
@@ -16,10 +21,10 @@
     <string name="clip_cutting">Cutting and saving clip…</string>
     <string name="clip_saved">Clip saved to Downloads/Rajneesh Discourse</string>
     <string name="clip_failed">Could not save clip</string>
-    <string name="clip_retry">Check your connection and free storage, then try Download Clip again.</string>
+    <string name="clip_retry">Check your connection and free storage, then try exporting the clip again.</string>
     <string name="clip_unsupported">This audio format does not support fast clipping</string>
     <string name="clip_busy">A clip is already being downloaded. Check the export notification.</string>
-    <string name="clip_started">Clip download started. You can keep listening.</string>
+    <string name="clip_started">Clip export started. You can keep listening.</string>
     <string name="clip_permission">Storage permission is needed to save clips to Downloads.</string>
     <string name="clip_invalid">Enter a valid time (m:ss or h:mm:ss) within the track. Select at least one second.</string>
     <string name="clip_noise_loading">Wait for noise cancellation to finish loading, then tap Cut again.</string>
@@ -27,8 +32,8 @@
     <string name="clip_mixer_off">Background music: Off</string>
     <string name="clip_loop_on">Loop on</string>
     <string name="clip_loop_off">Loop off</string>
-    <string name="clip_processed_note">The selected effects will be included in an M4A file saved to Downloads/Rajneesh Discourse. Processing may take a while. The file may include brief encoder padding.</string>
+    <string name="clip_processed_note">The selected effects will be included in your export. Audio downloads use M4A. Clips are saved to Downloads/Rajneesh Discourse. Processing may take a while and may add brief encoder padding.</string>
     <string name="clip_processing">Processing and saving clip…</string>
-    <string name="clip_processing_failed">Could not process clip. Check that the source and selected background file are available, then try Download Clip again.</string>
+    <string name="clip_processing_failed">Could not process clip. Check that the source and selected background file are available, then try exporting again.</string>
     <string name="clip_processing_unsupported">This audio format cannot be processed on this device. Choose another background file or turn off export effects, then try again.</string>
 </resources>
