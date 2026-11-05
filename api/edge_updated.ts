@@ -1,0 +1,1326 @@
+import * as BunnySDK from "npm:@bunny.net/edgescript-sdk@0.12.1";
+import { createClient } from "npm:@libsql/client@0.17.4/web";
+import process from "node:process";
+
+const API_KEY = process.env.API_KEY;
+const db = createClient({
+	url: process.env.BUNNY_DATABASE_URL!,
+	authToken: process.env.BUNNY_DATABASE_AUTH_TOKEN,
+});
+
+const PAGE_SIZE = 24;
+const TIMELINE_PAGE_SIZE = 12;
+
+async function initializeSchema(): Promise<void> {
+	/**
+	 * Schema
+	 */
+
+	await db.execute(`
+        CREATE TABLE IF NOT EXISTS discourse (
+                                                 id TEXT PRIMARY KEY,
+                                                 title TEXT NOT NULL,
+                                                 thumbnail_url TEXT,
+                                                 is_audio_cleaned INTEGER NOT NULL DEFAULT 0,
+                                                 language TEXT NOT NULL DEFAULT '',
+                                                 total_tracks INTEGER NOT NULL DEFAULT 0,
+                                                 total_likes INTEGER NOT NULL DEFAULT 0,
+                                                 slug TEXT UNIQUE,
+                                                 has_cc INTEGER NOT NULL DEFAULT 0 CHECK (has_cc IN (0, 1)),
+                                                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+	`);
+
+	await db.execute(`
+        CREATE TABLE IF NOT EXISTS discourse_audio (
+                                                       id TEXT PRIMARY KEY,
+                                                       discourse_id TEXT NOT NULL,
+                                                       discourse_name TEXT NOT NULL,
+                                                       discourse_thumbnail_url TEXT,
+                                                       language TEXT NOT NULL,
+                                                       title TEXT NOT NULL,
+                                                       audio_url TEXT NOT NULL,
+                                                       duration_seconds REAL,
+                                                       file_size INTEGER,
+                                                       mime_type TEXT,
+                                                       track_number INTEGER,
+                                                       total_likes INTEGER NOT NULL DEFAULT 0,
+                                                       has_cc INTEGER NOT NULL DEFAULT 0 CHECK (has_cc IN (0, 1)),
+                                                       cc_path TEXT NOT NULL DEFAULT '',
+                                                       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                                                       FOREIGN KEY (discourse_id)
+            REFERENCES discourse(id)
+            ON DELETE CASCADE
+            )
+	`);
+
+	for (const [table, column] of [
+		["discourse", "total_tracks"],
+		["discourse", "total_likes"],
+		["discourse", "language"],
+		["discourse_audio", "total_likes"],
+	]) {
+		const columns = await db.execute(`PRAGMA table_info(${table})`);
+		if (!columns.rows.some((row) => row.name === column)) {
+			await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 0`);
+		}
+	}
+
+	// Upgrade existing databases. Discourse has only has_cc; individual tracks
+	// have has_cc and cc_path. Preserve all existing rows and other columns.
+	for (const table of ["discourse", "discourse_audio"] as const) {
+		const columns = await db.execute(`PRAGMA table_info(${table})`);
+		const existing = new Set(columns.rows.map((row) => String(row.name)));
+		if (!existing.has("has_cc")) {
+			await db.execute(`ALTER TABLE ${table} ADD COLUMN has_cc INTEGER NOT NULL DEFAULT 0 CHECK (has_cc IN (0, 1))`);
+		}
+		if (table === "discourse_audio" && !existing.has("cc_path")) {
+			await db.execute(`ALTER TABLE discourse_audio ADD COLUMN cc_path TEXT NOT NULL DEFAULT ''`);
+		}
+		if (table === "discourse" && existing.has("cc_path")) {
+			// Drop only the obsolete discourse caption path (not the records).
+			await db.execute("ALTER TABLE discourse DROP COLUMN cc_path");
+		}
+	}
+
+	await db.execute(`
+        CREATE TABLE IF NOT EXISTS discourse_likes (
+                                                       discourse_id TEXT NOT NULL,
+                                                       liked_by_user_id TEXT NOT NULL,
+                                                       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                                                       PRIMARY KEY (discourse_id, liked_by_user_id),
+
+            FOREIGN KEY (discourse_id)
+            REFERENCES discourse(id)
+            ON DELETE CASCADE
+            )
+	`);
+
+	await db.execute(`
+        CREATE TABLE IF NOT EXISTS discourse_audio_likes (
+                                                             discourse_audio_id TEXT NOT NULL,
+                                                             liked_by_user_id TEXT NOT NULL,
+                                                             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                                                             PRIMARY KEY (discourse_audio_id, liked_by_user_id),
+
+            FOREIGN KEY (discourse_audio_id)
+            REFERENCES discourse_audio(id)
+            ON DELETE CASCADE
+            )
+	`);
+
+	await db.execute(`
+        CREATE TABLE IF NOT EXISTS timeline (
+                                                id TEXT PRIMARY KEY NOT NULL,
+                                                title TEXT NOT NULL,
+                                                image_url TEXT NOT NULL,
+                                                user_id TEXT NOT NULL,
+                                                discourse_id TEXT,
+                                                discourse_audio_id TEXT NOT NULL,
+                                                start_time INTEGER,
+                                                end_time INTEGER,
+                                                discourse_audio JSON CHECK (discourse_audio IS NULL OR json_valid(discourse_audio)),
+            likes_count INTEGER NOT NULL DEFAULT 0 CHECK (likes_count >= 0),
+            is_approved BOOLEAN NOT NULL DEFAULT 0 CHECK (is_approved IN (0, 1)),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (discourse_id) REFERENCES discourse(id) ON DELETE CASCADE,
+            FOREIGN KEY (discourse_audio_id) REFERENCES discourse_audio(id) ON DELETE CASCADE
+            )
+	`);
+
+	await db.execute(`
+        CREATE TABLE IF NOT EXISTS stats (
+                                             id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                             discourse_id TEXT,
+                                             discourse_audio_id TEXT,
+                                             user_id TEXT NOT NULL,
+                                             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+	`);
+
+	const statsSchema = await db.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'stats'");
+	if (String(statsSchema.rows[0]?.sql ?? "").includes("discourse_id IS NOT NULL) != (discourse_audio_id IS NOT NULL")) {
+		await db.batch([
+			{ sql: "ALTER TABLE stats RENAME TO stats_legacy", args: [] },
+			{ sql: `CREATE TABLE stats (
+                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                           discourse_id TEXT,
+                                           discourse_audio_id TEXT,
+                                           user_id TEXT NOT NULL,
+                                           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )`, args: [] },
+			{ sql: "INSERT INTO stats SELECT * FROM stats_legacy", args: [] },
+			{ sql: "DROP TABLE stats_legacy", args: [] },
+		], "write");
+	}
+
+	/**
+	 * Indexes
+	 */
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_discourse_title
+            ON discourse(title)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_discourse_audio_cleaned
+            ON discourse(is_audio_cleaned)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_discourse_audio_discourse_id
+            ON discourse_audio(discourse_id)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_discourse_audio_title
+            ON discourse_audio(title)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_discourse_audio_discourse_name
+            ON discourse_audio(discourse_name)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_discourse_audio_language
+            ON discourse_audio(language)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_stats_discourse_created
+            ON stats(discourse_id, created_at)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_stats_audio_created
+            ON stats(discourse_audio_id, created_at)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_timeline_created_at
+            ON timeline(created_at DESC)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_timeline_user_id
+            ON timeline(user_id)
+	`);
+
+	await db.execute(`
+        CREATE INDEX IF NOT EXISTS idx_stats_user_entity_created
+            ON stats(user_id, discourse_id, discourse_audio_id, created_at)
+	`);
+}
+
+let schemaReady: Promise<void> | undefined;
+const ensureSchema = () => {
+	if (!schemaReady) {
+		schemaReady = initializeSchema().catch((error) => {
+			schemaReady = undefined;
+			throw error;
+		});
+	}
+	return schemaReady;
+};
+
+/**
+ * Helpers
+ */
+
+const jsonResponse = (
+	data: unknown,
+	status = 200,
+) =>
+	new Response(JSON.stringify(data), {
+		status,
+		headers: {
+			"content-type": "application/json",
+		},
+	});
+
+const hasValidApiKey = (request: Request) =>
+	Boolean(API_KEY) && request.headers.get("x-api-key") === API_KEY;
+
+async function recordListening(request: Request): Promise<Response> {
+	const payload: any = await request.json().catch(() => null);
+	const userId = typeof payload?.user_id === "string" ? payload.user_id.trim() : "";
+	const discourseId = typeof payload?.discourse_id === "string" ? payload.discourse_id.trim() : "";
+	const audioId = typeof payload?.discourse_audio_id === "string" ? payload.discourse_audio_id.trim() : "";
+	if (!userId || !discourseId || !audioId) {
+		return jsonResponse({ error: "user_id, discourse_id, and discourse_audio_id are required." }, 400);
+	}
+
+	const [discourse, audio] = await Promise.all([
+		db.execute({ sql: "SELECT id FROM discourse WHERE id = ? LIMIT 1", args: [discourseId] }),
+		db.execute({ sql: "SELECT id FROM discourse_audio WHERE id = ? LIMIT 1", args: [audioId] }),
+	]);
+	if (!discourse.rows.length || !audio.rows.length) return jsonResponse({ error: "Discourse or audio not found." }, 404);
+
+	const insert = await db.execute({
+		sql: `INSERT INTO stats (discourse_id, discourse_audio_id, user_id)
+              SELECT ?, ?, ? WHERE NOT EXISTS (
+			SELECT 1 FROM stats WHERE user_id = ? AND created_at >= datetime('now', '-24 hours')
+			AND (discourse_id = ? OR discourse_audio_id = ?)
+		)`,
+		args: [discourseId, audioId, userId, userId, discourseId, audioId],
+	});
+	return insert.rowsAffected
+		? jsonResponse({ data: { recorded: true } }, 201)
+		: jsonResponse({ data: { recorded: false, reason: "duplicate_within_24_hours" } });
+}
+
+async function getTopListening(url: URL): Promise<Response> {
+	const by = url.searchParams.get("by");
+	const time = url.searchParams.get("time");
+	if (!["discourse", "discourse_audio"].includes(by ?? "") || !["7_days", "24_hours"].includes(time ?? "")) {
+		return jsonResponse({ error: "by must be discourse or discourse_audio; time must be 7_days or 24_hours." }, 400);
+	}
+
+	const column = by === "discourse" ? "discourse_id" : "discourse_audio_id";
+	const interval = time === "7_days" ? "-7 days" : "-24 hours";
+	const result = await db.execute({
+		sql: `SELECT ${column} AS id, COUNT(*) AS plays FROM stats WHERE ${column} IS NOT NULL AND created_at >= datetime('now', ?) GROUP BY ${column} ORDER BY plays DESC, id ASC LIMIT ?`,
+		args: [interval, PAGE_SIZE],
+	});
+	const ranked = result.rows as { id: string; plays: number }[];
+	const records = ranked.length
+		? await db.execute({
+			sql: `SELECT * FROM ${by === "discourse" ? "discourse" : "discourse_audio"} WHERE id IN (${ranked.map(() => "?").join(", ")})`,
+			args: ranked.map(({ id }) => id),
+		})
+		: { rows: [] as any[] };
+	const byId = new Map(records.rows.map((row: any) => [row.id, by === "discourse" ? normalizeDiscourse(row) : normalizeDiscourseAudio(row)]));
+	const data = ranked.flatMap(({ id, plays }) => {
+		const record = byId.get(id);
+		return record ? [{ ...record, plays }] : [];
+	});
+	return jsonResponse({ data, meta: { by, time, limit: PAGE_SIZE } });
+}
+
+async function getUserLikes(url: URL): Promise<Response> {
+	const userId = url.searchParams.get("user_id")?.trim();
+	if (!userId) return jsonResponse({ error: "user_id is required." }, 400);
+
+	const [discourses, audios] = await Promise.all([
+		db.execute({
+			sql: "SELECT discourse_id FROM discourse_likes WHERE liked_by_user_id = ?",
+			args: [userId],
+		}),
+		db.execute({
+			sql: "SELECT discourse_audio_id FROM discourse_audio_likes WHERE liked_by_user_id = ?",
+			args: [userId],
+		}),
+	]);
+
+	return jsonResponse({
+		discourse: discourses.rows.map((row) => row.discourse_id),
+		discourse_audio: audios.rows.map((row) => row.discourse_audio_id),
+	});
+}
+
+async function deleteUserLike(url: URL): Promise<Response> {
+	const userId = url.searchParams.get("user_id")?.trim();
+	const discourseId = url.searchParams.get("discourse_id")?.trim();
+	const audioId = url.searchParams.get("discourse_audio_id")?.trim();
+	if (!userId || Boolean(discourseId) === Boolean(audioId)) {
+		return jsonResponse({ error: "user_id and exactly one of discourse_id or discourse_audio_id are required." }, 400);
+	}
+
+	if (discourseId) {
+		const result = await db.execute({
+			sql: "DELETE FROM discourse_likes WHERE discourse_id = ? AND liked_by_user_id = ?",
+			args: [discourseId, userId],
+		});
+		if (result.rowsAffected) {
+			await db.execute({
+				sql: "UPDATE discourse SET total_likes = MAX(0, total_likes - 1) WHERE id = ?",
+				args: [discourseId],
+			});
+		}
+
+		const count = await db.execute({
+			sql: "SELECT total_likes FROM discourse WHERE id = ?",
+			args: [discourseId],
+		});
+		return jsonResponse({ data: { discourse_id: discourseId, liked_by_user_id: userId, unliked: Boolean(result.rowsAffected), total_likes: Number(count.rows[0]?.total_likes ?? 0) } });
+	}
+
+	const result = await db.execute({
+		sql: "DELETE FROM discourse_audio_likes WHERE discourse_audio_id = ? AND liked_by_user_id = ?",
+		args: [audioId, userId],
+	});
+	if (result.rowsAffected) {
+		await db.execute({ sql: "UPDATE discourse_audio SET total_likes = MAX(0, total_likes - 1) WHERE id = ?", args: [audioId] });
+	}
+
+	const audioCount = await db.execute({ sql: "SELECT total_likes FROM discourse_audio WHERE id = ?", args: [audioId] });
+	return jsonResponse({
+		data: {
+			discourse_audio_id: audioId,
+			liked_by_user_id: userId,
+			unliked: Boolean(result.rowsAffected),
+			total_likes: Number(audioCount.rows[0]?.total_likes ?? 0),
+		},
+	});
+}
+
+const parsePage = (value: string | null) => {
+	const page = Number(value ?? "1");
+
+	if (
+		!Number.isInteger(page) ||
+		page < 1
+	) {
+		return 1;
+	}
+
+	return page;
+};
+
+const parseBoolean = (
+	value: string | null,
+): boolean | null => {
+	if (value === null) {
+		return null;
+	}
+
+	const normalized =
+		value.toLowerCase();
+
+	if (
+		normalized === "true" ||
+		normalized === "1"
+	) {
+		return true;
+	}
+
+	if (
+		normalized === "false" ||
+		normalized === "0"
+	) {
+		return false;
+	}
+
+	return null;
+};
+
+const paginationMeta = (
+	page: number,
+	totalRecords: number,
+	pageSize = PAGE_SIZE,
+) => ({
+	page,
+	page_size: pageSize,
+	total_records: totalRecords,
+	total_pages: Math.ceil(
+		totalRecords / pageSize,
+	),
+});
+
+/**
+ * Convert SQLite integer booleans to JS booleans.
+ */
+const normalizeDiscourse = (
+	row: any,
+) => ({
+	...row,
+	is_audio_cleaned:
+		Boolean(row.is_audio_cleaned),
+	has_cc: Boolean(row.has_cc),
+});
+
+const normalizeDiscourseAudio = (row: any) => ({
+	...row,
+	has_cc: Boolean(row.has_cc),
+});
+
+/**
+ * GET /discourses
+ *
+ * Query:
+ *
+ * ?page=1
+ * ?search=dhyan
+ * ?is_audio_cleaned=true
+ * ?language=hindi
+ * ?sort=most_liked
+ */
+
+async function getDiscourses(
+	url: URL,
+): Promise<Response> {
+	const page = parsePage(
+		url.searchParams.get("page"),
+	);
+	const sortByLikes = url.searchParams.get("sort") === "most_liked";
+
+	const search =
+		url.searchParams
+			.get("search")
+			?.trim() ?? "";
+	const language =
+		url.searchParams
+			.get("language")
+			?.trim() ?? "";
+
+	const cleanedRaw =
+		url.searchParams.get(
+			"is_audio_cleaned",
+		);
+
+	const isAudioCleaned =
+		parseBoolean(cleanedRaw);
+
+	if (
+		cleanedRaw !== null &&
+		isAudioCleaned === null
+	) {
+		return jsonResponse(
+			{
+				error:
+					"is_audio_cleaned must be true or false.",
+			},
+			400,
+		);
+	}
+
+	const where: string[] = [];
+	const args: any[] = [];
+
+	if (search) {
+		where.push(
+			"title LIKE ? COLLATE NOCASE",
+		);
+
+		args.push(`%${search}%`);
+	}
+	if (language) {
+		where.push("language = ? COLLATE NOCASE");
+		args.push(language);
+	}
+
+	if (isAudioCleaned !== null) {
+		where.push(
+			"is_audio_cleaned = ?",
+		);
+
+		args.push(
+			isAudioCleaned ? 1 : 0,
+		);
+	}
+
+	const whereSql =
+		where.length > 0
+			? `WHERE ${where.join(" AND ")}`
+			: "";
+
+	/**
+	 * Count matching records.
+	 */
+	const countResult =
+		await db.execute({
+			sql: `
+                SELECT COUNT(*) AS total
+                FROM discourse
+                         ${whereSql}
+			`,
+			args,
+		});
+
+	const totalRecords = Number(
+		countResult.rows[0]?.total ?? 0,
+	);
+
+	const offset =
+		(page - 1) * PAGE_SIZE;
+
+	const result =
+		await db.execute({
+			sql: `
+                SELECT *
+                FROM discourse
+                         ${whereSql}
+                ORDER BY ${sortByLikes ? "total_likes DESC, title COLLATE NOCASE ASC" : "title COLLATE NOCASE ASC"}
+                    LIMIT ?
+                OFFSET ?
+			`,
+			args: [
+				...args,
+				PAGE_SIZE,
+				offset,
+			],
+		});
+
+	return jsonResponse({
+		data: result.rows.map(
+			normalizeDiscourse,
+		),
+
+		meta: paginationMeta(
+			page,
+			totalRecords,
+		),
+	});
+}
+
+/**
+ * GET /discourse-audios
+ *
+ * Query:
+ *
+ * ?page=1
+ * ?search=upanishad
+ * ?discourse_name=Adhyatam Upanishad
+ * ?language=hindi
+ * ?sort=most_liked
+ *
+ * OR:
+ *
+ * ?discourse_id=UUID
+ *
+ * discourse_id intentionally returns ALL
+ * tracks without pagination.
+ */
+
+async function getDiscourseAudios(
+	url: URL,
+): Promise<Response> {
+	const discourseId =
+		url.searchParams
+			.get("discourse_id")
+			?.trim();
+
+	/**
+	 * Special case:
+	 *
+	 * Fetch ALL audio for one discourse.
+	 * No pagination.
+	 */
+	if (discourseId) {
+		const result =
+			await db.execute({
+				sql: `
+                    SELECT *
+                    FROM discourse_audio
+                    WHERE discourse_id = ?
+                    ORDER BY
+                        track_number ASC,
+                        title COLLATE NOCASE ASC
+				`,
+				args: [discourseId],
+			});
+
+		return jsonResponse({
+			data: result.rows.map(normalizeDiscourseAudio),
+
+			meta: {
+				total_records:
+				result.rows.length,
+			},
+		});
+	}
+
+	const page = parsePage(
+		url.searchParams.get("page"),
+	);
+	const sortByLikes = url.searchParams.get("sort") === "most_liked";
+
+	const search =
+		url.searchParams
+			.get("search")
+			?.trim() ?? "";
+
+	const discourseName =
+		url.searchParams
+			.get("discourse_name")
+			?.trim() ?? "";
+
+	const language =
+		url.searchParams
+			.get("language")
+			?.trim() ?? "";
+
+	const where: string[] = [];
+	const args: any[] = [];
+
+	/**
+	 * Search audio title
+	 */
+	if (search) {
+		where.push(
+			"title LIKE ? COLLATE NOCASE",
+		);
+
+		args.push(`%${search}%`);
+	}
+
+	/**
+	 * Discourse name filter.
+	 *
+	 * Exact match, case insensitive.
+	 */
+	if (discourseName) {
+		where.push(
+			"discourse_name = ? COLLATE NOCASE",
+		);
+
+		args.push(discourseName);
+	}
+
+	/**
+	 * Language filter.
+	 *
+	 * Example:
+	 *
+	 * hindi
+	 * english
+	 */
+	if (language) {
+		where.push(
+			"language = ? COLLATE NOCASE",
+		);
+
+		args.push(language);
+	}
+
+	const whereSql =
+		where.length > 0
+			? `WHERE ${where.join(" AND ")}`
+			: "";
+
+	/**
+	 * Count
+	 */
+	const countResult =
+		await db.execute({
+			sql: `
+                SELECT COUNT(*) AS total
+                FROM discourse_audio
+                         ${whereSql}
+			`,
+			args,
+		});
+
+	const totalRecords = Number(
+		countResult.rows[0]?.total ?? 0,
+	);
+
+	const offset =
+		(page - 1) * PAGE_SIZE;
+
+	/**
+	 * Records
+	 */
+	const result =
+		await db.execute({
+			sql: `
+                SELECT *
+                FROM discourse_audio
+                         ${whereSql}
+
+                ORDER BY ${sortByLikes
+                        ? "total_likes DESC, discourse_name COLLATE NOCASE ASC, track_number ASC, title COLLATE NOCASE ASC"
+                        : "discourse_name COLLATE NOCASE ASC, track_number ASC, title COLLATE NOCASE ASC"}
+
+                    LIMIT ?
+                OFFSET ?
+			`,
+			args: [
+				...args,
+				PAGE_SIZE,
+				offset,
+			],
+		});
+
+	return jsonResponse({
+		data: result.rows.map(normalizeDiscourseAudio),
+
+		meta: paginationMeta(
+			page,
+			totalRecords,
+		),
+	});
+}
+
+/**
+ * PUT /discourses/:id/like
+ *
+ * Body:
+ *
+ * {
+ *   "user_id": "123"
+ * }
+ */
+
+async function likeDiscourse(
+	discourseId: string,
+	request: Request,
+): Promise<Response> {
+	const payload: any =
+		await request
+			.json()
+			.catch(() => null);
+
+	const userId =
+		payload?.user_id?.trim();
+
+	if (!userId) {
+		return jsonResponse(
+			{
+				error:
+					"user_id is required.",
+			},
+			400,
+		);
+	}
+
+	/**
+	 * Make sure discourse exists.
+	 */
+	const discourse =
+		await db.execute({
+			sql: `
+                SELECT id
+                FROM discourse
+                WHERE id = ?
+                    LIMIT 1
+			`,
+			args: [discourseId],
+		});
+
+	if (!discourse.rows.length) {
+		return jsonResponse(
+			{
+				error:
+					"Discourse not found.",
+			},
+			404,
+		);
+	}
+
+	/**
+	 * INSERT OR IGNORE makes this
+	 * endpoint idempotent.
+	 */
+	const likeResult = await db.execute({
+		sql: `
+            INSERT OR IGNORE INTO discourse_likes (
+        discourse_id,
+        liked_by_user_id
+      )
+      VALUES (?, ?)
+		`,
+		args: [
+			discourseId,
+			userId,
+		],
+	});
+	if (likeResult.rowsAffected) await db.execute({
+		sql: `UPDATE discourse SET total_likes = total_likes + 1 WHERE id = ?`,
+		args: [discourseId],
+	});
+
+	const countResult =
+		await db.execute({
+			sql: `
+                SELECT total_likes AS total
+                FROM discourse
+                WHERE id = ?
+			`,
+			args: [discourseId],
+		});
+
+	return jsonResponse({
+		data: {
+			discourse_id:
+			discourseId,
+
+			liked_by_user_id:
+			userId,
+
+			liked: true,
+
+			total_likes: Number(
+				countResult.rows[0]
+					?.total ?? 0,
+			),
+		},
+	});
+}
+
+/**
+ * PUT /discourse-audios/:id/like
+ *
+ * Body:
+ *
+ * {
+ *   "user_id": "123"
+ * }
+ */
+
+async function likeDiscourseAudio(
+	audioId: string,
+	request: Request,
+): Promise<Response> {
+	const payload: any =
+		await request
+			.json()
+			.catch(() => null);
+
+	const userId =
+		payload?.user_id?.trim();
+
+	if (!userId) {
+		return jsonResponse(
+			{
+				error:
+					"user_id is required.",
+			},
+			400,
+		);
+	}
+
+	/**
+	 * Make sure audio exists.
+	 */
+	const audio =
+		await db.execute({
+			sql: `
+                SELECT id
+                FROM discourse_audio
+                WHERE id = ?
+                    LIMIT 1
+			`,
+			args: [audioId],
+		});
+
+	if (!audio.rows.length) {
+		return jsonResponse(
+			{
+				error:
+					"Discourse audio not found.",
+			},
+			404,
+		);
+	}
+
+	const likeResult = await db.execute({
+		sql: `
+            INSERT OR IGNORE INTO discourse_audio_likes (
+        discourse_audio_id,
+        liked_by_user_id
+      )
+      VALUES (?, ?)
+		`,
+		args: [
+			audioId,
+			userId,
+		],
+	});
+	if (likeResult.rowsAffected) {
+		await db.execute({
+			sql: `UPDATE discourse_audio SET total_likes = total_likes + 1 WHERE id = ?`,
+			args: [audioId],
+		});
+	}
+
+	const countResult =
+		await db.execute({
+			sql: `
+                SELECT total_likes AS total
+                FROM discourse_audio
+                WHERE id = ?
+			`,
+			args: [audioId],
+		});
+
+	return jsonResponse({
+		data: {
+			discourse_audio_id:
+			audioId,
+
+			liked_by_user_id:
+			userId,
+
+			liked: true,
+
+			total_likes: Number(
+				countResult.rows[0]
+					?.total ?? 0,
+			),
+		},
+	});
+}
+
+/**
+ * POST /discourses/:id/cc         Body: { has_cc: boolean }
+ * POST /discourse-audios/:id/cc   Body: { has_cc: boolean, cc_path: string }
+ * Discourse CC is only an availability flag; caption paths belong to tracks.
+ */
+async function updateClosedCaptions(
+	resource: "discourses" | "discourse-audios",
+	id: string,
+	request: Request,
+): Promise<Response> {
+	const payload: any = await request.json().catch(() => null);
+	if (typeof payload?.has_cc !== "boolean") {
+		return jsonResponse({ error: "has_cc is required and must be a boolean." }, 400);
+	}
+
+	const isDiscourse = resource === "discourses";
+	if (isDiscourse && payload.cc_path !== undefined) {
+		return jsonResponse({ error: "cc_path is only supported for discourse audio." }, 400);
+	}
+
+	let ccPath = "";
+	if (!isDiscourse) {
+		if (typeof payload.cc_path !== "string") {
+			return jsonResponse({ error: "cc_path is required and must be a string." }, 400);
+		}
+		ccPath = payload.cc_path.trim();
+		if (payload.has_cc && !ccPath) {
+			return jsonResponse({ error: "cc_path must be non-empty when has_cc is true." }, 400);
+		}
+	}
+
+	// Table names are selected exclusively from the two hardcoded options.
+	const table = isDiscourse ? "discourse" : "discourse_audio";
+	const update = await db.execute(isDiscourse
+		? {
+			sql: "UPDATE discourse SET has_cc = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+			args: [payload.has_cc ? 1 : 0, id],
+		}
+		: {
+			sql: "UPDATE discourse_audio SET has_cc = ?, cc_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+			args: [payload.has_cc ? 1 : 0, ccPath, id],
+		});
+	if (!update.rowsAffected) {
+		return jsonResponse({ error: isDiscourse ? "Discourse not found." : "Discourse audio not found." }, 404);
+	}
+
+	const updated = await db.execute({
+		sql: `SELECT * FROM ${table} WHERE id = ? LIMIT 1`,
+		args: [id],
+	});
+	const row = updated.rows[0];
+	return jsonResponse({ data: isDiscourse ? normalizeDiscourse(row) : normalizeDiscourseAudio(row) });
+}
+
+/**
+ * Timeline posts contain a snapshot of the associated discourse audio.
+ * SQLite stores JSON as text and BOOLEAN as 0/1, so convert both for API responses.
+ */
+const normalizeTimeline = (row: any, columns: string[]) => {
+	const post = Object.fromEntries(columns.map((column, index) => [column, row[index]]));
+	return {
+		...post,
+		discourse_audio: post.discourse_audio ? normalizeDiscourseAudio(JSON.parse(String(post.discourse_audio))) : null,
+		is_approved: Boolean(post.is_approved),
+	};
+};
+
+/**
+ * GET /timeline?page=1
+ * Returns 12 posts per page, newest first.
+ */
+async function getTimeline(url: URL): Promise<Response> {
+	const page = parsePage(url.searchParams.get("page"));
+	const offset = (page - 1) * TIMELINE_PAGE_SIZE;
+
+	const [countResult, result] = await Promise.all([
+		db.execute("SELECT COUNT(*) AS total FROM timeline"),
+		db.execute({
+			sql: `SELECT * FROM timeline
+			      ORDER BY created_at DESC, rowid DESC
+			      LIMIT ? OFFSET ?`,
+			args: [TIMELINE_PAGE_SIZE, offset],
+		}),
+	]);
+
+	const totalRecords = Number(countResult.rows[0]?.total ?? 0);
+	return jsonResponse({
+		data: result.rows.map((row) => normalizeTimeline(row, result.columns)),
+		meta: paginationMeta(page, totalRecords, TIMELINE_PAGE_SIZE),
+	});
+}
+
+/**
+ * POST /timeline
+ * Body: { title, image_url, user_id, discourse_audio_id, start_time?, end_time? }
+ * discourse_id and discourse_audio are resolved from the existing audio record.
+ */
+async function createTimelinePost(request: Request): Promise<Response> {
+	const payload: any = await request.json().catch(() => null);
+	const required = ["title", "image_url", "user_id", "discourse_audio_id"] as const;
+	for (const field of required) {
+		if (typeof payload?.[field] !== "string" || !payload[field].trim()) {
+			return jsonResponse({ error: `${field} is required and must be a non-empty string.` }, 400);
+		}
+	}
+
+	const startTime = payload.start_time == null ? null : payload.start_time;
+	const endTime = payload.end_time == null ? null : payload.end_time;
+	for (const [field, value] of [["start_time", startTime], ["end_time", endTime]] as const) {
+		if (value !== null && (!Number.isSafeInteger(value) || value < 0)) {
+			return jsonResponse({ error: `${field} must be a non-negative integer.` }, 400);
+		}
+	}
+	if (startTime !== null && endTime !== null && endTime <= startTime) {
+		return jsonResponse({ error: "end_time must be greater than start_time." }, 400);
+	}
+
+	const discourseAudioId = payload.discourse_audio_id.trim();
+	const audioResult = await db.execute({
+		sql: "SELECT * FROM discourse_audio WHERE id = ? LIMIT 1",
+		args: [discourseAudioId],
+	});
+	if (!audioResult.rows.length) {
+		return jsonResponse({ error: "Discourse audio not found." }, 404);
+	}
+
+	const audio = normalizeDiscourseAudio(Object.fromEntries(
+		audioResult.columns.map((column, index) => [column, audioResult.rows[0][index]]),
+	));
+	const id = crypto.randomUUID();
+	await db.execute({
+		sql: `INSERT INTO timeline (
+			id, title, image_url, user_id, discourse_id, discourse_audio_id,
+			start_time, end_time, discourse_audio
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		args: [
+			id,
+			payload.title.trim(),
+			payload.image_url.trim(),
+			payload.user_id.trim(),
+			String(audio.discourse_id),
+			discourseAudioId,
+			startTime,
+			endTime,
+			JSON.stringify(audio, (_key, value) => typeof value === "bigint" ? value.toString() : value),
+		],
+	});
+
+	const created = await db.execute({
+		sql: "SELECT * FROM timeline WHERE id = ? LIMIT 1",
+		args: [id],
+	});
+	return jsonResponse({ data: normalizeTimeline(created.rows[0], created.columns) }, 201);
+}
+
+/**
+ * Router
+ */
+
+BunnySDK.net.http.serve(
+	async (
+		request: Request,
+	): Promise<Response> => {
+		try {
+			if (!hasValidApiKey(request)) {
+				return jsonResponse({ error: "Unauthorized" }, 401);
+			}
+
+			const url = new URL(
+				request.url,
+			);
+
+			const parts =
+				url.pathname
+					.split("/")
+					.filter(Boolean);
+
+			const resource = parts[0];
+			const id = parts[1];
+			const action = parts[2];
+
+			/**
+			 * Health / API index
+			 */
+			if (!resource) {
+				return jsonResponse({
+					message:
+						"Osho Audio API",
+
+					endpoints: {
+						discourses:
+							"/discourses",
+
+						discourse_audios:
+							"/discourse-audios",
+
+						stats:
+							"/stats",
+
+						likes:
+							"/likes?user_id=USER_UUID",
+
+						timeline:
+							"/timeline",
+					},
+				});
+			}
+
+			if (["stats", "discourses", "discourse-audios", "likes", "timeline"].includes(resource)) {
+				await ensureSchema();
+			}
+
+			if (resource === "timeline") {
+				if (request.method === "GET" && !id) return getTimeline(url);
+				if (request.method === "POST" && !id) return createTimelinePost(request);
+				return jsonResponse({ error: "Not found" }, 404);
+			}
+
+			if (resource === "likes" && request.method === "GET" && !id) {
+				return getUserLikes(url);
+			}
+			if (resource === "likes" && request.method === "DELETE" && !id) {
+				return deleteUserLike(url);
+			}
+
+			if (resource === "stats") {
+				if (request.method === "POST" && !id) return recordListening(request);
+				if (request.method === "GET" && !id) return getTopListening(url);
+			}
+
+			/**
+			 * --------------------------------
+			 * DISCOURSES
+			 * --------------------------------
+			 */
+
+			if (
+				resource ===
+				"discourses"
+			) {
+				/**
+				 * GET /discourses
+				 */
+				if (
+					request.method ===
+					"GET" &&
+					!id
+				) {
+					return getDiscourses(
+						url,
+					);
+				}
+
+				if (request.method === "POST" && id && action === "cc") {
+					return updateClosedCaptions("discourses", id, request);
+				}
+
+				/**
+				 * PUT
+				 * /discourses/:id/like
+				 */
+				if (
+					request.method ===
+					"PUT" &&
+					id &&
+					action === "like"
+				) {
+					return likeDiscourse(
+						id,
+						request,
+					);
+				}
+
+				return jsonResponse(
+					{
+						error:
+							"Not found",
+					},
+					404,
+				);
+			}
+
+			/**
+			 * --------------------------------
+			 * DISCOURSE AUDIO
+			 * --------------------------------
+			 */
+
+			if (
+				resource ===
+				"discourse-audios"
+			) {
+				/**
+				 * GET /discourse-audios
+				 *
+				 * Also handles:
+				 *
+				 * GET
+				 * /discourse-audios?discourse_id=...
+				 */
+				if (
+					request.method ===
+					"GET" &&
+					!id
+				) {
+					return getDiscourseAudios(
+						url,
+					);
+				}
+
+				if (request.method === "POST" && id && action === "cc") {
+					return updateClosedCaptions("discourse-audios", id, request);
+				}
+
+				/**
+				 * PUT
+				 * /discourse-audios/:id/like
+				 */
+				if (
+					request.method ===
+					"PUT" &&
+					id &&
+					action === "like"
+				) {
+					return likeDiscourseAudio(
+						id,
+						request,
+					);
+				}
+
+				return jsonResponse(
+					{
+						error:
+							"Not found",
+					},
+					404,
+				);
+			}
+
+			return jsonResponse(
+				{
+					error:
+						"Not found",
+				},
+				404,
+			);
+		} catch (error) {
+			console.error(error);
+
+			return jsonResponse(
+				{
+					error:
+						"Internal server error",
+				},
+				500,
+			);
+		}
+	},
+);

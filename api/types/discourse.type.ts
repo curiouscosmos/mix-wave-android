@@ -16,6 +16,7 @@ export type Discourse = {
 	slug: string;
 	created_at: string;
 	updated_at: string;
+	has_cc: boolean;
 };
 
 export type DiscourseAudio = {
@@ -33,6 +34,8 @@ export type DiscourseAudio = {
 	total_likes: number;
 	created_at: string;
 	updated_at: string;
+	has_cc: boolean;
+	cc_path: string;
 };
 
 export type GetDiscoursesRequest = {

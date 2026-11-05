@@ -25,6 +25,25 @@ class ClipVideoExporterTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
 
+    @Test fun lowSampleRateMp3WorksWithPhotoAndVideo() = runBlocking {
+        val visual = asset("visual.mp4")
+        val photo = File(context.cacheDir, "speech-photo.png")
+        try {
+            val bitmap = Bitmap.createBitmap(320, 180, Bitmap.Config.ARGB_8888)
+            bitmap.eraseColor(Color.GREEN)
+            photo.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+            withAudio(2_000, "speech-24k.mp3") { audio, output ->
+                for (file in listOf(photo, visual)) {
+                    val updates = mutableListOf<Int>()
+                    ClipVideoExporter.export(context, Uri.fromFile(file), audio, output, updates::add)
+                    assertEquals(100, updates.last())
+                    checkTracks(audio, output, 1280, 720)
+                }
+            }
+        } finally { listOf(photo, visual).forEach(File::delete) }
+    }
+
     @Test fun requestRoundTripIncludesVisualAndOldRequestsDefaultToAudio() {
         val options = ClipExportOptions(NoiseCancellationLevel.HIGH,
             ClipMixerOptions("content://music/1", "Music", 37, true), ClipOutput.VIDEO, "content://photos/1")
@@ -145,8 +164,8 @@ class ClipVideoExporterTest {
         }
     }
 
-    private suspend fun withAudio(duration: Long, block: suspend (File, File) -> Unit) {
-        val source = asset("sample.m4a")
+    private suspend fun withAudio(duration: Long, sourceName: String = "sample.m4a", block: suspend (File, File) -> Unit) {
+        val source = asset(sourceName)
         val audio = File(context.cacheDir, "video-prepared.m4a")
         val output = File(context.cacheDir, "video-result.mp4")
         try {

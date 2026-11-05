@@ -29,6 +29,29 @@ class ProcessedClipExporterTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
 
+    @Test fun lowSampleRateMp3ExportsThroughTheSelectedEnd() = runBlocking {
+        val source = File(context.cacheDir, "speech-24k.mp3")
+        val output = File(context.cacheDir, "speech-24k.m4a")
+        try {
+            instrumentation.context.assets.open("clips/speech-24k.mp3").use { input ->
+                source.outputStream().use { input.copyTo(it) }
+            }
+            for (range in listOf(ClipRange(0, 2_000), ClipRange(2_000, 4_000), ClipRange(4_000, 6_000))) {
+                var progress = 0
+                try {
+                    ProcessedClipExporter.export(context, source, range, ClipExportOptions(), output) { progress = it }
+                } catch (error: Exception) { throw AssertionError("Export failed at $progress% for $range", error) }
+                checkContainer(output, 2_000)
+            }
+            try {
+                ProcessedClipExporter.export(context, source, ClipRange(5_000, 7_000), ClipExportOptions(), output) {}
+                fail("Truncated audio was silently padded")
+            } catch (error: IllegalStateException) {
+                assertEquals("Discourse ended before the selected clip", error.message)
+            }
+        } finally { source.delete(); output.delete() }
+    }
+
     @Test fun mixerStartsAtZeroAndHonorsVolumeLoopAndStereo() = runBlocking {
         val source = wav("silent", 48_000, 1, 3_000) { _, _ -> 0f }
         val music = wav("music", 44_100, 2, 600) { sample, channel ->

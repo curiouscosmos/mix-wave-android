@@ -26,9 +26,10 @@ async function initializeSchema(): Promise<void> {
                                                  total_tracks INTEGER NOT NULL DEFAULT 0,
                                                  total_likes INTEGER NOT NULL DEFAULT 0,
                                                  slug TEXT UNIQUE,
-                                                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
+                                                 has_cc INTEGER NOT NULL DEFAULT 0 CHECK (has_cc IN (0, 1)),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
 	`);
 
 	await db.execute(`
@@ -45,10 +46,12 @@ async function initializeSchema(): Promise<void> {
                                                        mime_type TEXT,
                                                        track_number INTEGER,
                                                        total_likes INTEGER NOT NULL DEFAULT 0,
-                                                       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                                       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                       has_cc INTEGER NOT NULL DEFAULT 0 CHECK (has_cc IN (0, 1)),
+            cc_path TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                                                       FOREIGN KEY (discourse_id)
+            FOREIGN KEY (discourse_id)
             REFERENCES discourse(id)
             ON DELETE CASCADE
             )
@@ -63,6 +66,23 @@ async function initializeSchema(): Promise<void> {
 		const columns = await db.execute(`PRAGMA table_info(${table})`);
 		if (!columns.rows.some((row) => row.name === column)) {
 			await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 0`);
+		}
+	}
+
+	// Upgrade existing databases. Discourse has only has_cc; individual tracks
+	// have has_cc and cc_path. Preserve all existing rows and other columns.
+	for (const table of ["discourse", "discourse_audio"] as const) {
+		const columns = await db.execute(`PRAGMA table_info(${table})`);
+		const existing = new Set(columns.rows.map((row) => String(row.name)));
+		if (!existing.has("has_cc")) {
+			await db.execute(`ALTER TABLE ${table} ADD COLUMN has_cc INTEGER NOT NULL DEFAULT 0 CHECK (has_cc IN (0, 1))`);
+		}
+		if (table === "discourse_audio" && !existing.has("cc_path")) {
+			await db.execute(`ALTER TABLE discourse_audio ADD COLUMN cc_path TEXT NOT NULL DEFAULT ''`);
+		}
+		if (table === "discourse" && existing.has("cc_path")) {
+			// Drop only the obsolete discourse caption path (not the records).
+			await db.execute("ALTER TABLE discourse DROP COLUMN cc_path");
 		}
 	}
 
@@ -282,7 +302,7 @@ async function getTopListening(url: URL): Promise<Response> {
 			args: ranked.map(({ id }) => id),
 		})
 		: { rows: [] as any[] };
-	const byId = new Map(records.rows.map((row: any) => [row.id, by === "discourse" ? normalizeDiscourse(row) : row]));
+	const byId = new Map(records.rows.map((row: any) => [row.id, by === "discourse" ? normalizeDiscourse(row) : normalizeDiscourseAudio(row)]));
 	const data = ranked.flatMap(({ id, plays }) => {
 		const record = byId.get(id);
 		return record ? [{ ...record, plays }] : [];
@@ -419,6 +439,12 @@ const normalizeDiscourse = (
 	...row,
 	is_audio_cleaned:
 		Boolean(row.is_audio_cleaned),
+	has_cc: Boolean(row.has_cc),
+});
+
+const normalizeDiscourseAudio = (row: any) => ({
+	...row,
+	has_cc: Boolean(row.has_cc),
 });
 
 /**
@@ -598,7 +624,7 @@ async function getDiscourseAudios(
 			});
 
 		return jsonResponse({
-			data: result.rows,
+			data: result.rows.map(normalizeDiscourseAudio),
 
 			meta: {
 				total_records:
@@ -720,7 +746,7 @@ async function getDiscourseAudios(
 		});
 
 	return jsonResponse({
-		data: result.rows,
+		data: result.rows.map(normalizeDiscourseAudio),
 
 		meta: paginationMeta(
 			page,
@@ -940,6 +966,72 @@ async function likeDiscourseAudio(
 }
 
 /**
+ * POST /discourses/:id/cc
+ * Body: { has_cc: boolean }
+ * Discourse records have a CC availability flag only, never cc_path.
+ */
+async function updateDiscourseClosedCaptions(
+	id: string,
+	request: Request,
+): Promise<Response> {
+	const payload: any = await request.json().catch(() => null);
+	if (typeof payload?.has_cc !== "boolean") {
+		return jsonResponse({ error: "has_cc is required and must be a boolean." }, 400);
+	}
+
+	const update = await db.execute({
+		sql: "UPDATE discourse SET has_cc = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		args: [payload.has_cc ? 1 : 0, id],
+	});
+	if (!update.rowsAffected) {
+		return jsonResponse({ error: "Discourse not found." }, 404);
+	}
+
+	const updated = await db.execute({
+		sql: "SELECT * FROM discourse WHERE id = ? LIMIT 1",
+		args: [id],
+	});
+	return jsonResponse({ data: normalizeDiscourse(updated.rows[0]) });
+}
+
+/**
+ * POST /discourse-audios/:id/cc
+ * Body: { has_cc: boolean, cc_path: string }
+ * Caption paths are stored only on individual audio tracks.
+ */
+async function updateDiscourseAudioClosedCaptions(
+	id: string,
+	request: Request,
+): Promise<Response> {
+	const payload: any = await request.json().catch(() => null);
+	if (typeof payload?.has_cc !== "boolean") {
+		return jsonResponse({ error: "has_cc is required and must be a boolean." }, 400);
+	}
+	if (typeof payload.cc_path !== "string") {
+		return jsonResponse({ error: "cc_path is required and must be a string." }, 400);
+	}
+
+	const ccPath = payload.cc_path.trim();
+	if (payload.has_cc && !ccPath) {
+		return jsonResponse({ error: "cc_path must be non-empty when has_cc is true." }, 400);
+	}
+
+	const update = await db.execute({
+		sql: "UPDATE discourse_audio SET has_cc = ?, cc_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		args: [payload.has_cc ? 1 : 0, ccPath, id],
+	});
+	if (!update.rowsAffected) {
+		return jsonResponse({ error: "Discourse audio not found." }, 404);
+	}
+
+	const updated = await db.execute({
+		sql: "SELECT * FROM discourse_audio WHERE id = ? LIMIT 1",
+		args: [id],
+	});
+	return jsonResponse({ data: normalizeDiscourseAudio(updated.rows[0]) });
+}
+
+/**
  * Timeline posts contain a snapshot of the associated discourse audio.
  * SQLite stores JSON as text and BOOLEAN as 0/1, so convert both for API responses.
  */
@@ -947,7 +1039,7 @@ const normalizeTimeline = (row: any, columns: string[]) => {
 	const post = Object.fromEntries(columns.map((column, index) => [column, row[index]]));
 	return {
 		...post,
-		discourse_audio: post.discourse_audio ? JSON.parse(String(post.discourse_audio)) : null,
+		discourse_audio: post.discourse_audio ? normalizeDiscourseAudio(JSON.parse(String(post.discourse_audio))) : null,
 		is_approved: Boolean(post.is_approved),
 	};
 };
@@ -964,8 +1056,8 @@ async function getTimeline(url: URL): Promise<Response> {
 		db.execute("SELECT COUNT(*) AS total FROM timeline"),
 		db.execute({
 			sql: `SELECT * FROM timeline
-			      ORDER BY created_at DESC, rowid DESC
-			      LIMIT ? OFFSET ?`,
+                  ORDER BY created_at DESC, rowid DESC
+                      LIMIT ? OFFSET ?`,
 			args: [TIMELINE_PAGE_SIZE, offset],
 		}),
 	]);
@@ -1011,15 +1103,15 @@ async function createTimelinePost(request: Request): Promise<Response> {
 		return jsonResponse({ error: "Discourse audio not found." }, 404);
 	}
 
-	const audio = Object.fromEntries(
+	const audio = normalizeDiscourseAudio(Object.fromEntries(
 		audioResult.columns.map((column, index) => [column, audioResult.rows[0][index]]),
-	);
+	));
 	const id = crypto.randomUUID();
 	await db.execute({
 		sql: `INSERT INTO timeline (
-			id, title, image_url, user_id, discourse_id, discourse_audio_id,
-			start_time, end_time, discourse_audio
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, title, image_url, user_id, discourse_id, discourse_audio_id,
+            start_time, end_time, discourse_audio
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		args: [
 			id,
 			payload.title.trim(),
@@ -1138,6 +1230,10 @@ BunnySDK.net.http.serve(
 					);
 				}
 
+				if (request.method === "POST" && id && action === "cc") {
+					return updateDiscourseClosedCaptions(id, request);
+				}
+
 				/**
 				 * PUT
 				 * /discourses/:id/like
@@ -1189,6 +1285,10 @@ BunnySDK.net.http.serve(
 					return getDiscourseAudios(
 						url,
 					);
+				}
+
+				if (request.method === "POST" && id && action === "cc") {
+					return updateDiscourseAudioClosedCaptions(id, request);
 				}
 
 				/**

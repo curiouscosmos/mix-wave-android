@@ -25,6 +25,8 @@ internal object ProcessedClipExporter {
         val inputFrames = warmFrames + clipFrames
         ClipAudioDecoder(context, Uri.fromFile(source), warmStart, range.endMs, coroutine).use { decoder ->
             val speech = ClipResampler(decoder.sampleRate, read = decoder::next)
+            // MP3 priming can remove 1152 input samples; at 24 kHz that exceeds 2048 output frames.
+            val paddingFrames = maxOf(2048, 1152 * 48_000 / decoder.sampleRate)
             Background(context, options.mixer, coroutine).use { background ->
                 val filter = if (denoise) createNoiseFilter(context, options.noiseLevel) else null
                 try {
@@ -48,8 +50,8 @@ internal object ProcessedClipExporter {
                                 frame.fill(0f)
                                 if (inputPosition < inputFrames) {
                                     if (!speech.next(frame)) {
-                                        // Container durations can include an encoder's final padded AAC frame.
-                                        check(++missing <= 2048) { "Discourse ended before the selected clip" }
+                                        // Allow codec priming/padding, while still rejecting truncated sources.
+                                        check(++missing <= paddingFrames) { "Discourse ended before the selected clip" }
                                     }
                                     inputPosition++
                                 }

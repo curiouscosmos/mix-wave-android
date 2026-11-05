@@ -13,6 +13,11 @@ Regenerate with:
     ffmpeg -f lavfi -i "aevalsrc=0.3*sin(2*PI*(440+220*floor(t))*t):s=44100:d=6" -c:a libmp3lame -q:a 4 variable.mp3
     ffmpeg -f lavfi -i "aevalsrc=0.3*sin(2*PI*(440+220*floor(t))*t):s=44100:d=6" -c:a aac -b:a 96k sample.m4a
 
+`speech-24k.mp3` covers decoder priming at a low speech sample rate, which can exceed
+the exporter's original 2048-frame padding allowance after resampling to 48 kHz.
+
+    ffmpeg -f lavfi -i sine=frequency=440:sample_rate=24000:duration=6 -c:a libmp3lame -b:a 56k speech-24k.mp3
+
 `visual.mp4` is a two-second SDR H.264 video (one second red, one second blue),
 with an unrelated 1800 Hz tone to verify that video export discards source audio.
 `rotated.mp4` adds a green upper-left marker and 90-degree display rotation metadata.

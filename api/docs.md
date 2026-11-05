@@ -25,6 +25,28 @@ The paginated `/discourses` route also accepts `language=hindi` or `language=eng
 # No pagination:
 GET /discourse-audios?discourse_id=UUID
 
+# Closed captions (CC)
+
+Both `discourse` and `discourse_audio` now have `has_cc` (BOOLEAN stored as 0/1, default false) and `cc_path` (TEXT, default empty string). Existing database tables gain these fields automatically on schema initialization; no records are removed. The API returns `has_cc` as a JSON boolean. The two sets of metadata are independent: updating a discourse does not change its audio tracks, and vice versa.
+
+POST /discourses/:id/cc
+BODY: `{ "has_cc": true }`
+Updates the `has_cc` flag for one discourse by ID.
+
+POST /discourse-audios/:id/cc
+BODY: `{ "has_cc": true, "cc_path": "/captions/audio-uuid.vtt" }`
+Updates the `has_cc` flag and `cc_path` for one discourse audio by ID.
+
+Both fields are required: `has_cc` must be a JSON boolean (`true` or `false`, not `1` or `"true"`); `cc_path` must be a string and may be empty only when `has_cc` is false. To disable captions, send `{ "has_cc": false, "cc_path": "" }`. A successful update returns HTTP `200` with `{ "data": { ...full updated discourse or discourse_audio... } }`, including `has_cc` as a boolean. Invalid/missing body fields return `400`; an unknown ID returns `404`. A valid `x-api-key` header is required. The server stores the supplied path without uploading or validating the caption file.
+
+Example:
+```bash
+curl -X POST "https://oshoapi-0i8tq.bunny.run/discourse-audios/AUDIO_UUID/cc" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"has_cc":true,"cc_path":"/captions/audio-uuid.vtt"}'
+```
+
 PUT /discourses/:id/like
 BODY: { "user_id": "USER_UUID" }
 Adds one to the discourse `total_likes` on the first like from this user. Repeated likes are idempotent.
