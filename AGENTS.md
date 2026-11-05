@@ -32,6 +32,7 @@ Primary goal: keep VLC's local media playback base, but present it as Rajneesh D
 - The app does not use an advertising ID. `application/app/src/main/AndroidManifest.xml` removes `com.google.android.gms.permission.AD_ID` and `android.permission.ACCESS_ADSERVICES_AD_ID` with `tools:node="remove"` because Firebase Analytics pulls them in transitively. Keep them removed.
 - Foreground services are used and must keep their type-specific permissions: `mediaPlayback` for `PlaybackService`, `dataSync` for `MediaParsingService`, and `specialUse` for `RemoteAccessService`/`DebugLogService`. The Play Console "Foreground service permissions" declaration must cover these types.
 - Downloaded discourse tracks are stored as `<audioId>.audio`, so a restored queue rebuilds wrappers from local file URIs. `PlaylistManager` must call `MediaWrapper.restoreDiscourseMetadata()` after restoring the discourse tag, otherwise the player and notification show the file name/UUID instead of the API title.
+- Discourse download status is cached by `DiscourseDownloadStore`; row binding must use `cachedState`/`cachedProgress`, and download polling runs only while a download is active. Before this, a 500 ms loop re-queried `DownloadManager` for every track and rebound the whole list, making 40+ track detail screens janky.
 - Added bottom mini-player on Music, fixed near the bottom like Spotify.
 - Removed Music random/shuffle floating button.
 - Removed file-menu options:

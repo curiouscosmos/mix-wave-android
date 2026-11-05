@@ -5,6 +5,8 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import androidx.core.content.getSystemService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.videolan.tools.ErrorReporter
 import org.videolan.tools.Settings
 import java.io.File
@@ -52,28 +54,62 @@ class DiscourseDownloadStore(context: Context) {
     private val manager = context.getSystemService<DownloadManager>()!!
     private val settings = Settings.getInstance(context)
     private val reportedFailures = mutableSetOf<Long>()
+    private val cache = HashMap<String, Snapshot>()
+    private data class Snapshot(val state: DiscourseDownloadState, val progress: DiscourseDownloadProgress)
 
-    fun state(audio: DiscourseAudio): DiscourseDownloadState {
-        if (verifiedFile(audio) != null) return DiscourseDownloadState.DOWNLOADED
-        val id = downloads()[audio.id] ?: return DiscourseDownloadState.MISSING
-        val info = downloadInfo(id)
-        return when (info.status) {
-            DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> DiscourseDownloadState.DOWNLOADING
-            else -> DiscourseDownloadState.FAILED.also { reportFailure(audio, id, info) }
+    /** Cheap values for row binding. Call [refresh] first; missing entries report as not downloaded. */
+    fun cachedState(audio: DiscourseAudio): DiscourseDownloadState =
+        synchronized(cache) { cache[audio.id]?.state } ?: DiscourseDownloadState.MISSING
+
+    fun cachedProgress(audio: DiscourseAudio): DiscourseDownloadProgress =
+        synchronized(cache) { cache[audio.id]?.progress } ?: DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING)
+
+    fun state(audio: DiscourseAudio): DiscourseDownloadState = snapshot(audio).state
+
+    fun progress(audio: DiscourseAudio): DiscourseDownloadProgress = snapshot(audio).progress
+
+    private fun snapshot(audio: DiscourseAudio): Snapshot = synchronized(cache) { cache[audio.id] }
+        ?: compute(audio).also { value -> synchronized(cache) { cache[audio.id] = value } }
+
+    /**
+     * Recomputes the download state for the supplied tracks on a worker thread, keeping
+     * DownloadManager queries off the UI thread. Returns the IDs whose state changed.
+     */
+    suspend fun refresh(audios: List<DiscourseAudio>): Set<String> = withContext(Dispatchers.IO) {
+        val changed = mutableSetOf<String>()
+        audios.forEach { audio ->
+            val next = compute(audio)
+            val previous = synchronized(cache) { cache.put(audio.id, next) }
+            if (previous != next) changed.add(audio.id)
         }
+        changed
     }
 
-    fun progress(audio: DiscourseAudio): DiscourseDownloadProgress {
-        if (verifiedFile(audio) != null) return DiscourseDownloadProgress(100, DiscourseDownloadState.DOWNLOADED)
-        val id = downloads()[audio.id] ?: return DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING)
+    fun hasActiveDownloads(): Boolean =
+        synchronized(cache) { cache.values.any { it.state == DiscourseDownloadState.DOWNLOADING } }
+
+    fun invalidate(audioId: String? = null): Unit = synchronized(cache) {
+        if (audioId == null) cache.clear() else cache.remove(audioId)
+    }
+
+    fun invalidateDownload(downloadId: Long): Unit = synchronized(cache) {
+        downloads().entries.firstOrNull { it.value == downloadId }?.key?.let(cache::remove)
+    }
+
+    private fun compute(audio: DiscourseAudio): Snapshot {
+        if (verifiedFile(audio) != null)
+            return Snapshot(DiscourseDownloadState.DOWNLOADED, DiscourseDownloadProgress(100, DiscourseDownloadState.DOWNLOADED))
+        val id = downloads()[audio.id]
+            ?: return Snapshot(DiscourseDownloadState.MISSING, DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING))
         val info = downloadInfo(id)
         val state = when (info.status) {
             DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> DiscourseDownloadState.DOWNLOADING
             else -> DiscourseDownloadState.FAILED.also { reportFailure(audio, id, info) }
         }
-        if (state != DiscourseDownloadState.DOWNLOADING) return DiscourseDownloadProgress(null, state)
-        val percent = downloadPercent(info.downloadedBytes, info.totalBytes, audio.fileSize)
-        return DiscourseDownloadProgress(percent, state)
+        val progress = if (state == DiscourseDownloadState.DOWNLOADING)
+            DiscourseDownloadProgress(downloadPercent(info.downloadedBytes, info.totalBytes, audio.fileSize), state)
+        else DiscourseDownloadProgress(null, state)
+        return Snapshot(state, progress)
     }
 
     fun playbackUri(audio: DiscourseAudio): Uri? = verifiedFile(audio)?.let(Uri::fromFile)
@@ -115,6 +151,12 @@ class DiscourseDownloadStore(context: Context) {
             .getOrNull() ?: return@synchronized false
         save(downloads() + (audio.id to id))
         saveDownloadDiscourses(downloadDiscourses() + (audio.id to audio.discourseId))
+        synchronized(cache) {
+            cache[audio.id] = Snapshot(
+                DiscourseDownloadState.DOWNLOADING,
+                DiscourseDownloadProgress(null, DiscourseDownloadState.DOWNLOADING)
+            )
+        }
         true
     }
 
@@ -126,6 +168,7 @@ class DiscourseDownloadStore(context: Context) {
         file(audio).delete()
         save(current)
         saveDownloadDiscourses(downloadDiscourses() - audio.id)
+        synchronized(cache) { cache[audio.id] = Snapshot(DiscourseDownloadState.MISSING, DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING)) }
     }
 
     fun verifiedFile(audio: DiscourseAudio): File? {

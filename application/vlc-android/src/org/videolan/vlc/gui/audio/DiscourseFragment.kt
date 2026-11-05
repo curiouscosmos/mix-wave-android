@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.graphics.Bitmap
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
@@ -36,6 +37,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -86,9 +88,12 @@ class DiscourseFragment : BaseFragment() {
     private lateinit var downloads: DiscourseDownloadStore
     private lateinit var playbackStore: DiscoursePlaybackStore
     private lateinit var likesUi: DiscourseLikesUi
+    private var downloadPollingJob: Job? = null
+    private var trackThumbnailUrl: String? = null
+    private var trackThumbnail: Bitmap? = null
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            refreshDownloadIndicators()
+            refreshDownloadIndicators(intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L))
         }
     }
 
@@ -180,8 +185,12 @@ class DiscourseFragment : BaseFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 launch {
                     while (isActive) {
-                        refreshDownloadIndicators()
-                        delay(500)
+                        // Catalogue cards only need periodic updates while a download is running.
+                        if (downloads.hasActiveDownloads()) {
+                            (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
+                            refreshDownloadSummary()
+                        }
+                        delay(1000)
                     }
                 }
                 refreshProgress(null)
@@ -193,9 +202,13 @@ class DiscourseFragment : BaseFragment() {
     override fun onResume() {
         super.onResume()
         if (!detailOnly) model.load()
-        (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
-        trackAdapter?.refreshDownloads()
-        refreshDownloadSummary()
+        refreshDownloadIndicators()
+    }
+
+    override fun onDestroyView() {
+        downloadPollingJob?.cancel()
+        downloadPollingJob = null
+        super.onDestroyView()
     }
 
     override fun onStart() {
@@ -253,6 +266,7 @@ class DiscourseFragment : BaseFragment() {
                 header.findViewById<Button>(R.id.discourse_cancel_downloads).isVisible = false
                 header.findViewById<ProgressBar>(R.id.discourse_download_progress).isVisible = false
                 loadImage(image, value.discourse.thumbnailUrl)
+                loadTrackThumbnail(value.discourse.thumbnailUrl)
                 val audios = value.tracks.orEmpty()
                 if (value.tracks != null || value.error) headerAdapter.stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.ALLOW
                 header.findViewById<TextView>(R.id.discourse_tracks_heading).text = getString(R.string.discourse_tracks_heading, value.tracks?.size ?: value.discourse.totalTracks)
@@ -280,6 +294,7 @@ class DiscourseFragment : BaseFragment() {
                             }
                             tracks.adapter?.notifyDataSetChanged()
                             refreshDownloadSummary()
+                            startDownloadPolling()
                         }
                         header.findViewById<Button>(R.id.discourse_remove_all).setOnClickListener {
                             AlertDialog.Builder(requireContext())
@@ -288,13 +303,13 @@ class DiscourseFragment : BaseFragment() {
                                 .setPositiveButton(R.string.discourse_remove_download) { _, _ ->
                                     value.tracks.forEach(downloads::remove)
                                     tracks.adapter?.notifyDataSetChanged()
-                                    refreshDownloadSummary()
+                                    refreshDownloadIndicators()
                                 }.show()
                         }
                         header.findViewById<Button>(R.id.discourse_cancel_downloads).setOnClickListener {
                             value.tracks.filter { downloads.state(it) == DiscourseDownloadState.DOWNLOADING }.forEach(downloads::cancel)
                             tracks.adapter?.notifyDataSetChanged()
-                            refreshDownloadSummary()
+                            refreshDownloadIndicators()
                         }
                         val concat = tracks.adapter as ConcatAdapter
                         trackAdapter?.let(concat::removeAdapter)
@@ -304,6 +319,7 @@ class DiscourseFragment : BaseFragment() {
                         }
                         concat.addAdapter(trackAdapter!!)
                         refreshDownloadSummary()
+                        startDownloadPolling()
                         tracks.post { scrollToAudioIfNeeded() }
                     }
                 }
@@ -337,8 +353,8 @@ class DiscourseFragment : BaseFragment() {
     private fun refreshDownloadSummary() {
         val value = model.state.value as? DiscourseViewModel.State.Detail ?: return
         val audios = value.tracks ?: return
-        val downloaded = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADED }
-        val active = audios.count { downloads.state(it) == DiscourseDownloadState.DOWNLOADING }
+        val downloaded = audios.count { downloads.cachedState(it) == DiscourseDownloadState.DOWNLOADED }
+        val active = audios.count { downloads.cachedState(it) == DiscourseDownloadState.DOWNLOADING }
         header.findViewById<Button>(R.id.discourse_download_all).isEnabled = active == 0 && downloaded < audios.size
         header.findViewById<Button>(R.id.discourse_remove_all).isVisible = downloaded > 0
         header.findViewById<Button>(R.id.discourse_cancel_downloads).isVisible = active > 0
@@ -374,10 +390,51 @@ class DiscourseFragment : BaseFragment() {
         ).filterNotNull().joinToString(". ")
     }
 
-    private fun refreshDownloadIndicators() {
-        (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
-        trackAdapter?.refreshDownloads()
-        refreshDownloadSummary()
+    private fun refreshDownloadIndicators(completedDownloadId: Long? = null) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (completedDownloadId != null && completedDownloadId > 0) {
+                downloads.invalidateDownload(completedDownloadId)
+            }
+            val audios = (model.state.value as? DiscourseViewModel.State.Detail)?.tracks.orEmpty()
+            val changed = if (audios.isEmpty()) emptySet()
+            else withContext(Dispatchers.IO) { downloads.refresh(audios) }
+            trackAdapter?.refreshDownloads(changed)
+            (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
+            refreshDownloadSummary()
+            if (audios.isNotEmpty()) startDownloadPolling()
+        }
+    }
+
+    /** Populates the download cache off the UI thread and polls only while a download is active. */
+    private fun startDownloadPolling() {
+        downloadPollingJob?.cancel()
+        downloadPollingJob = viewLifecycleOwner.lifecycleScope.launch {
+            while (isActive) {
+                val audios = (model.state.value as? DiscourseViewModel.State.Detail)?.tracks.orEmpty()
+                if (audios.isEmpty()) break
+                val changed = withContext(Dispatchers.IO) { downloads.refresh(audios) }
+                if (changed.isNotEmpty()) {
+                    trackAdapter?.refreshDownloads(changed)
+                    refreshDownloadSummary()
+                }
+                if (!downloads.hasActiveDownloads()) break
+                delay(1000)
+            }
+        }
+    }
+
+    private fun loadTrackThumbnail(url: String?) {
+        if (trackThumbnailUrl == url && trackThumbnail != null) return
+        trackThumbnailUrl = url
+        trackThumbnail = null
+        val imageUrl = org.videolan.vlc.discourse.resolveDiscourseUrl(url) ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bitmap = HttpImageLoader.downloadBitmap(imageUrl)
+            if (trackThumbnailUrl == url && bitmap != null) {
+                trackThumbnail = bitmap
+                trackAdapter?.refreshThumbnails()
+            }
+        }
     }
 
     private fun bindDownloadProgress(view: ProgressBar, value: DiscourseDownloadProgress, visible: Boolean = true) {
@@ -554,7 +611,7 @@ class DiscourseFragment : BaseFragment() {
         override fun onBindViewHolder(holder: DiscourseTrackHolder, position: Int) {
             val item = items[position]
             holder.number.text = (item.trackNumber ?: position + 1).toString()
-            loadImage(holder.image, item.discourseThumbnailUrl)
+            bindTrackImage(holder, item)
             holder.title.text = item.title
             holder.meta.text = listOfNotNull(
                 item.durationSeconds?.takeIf { it.isFinite() && it > 0 }?.let { Tools.millisToString((it * 1000).toLong()) },
@@ -565,13 +622,15 @@ class DiscourseFragment : BaseFragment() {
             holder.played.isVisible = playbackStore.isPlayed(item.id)
             holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}"
             holder.itemView.setOnClickListener { holder.bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION }?.let(click) }
-            bindDownloadAction(holder, item)
-            bindProgress(holder, item)
-            bindDownloadProgress(holder.downloadProgress, downloads.progress(item))
+            val downloadState = downloads.cachedState(item)
+            val downloadProgress = downloads.cachedProgress(item)
+            bindDownloadAction(holder, item, downloadState, downloadProgress)
+            bindProgress(holder, item, downloadState)
+            bindDownloadProgress(holder.downloadProgress, downloadProgress)
             holder.download.setOnClickListener {
                 val menu = PopupMenu(requireContext(), holder.download)
-                val downloadState = downloads.state(item)
-                menu.menu.add(0, 1, 0, getString(when (downloadState) {
+                val currentState = downloads.state(item)
+                menu.menu.add(0, 1, 0, getString(when (currentState) {
                     DiscourseDownloadState.MISSING, DiscourseDownloadState.FAILED -> R.string.download
                     DiscourseDownloadState.DOWNLOADING -> R.string.cancel
                     DiscourseDownloadState.DOWNLOADED -> R.string.discourse_remove_download
@@ -590,6 +649,7 @@ class DiscourseFragment : BaseFragment() {
                             DiscourseDownloadState.DOWNLOADING -> downloads.cancel(item)
                             DiscourseDownloadState.DOWNLOADED -> downloads.remove(item)
                         }
+                        startDownloadPolling()
                     } else {
                         if (playbackStore.isPlayed(item.id)) playbackStore.clearPlayed(item.id) else playbackStore.markPlayed(item.id)
                     }
@@ -605,25 +665,44 @@ class DiscourseFragment : BaseFragment() {
         override fun onBindViewHolder(holder: DiscourseTrackHolder, position: Int, payloads: MutableList<Any>) {
             if (payloads.isEmpty()) onBindViewHolder(holder, position)
             else {
-                bindProgress(holder, items[position])
-                bindDownloadProgress(holder.downloadProgress, downloads.progress(items[position]))
-                if ("download" in payloads) bindDownloadAction(holder, items[position])
+                val item = items[position]
+                if ("thumb" in payloads) bindTrackImage(holder, item)
+                val downloadState = downloads.cachedState(item)
+                val downloadProgress = downloads.cachedProgress(item)
+                bindProgress(holder, item, downloadState)
+                bindDownloadProgress(holder.downloadProgress, downloadProgress)
+                if ("download" in payloads) bindDownloadAction(holder, item, downloadState, downloadProgress)
             }
         }
         fun refreshDownloads() = notifyItemRangeChanged(0, items.size, "download")
-        private fun bindProgress(holder: DiscourseTrackHolder, item: DiscourseAudio) {
+        fun refreshDownloads(changed: Set<String>) {
+            changed.forEach { id -> positions[id]?.let { notifyItemChanged(it, "download") } }
+        }
+        fun refreshThumbnails() = notifyItemRangeChanged(0, items.size, "thumb")
+        private fun bindTrackImage(holder: DiscourseTrackHolder, item: DiscourseAudio) {
+            val bitmap = trackThumbnail
+            if (bitmap != null && trackThumbnailUrl == item.discourseThumbnailUrl) {
+                holder.image.setImageBitmap(bitmap)
+            } else {
+                holder.image.setImageDrawable(UiTools.getDefaultAudioDrawable(requireContext()))
+            }
+        }
+        private fun bindProgress(holder: DiscourseTrackHolder, item: DiscourseAudio, downloadState: DiscourseDownloadState) {
             holder.played.isVisible = playbackStore.isPlayed(item.id)
             val percent = playbackStore.audioProgress(item.id)
             holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
-            val downloadState = if (downloads.state(item) == DiscourseDownloadState.DOWNLOADED) R.string.discourse_downloaded else R.string.not_downloaded
-            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}. ${getString(downloadState)}. ${getString(R.string.discourse_listening_percentage, percent)}"
+            val stateText = if (downloadState == DiscourseDownloadState.DOWNLOADED) R.string.discourse_downloaded else R.string.not_downloaded
+            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}. ${getString(stateText)}. ${getString(R.string.discourse_listening_percentage, percent)}"
         }
-        private fun bindDownloadAction(holder: DiscourseTrackHolder, item: DiscourseAudio) {
-            val state = downloads.state(item)
+        private fun bindDownloadAction(
+            holder: DiscourseTrackHolder,
+            item: DiscourseAudio,
+            state: DiscourseDownloadState,
+            value: DiscourseDownloadProgress
+        ) {
             holder.download.contentDescription = getString(R.string.more_actions)
             holder.itemView.setBackgroundResource(if (state == DiscourseDownloadState.DOWNLOADED) R.drawable.discourse_track_card_downloaded else R.drawable.discourse_track_card)
             holder.itemView.findViewById<ImageView>(R.id.discourse_track_downloaded).isVisible = state == DiscourseDownloadState.DOWNLOADED
-            val value = downloads.progress(item)
             holder.itemView.findViewById<ProgressBar>(R.id.discourse_track_spinner).apply {
                 val indeterminate = value.percent == null
                 if (isIndeterminate != indeterminate) {
