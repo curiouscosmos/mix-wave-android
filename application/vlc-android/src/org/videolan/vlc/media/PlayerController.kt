@@ -25,6 +25,7 @@ import org.videolan.tools.*
 import org.videolan.vlc.*
 import org.videolan.vlc.audio.NoiseOutput
 import org.videolan.vlc.audio.NoiseCancellationLevel
+import org.videolan.vlc.discourse.restoreDiscourseMetadata
 import org.videolan.vlc.gui.dialogs.VideoTracksDialog
 import org.videolan.vlc.gui.dialogs.adapters.VlcTrack
 import org.videolan.vlc.repository.EqualizerRepository
@@ -562,6 +563,7 @@ class PlayerController(val context: Context) : IVLCVout.Callback, MediaPlayer.Ev
     internal fun updateCurrentMeta(id: Int, mw: MediaWrapper?): Boolean {
         if (id == IMedia.Meta.Publisher) return false
         mw?.updateMeta(mediaplayer)
+        mw?.restoreDiscourseMetadata()
         return id != IMedia.Meta.NowPlaying || mw?.nowPlaying !== null
     }
 

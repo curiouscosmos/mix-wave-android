@@ -1426,7 +1426,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
      * @param mw: The [MediaWrapper] to be updated
      */
     private fun refreshTrackMeta(mw: MediaWrapper) {
-        mw.updateMeta(player.mediaplayer)
+        player.updateCurrentMeta(-1, mw)
         service.onMediaListChanged()
         service.showNotification()
     }

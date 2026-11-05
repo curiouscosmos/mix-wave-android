@@ -10,6 +10,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.videolan.medialibrary.MLServiceLocator
 import org.videolan.resources.AppContextProvider
+import org.videolan.libvlc.LibVLC
+import org.videolan.libvlc.MediaPlayer
+import org.videolan.vlc.media.PlayerController
 
 @RunWith(AndroidJUnit4::class)
 class DiscoursePlaybackMetadataTest {
@@ -48,6 +51,33 @@ class DiscoursePlaybackMetadataTest {
         assertEquals("Osho", media.artistName)
         assertEquals(60_000L, media.length)
         assertEquals(audio, media.discourseAudioSnapshot())
+
+        // Native metadata refreshes must not copy the restored wrapper's UUID into its display title.
+        val vlc = LibVLC(context, arrayListOf("--no-video"))
+        val player = MediaPlayer(vlc)
+        try {
+            repeat(3) {
+                media.updateMeta(player)
+                assertEquals("The Real Track Title", media.title)
+            }
+        } finally {
+            player.release()
+            vlc.release()
+        }
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val controller = PlayerController(context)
+            try {
+                repeat(3) {
+                    media.setTitle("audio-id.audio")
+                    media.setDisplayTitle("audio-id.audio")
+                    controller.updateCurrentMeta(-1, media)
+                    assertEquals("The Real Track Title", media.title)
+                    assertEquals("Osho", media.artistName)
+                }
+            } finally {
+                controller.release()
+            }
+        }
         media.updateCaptionSnapshot(audio.copy(title = "Different title", ccPath = "/refreshed.vtt"))
         assertEquals(audio.copy(ccPath = "/refreshed.vtt"), media.discourseAudioSnapshot())
     }
