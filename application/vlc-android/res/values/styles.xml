@@ -17,6 +17,8 @@
     </style>
 
     <style name="Theme.VLC.Apearance" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="caption_active_color">@color/caption_active_light</item>
+        <item name="caption_selection_color">@color/caption_selection_light</item>
         <item name="toolbar_popup_style">@style/ThemeOverlay.MaterialComponents</item>
         <item name="actionMenuTextColor">@color/white</item>
 
@@ -219,6 +221,8 @@
     </style>
 
     <style name="Theme.VLC.Apearance.Black" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="caption_active_color">@color/caption_active_dark</item>
+        <item name="caption_selection_color">@color/caption_selection_dark</item>
         <item name="toolbar_popup_style">@style/ThemeOverlay.MaterialComponents.Dark</item>
 
         <item name="android:gridViewStyle">@style/Theme.VLC.List</item>

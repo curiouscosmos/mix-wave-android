@@ -355,7 +355,7 @@
             <Button android:id="@+id/player_cc"
                     android:layout_width="@dimen/audio_player_button_size" android:layout_height="@dimen/audio_player_button_size"
                     android:text="CC" android:padding="0dp" android:contentDescription="@string/caption_label"
-                    android:background="@drawable/clip_action_background" android:textColor="?attr/font_default"
+                    android:background="@drawable/clip_action_background" android:textColor="@color/player_clip_action_tint"
                     android:visibility="gone"
                     app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/player_add_playlist" />
@@ -702,7 +702,8 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 app:layout_constraintStart_toEndOf="@id/player_download" app:layout_constraintEnd_toStartOf="@id/noise_cancellation"
                 app:layout_constraintHorizontal_chainStyle="packed" app:layout_goneMarginBottom="48dp"
-                app:layout_constraintBottom_toTopOf="@id/clip_controls" />
+                app:layout_constraintBottom_toTopOf="@id/clip_controls"
+                app:tint="@color/player_clip_action_tint" />
         <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/noise_cancellation" android:scaleType="center"
                 android:layout_width="64dp"

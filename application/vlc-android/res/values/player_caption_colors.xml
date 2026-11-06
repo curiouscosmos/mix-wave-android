@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="caption_active_color" format="color|reference" />
+    <attr name="caption_selection_color" format="color|reference" />
+    <color name="caption_active_light">#B3261E</color>
+    <color name="caption_active_dark">#FF8A80</color>
+    <color name="caption_selection_light">#DCE8FA</color>
+    <color name="caption_selection_dark">#253F5E</color>
+</resources>

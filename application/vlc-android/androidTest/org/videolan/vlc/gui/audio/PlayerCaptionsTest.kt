@@ -18,6 +18,74 @@ import org.videolan.vlc.gui.view.ClipRangeView
 
 @RunWith(AndroidJUnit4::class)
 class PlayerCaptionsTest {
+    @Test fun captionsAndClipControlsHaveContrastInBothThemesAndOrientations() = onMain {
+        val base = InstrumentationRegistry.getInstrumentation().targetContext
+        fun color(context: android.content.Context, attr: Int) =
+            org.videolan.vlc.gui.helpers.UiTools.getColorFromAttribute(context, attr)
+        fun sampleBackground(view: View): Int {
+            val bitmap = android.graphics.Bitmap.createBitmap(80, 80, android.graphics.Bitmap.Config.ARGB_8888)
+            val drawable = view.background
+            val bounds = android.graphics.Rect(drawable.bounds)
+            drawable.setBounds(0, 0, 80, 80)
+            drawable.draw(android.graphics.Canvas(bitmap))
+            drawable.bounds = bounds
+            return bitmap.getPixel(40, 40).also { bitmap.recycle() }
+        }
+        fun contrast(foreground: Int, background: Int, minimum: Double = 4.5) {
+            val opaque = androidx.core.graphics.ColorUtils.compositeColors(foreground, background)
+            assertTrue("Insufficient contrast: ${Integer.toHexString(foreground)} on ${Integer.toHexString(background)}",
+                androidx.core.graphics.ColorUtils.calculateContrast(opaque, background) >= minimum)
+        }
+        for (theme in listOf(R.style.Theme_VLC, R.style.Theme_VLC_Black)) {
+            for (orientation in listOf(Configuration.ORIENTATION_PORTRAIT, Configuration.ORIENTATION_LANDSCAPE)) {
+                val config = Configuration(base.resources.configuration).apply {
+                    this.orientation = orientation
+                    uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                        if (theme == R.style.Theme_VLC) Configuration.UI_MODE_NIGHT_NO else Configuration.UI_MODE_NIGHT_YES
+                }
+                val context = ContextThemeWrapper(base.createConfigurationContext(config), theme)
+                val root = LayoutInflater.from(context).inflate(R.layout.audio_player, null)
+                val background = sampleBackground(root.findViewById(R.id.caption_panel))
+                val panelColor = sampleBackground(root.findViewById(R.id.clip_controls))
+                val transcript = root.findViewById<CaptionTextView>(R.id.caption_text)
+                transcript.setCues(listOf(org.videolan.vlc.discourse.CaptionCue(0, 1000, "Caption")))
+                contrast(transcript.currentTextColor, background)
+                transcript.setActive(0)
+                transcript.setClipRange(ClipRange(0, 1000))
+                val text = transcript.text as android.text.Spanned
+                val active = text.getSpans(0, text.length, android.text.style.ForegroundColorSpan::class.java).single().foregroundColor
+                val selected = text.getSpans(0, text.length, android.text.style.BackgroundColorSpan::class.java).single().backgroundColor
+                contrast(active, background)
+                contrast(active, selected)
+                contrast(transcript.currentTextColor, selected)
+                for (id in listOf(R.id.clip_start, R.id.clip_end, R.id.clip_start_minus, R.id.clip_start_plus,
+                    R.id.clip_end_minus, R.id.clip_end_plus, R.id.clip_duration)) {
+                    contrast(root.findViewById<android.widget.TextView>(id).currentTextColor, panelColor)
+                }
+                val cc = root.findViewById<android.widget.TextView>(R.id.player_cc)
+                contrast(cc.currentTextColor, background)
+                cc.isSelected = true
+                contrast(cc.currentTextColor, color(context, R.attr.colorPrimary))
+                val scissors = root.findViewById<androidx.appcompat.widget.AppCompatImageButton>(R.id.player_clip)
+                contrast(scissors.supportImageTintList!!.getColorForState(intArrayOf(), 0), background, 3.0)
+                contrast(scissors.supportImageTintList!!.getColorForState(intArrayOf(android.R.attr.state_selected), 0),
+                    color(context, R.attr.colorPrimary), 3.0)
+                val handles = ClipRangeView(context).apply {
+                    durationMs = 10000
+                    setRange(ClipRange(1000, 8000))
+                    measure(View.MeasureSpec.makeMeasureSpec(500, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(48, View.MeasureSpec.EXACTLY))
+                    layout(0, 0, 500, 48)
+                }
+                val bitmap = android.graphics.Bitmap.createBitmap(500, 48, android.graphics.Bitmap.Config.ARGB_8888)
+                handles.draw(android.graphics.Canvas(bitmap))
+                contrast(bitmap.getPixel(50, 24), panelColor, 3.0)
+                contrast(bitmap.getPixel(400, 24), panelColor, 3.0)
+                bitmap.recycle()
+            }
+        }
+    }
+
     @Test fun captionsFlowTogetherAndOnlyTheSpokenPhraseChangesColor() = onMain {
         val context = ContextThemeWrapper(InstrumentationRegistry.getInstrumentation().targetContext, R.style.Theme_VLC_Black)
         val view = CaptionTextView(context)

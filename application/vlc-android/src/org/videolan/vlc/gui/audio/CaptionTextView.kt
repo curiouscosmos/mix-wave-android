@@ -14,18 +14,21 @@ import android.view.View
 import androidx.appcompat.widget.AppCompatTextView
 import org.videolan.vlc.discourse.CaptionCue
 import org.videolan.vlc.discourse.ClipRange
+import org.videolan.vlc.R
+import org.videolan.vlc.gui.helpers.UiTools
 
 /** Cues flow as prose, while their spans retain timing and individual click targets. */
 class CaptionTextView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :
     AppCompatTextView(context, attrs) {
     private var cues = emptyList<CaptionCue>()
     private var ranges = emptyList<IntRange>()
-    private val spoken = ForegroundColorSpan(Color.rgb(255, 110, 90))
+    private val spoken = ForegroundColorSpan(UiTools.getColorFromAttribute(context, R.attr.caption_active_color))
+    private val selectionColor = UiTools.getColorFromAttribute(context, R.attr.caption_selection_color)
     private val selectionSpans = ArrayList<BackgroundColorSpan>()
     var onCueClick: ((CaptionCue) -> Unit)? = null
 
     init {
-        setTextColor(Color.WHITE)
+        setTextColor(UiTools.getColorFromAttribute(context, R.attr.font_default))
         movementMethod = LinkMovementMethod.getInstance()
         highlightColor = Color.TRANSPARENT
     }
@@ -63,7 +66,7 @@ class CaptionTextView @JvmOverloads constructor(context: Context, attrs: Attribu
         cues.forEachIndexed { index, cue ->
             if (range != null && cue.startMs < range.endMs && cue.endMs > range.startMs) {
                 ranges[index].takeUnless { it.isEmpty() }?.let {
-                    val span = BackgroundColorSpan(0x303F8CFF)
+                    val span = BackgroundColorSpan(selectionColor)
                     content.setSpan(span, it.first, it.last + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     selectionSpans += span
                 }

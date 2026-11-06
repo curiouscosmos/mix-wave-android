@@ -2,7 +2,6 @@ package org.videolan.vlc.gui.view
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.os.Bundle
 import android.util.AttributeSet
@@ -17,12 +16,15 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.ClipRange
 import org.videolan.vlc.discourse.clipTimestamp
+import org.videolan.vlc.gui.helpers.UiTools
 import kotlin.math.abs
 
 /** Transparent overlay: touches away from handles fall through to the player's seekbar. */
 class ClipRangeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
     private val density = resources.displayMetrics.density
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val activeColor = UiTools.getColorFromAttribute(context, R.attr.caption_active_color)
+    private val inactiveColor = UiTools.getColorFromAttribute(context, R.attr.font_default)
     private val handles = List(2) { View(context) }
     private var dragging = -1
     var durationMs = 0L
@@ -97,11 +99,11 @@ class ClipRangeView @JvmOverloads constructor(context: Context, attrs: Attribute
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        paint.color = Color.rgb(239, 56, 49)
+        paint.color = activeColor
         paint.strokeWidth = 4 * density
         canvas.drawLine(x(range.startMs), height / 2f, x(range.endMs), height / 2f, paint)
         listOf(range.startMs, range.endMs).forEachIndexed { index, it ->
-            paint.color = if ((index == 0) == startActive) Color.rgb(239, 56, 49) else Color.WHITE
+            paint.color = if ((index == 0) == startActive) activeColor else inactiveColor
             canvas.drawRoundRect(x(it) - 4 * density, height / 2f - 14 * density,
                 x(it) + 4 * density, height / 2f + 14 * density, 4 * density, 4 * density, paint)
         }

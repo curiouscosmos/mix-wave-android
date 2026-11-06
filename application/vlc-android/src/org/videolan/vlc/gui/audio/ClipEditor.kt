@@ -58,9 +58,6 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
 
     init {
         binding.playerClip.setBackgroundResource(R.drawable.clip_action_background)
-        val normalIcon = binding.playerClip.supportImageTintList?.defaultColor ?: android.graphics.Color.WHITE
-        binding.playerClip.supportImageTintList = android.content.res.ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()), intArrayOf(android.graphics.Color.WHITE, normalIcon))
         binding.playerClip.setOnClickListener {
             if (range == null) {
                 startActive = true
