@@ -270,6 +270,12 @@ val migration_36_37 = object:Migration(36, 37) {
     }
 }
 
+val migration_37_38 = object : Migration(37, 38) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("CREATE TABLE IF NOT EXISTS `clip_history` (`audioId` TEXT NOT NULL, `startMs` INTEGER NOT NULL, `endMs` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`audioId`, `startMs`, `endMs`))")
+    }
+}
+
 @OptIn(DelicateCoroutinesApi::class)
 fun populateDB(context: Context) = GlobalScope.launch(Dispatchers.IO) {
     val uris = listOf(AndroidDevices.MediaFolders.EXTERNAL_PUBLIC_MOVIES_DIRECTORY_URI,

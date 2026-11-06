@@ -267,6 +267,11 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         clipEditor = ClipEditor(this, binding, savedInstanceState)
+        parentFragmentManager.setFragmentResultListener(org.videolan.vlc.gui.dialogs.ClipHistoryDialog.RESULT, viewLifecycleOwner) { _, result ->
+            result.getString("audioId")?.let { id ->
+                clipEditor?.restoreHistory(id, org.videolan.vlc.discourse.ClipRange(result.getLong("start"), result.getLong("end")))
+            }
+        }
         captions = PlayerCaptions(this, binding, clipEditor!!, savedInstanceState)
         captions?.onSlide(captionSlideOffset)
         viewLifecycleOwner.lifecycleScope.launch {
@@ -1000,6 +1005,14 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
             val service = playlistModel.service ?: return
             val activity = activity as? AppCompatActivity ?: return
             optionsDelegate = PlayerOptionsDelegate(activity, service)
+            optionsDelegate.setClipHistoryListener(
+                { playlistModel.currentMediaWrapper?.discourseAudioSnapshot() != null },
+                {
+                    playlistModel.currentMediaWrapper?.discourseAudioSnapshot()?.id?.let { id ->
+                        if (parentFragmentManager.findFragmentByTag("clip_history") == null)
+                            org.videolan.vlc.gui.dialogs.ClipHistoryDialog.newInstance(id).show(parentFragmentManager, "clip_history")
+                    }
+                })
             optionsDelegate.setBookmarkClickedListener {
                 lifecycleScope.launch { if (!activity.showPinIfNeeded()) showBookmarks() }
             }

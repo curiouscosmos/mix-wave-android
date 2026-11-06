@@ -1,0 +1,6 @@
+<resources>
+    <string name="clip_history">Clip History</string>
+    <string name="clip_history_empty">No saved clips for this track.</string>
+    <string name="clip_history_save_failed">Could not save clip history. Please try again.</string>
+    <string name="clip_history_load_failed">Could not load clip history. Please try again.</string>
+</resources>

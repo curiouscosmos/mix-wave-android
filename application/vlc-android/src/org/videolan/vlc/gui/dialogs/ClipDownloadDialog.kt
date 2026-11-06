@@ -127,15 +127,19 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
             if (captionsAvailable) binding.clipExportCaptions.toggle()
         }
         binding.clipExportClose.setOnClickListener { dismiss() }
-        binding.clipExportShare.setOnClickListener { shareClip() }
+        binding.clipExportShare.setOnClickListener { saveHistoryThen { shareClip() } }
         binding.clipExportDownload.setOnClickListener {
-            output = ClipOutput.AUDIO
-            visualUri = null
-            requestExport()
+            saveHistoryThen {
+                output = ClipOutput.AUDIO
+                visualUri = null
+                requestExport()
+            }
         }
         binding.clipExportVideo.setOnClickListener {
-            output = ClipOutput.VIDEO
-            visualPicker.launch(arrayOf("image/*", "video/*"))
+            saveHistoryThen {
+                output = ClipOutput.VIDEO
+                visualPicker.launch(arrayOf("image/*", "video/*"))
+            }
         }
         binding.clipExportCancel.setOnClickListener {
             if (exporting && DiscourseClipService.status.value?.running == true) {
@@ -163,6 +167,28 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val bitmap = HttpImageLoader.downloadBitmap(url)
             if (binding.clipExportArtwork.tag == url && bitmap != null) binding.clipExportArtwork.setImageBitmap(bitmap)
+        }
+    }
+
+    private var savingHistory = false
+
+    private fun saveHistoryThen(action: () -> Unit) {
+        if (savingHistory) return
+        val args = requireArguments()
+        val entry = org.videolan.vlc.mediadb.models.ClipHistory(audio.id, args.getLong("start"), args.getLong("end"), System.currentTimeMillis())
+        val history = org.videolan.vlc.discourse.ClipHistoryStore(requireContext())
+        savingHistory = true
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                history.save(entry)
+                if (isResumed) action()
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                UiTools.snacker(requireActivity(), R.string.clip_history_save_failed)
+            } finally {
+                savingHistory = false
+            }
         }
     }
 
