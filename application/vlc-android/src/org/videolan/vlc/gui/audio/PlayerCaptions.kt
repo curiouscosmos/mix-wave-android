@@ -30,6 +30,7 @@ internal class PlayerCaptions(
     private val scope = player.viewLifecycleOwner.lifecycleScope
     private val loader = DiscourseCaptions(player.requireContext())
     private var audio: DiscourseAudio? = null
+    private val captionsAvailable get() = audio?.hasCc == true && !audio?.ccPath.isNullOrBlank()
     private var currentId: String? = saved?.getString("captions_audio")
     private var initialized = false
     private var requested = saved?.getBoolean("captions_visible") == true
@@ -120,13 +121,17 @@ internal class PlayerCaptions(
     }
 
     private fun load(refresh: Boolean) {
+        if (!captionsAvailable) return
         if (!requests.request(refresh) || !requests.isLoading) return
         status.setText(R.string.caption_loading)
         status.isVisible = true
         retry.isVisible = false
     }
 
-    fun openForClip() { requested = true; followPlayback = true; load(false); render() }
+    fun openForClip() {
+        if (!captionsAvailable) return
+        requested = true; followPlayback = true; load(false); render()
+    }
 
     fun onSlide(offset: Float) { slideOffset = offset; render() }
 
@@ -136,7 +141,7 @@ internal class PlayerCaptions(
             val bottom = if (editor.isOpen) R.id.clip_controls else R.id.player_timeline_background
             if (params.bottomToTop != bottom) { params.bottomToTop = bottom; panel.layoutParams = params }
         }
-        val available = audio != null
+        val available = captionsAvailable
         button.isEnabled = available
         button.alpha = slideOffset * if (available) 1f else .4f
         button.isSelected = available && requested
