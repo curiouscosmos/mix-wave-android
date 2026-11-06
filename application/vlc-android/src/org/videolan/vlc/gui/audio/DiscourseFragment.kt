@@ -27,6 +27,7 @@ import android.widget.Toast
 import android.widget.PopupMenu
 import android.text.format.Formatter
 import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.ListAdapter
 import org.videolan.resources.util.parcelable
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.view.ActionMode
@@ -70,6 +71,8 @@ import org.videolan.resources.util.registerReceiverCompat
 
 class DiscourseFragment : BaseFragment() {
     private val model: DiscourseViewModel by viewModels { DiscourseViewModel.Factory(requireContext()) }
+    private lateinit var cardAdapter: DiscourseAdapter
+    private lateinit var loadingFooter: LoadingFooter
     private lateinit var grid: RecyclerView
     private lateinit var gridSwipe: SwipeRefreshLayout
     private lateinit var catalogue: View
@@ -155,6 +158,9 @@ class DiscourseFragment : BaseFragment() {
         message = view.findViewById(R.id.discourse_message)
         retry = view.findViewById(R.id.discourse_retry)
         grid.layoutManager = LinearLayoutManager(requireContext())
+        cardAdapter = DiscourseAdapter(::openDiscourse)
+        loadingFooter = LoadingFooter()
+        grid.adapter = ConcatAdapter(cardAdapter, loadingFooter)
         tracks.layoutManager = LinearLayoutManager(requireContext())
         detail.setBackgroundResource(R.drawable.discourse_detail_background)
         header = layoutInflater.inflate(R.layout.discourse_detail_header, tracks, false)
@@ -184,14 +190,14 @@ class DiscourseFragment : BaseFragment() {
             arguments?.parcelable<Discourse>(DiscourseDetailActivity.ARG_DISCOURSE)?.let(model::openDiscourse)
         }
         model.state.observe(viewLifecycleOwner, ::render)
-        model.loadingMore.observe(viewLifecycleOwner) { (grid.adapter as? DiscourseAdapter)?.setLoadingMore(it) }
+        model.loadingMore.observe(viewLifecycleOwner) { loadingFooter.setLoadingMore(it) }
         viewLifecycleOwner.lifecycleScope.launch {
             playbackStore.initialize()
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 launch {
                     if (detailOnly) return@launch
                     downloads.summaryChanges().collect { changed ->
-                        (grid.adapter as? DiscourseAdapter)?.refreshDownloads(changed)
+                        cardAdapter.refreshDownloads(changed)
                     }
                 }
                 refreshProgress(null)
@@ -240,15 +246,13 @@ class DiscourseFragment : BaseFragment() {
                     catalogueEmpty.isVisible = true
                     gridSwipe.isVisible = false
                     grid.isVisible = false
-                    (grid.adapter as? DiscourseAdapter)?.update(emptyList())
-                        ?: run { grid.adapter = DiscourseAdapter(emptyList(), ::openDiscourse) }
+                    cardAdapter.update(emptyList())
                 } else {
                     state.isVisible = false
                     catalogueEmpty.isVisible = false
                     gridSwipe.isVisible = true
                     grid.isVisible = true
-                    (grid.adapter as? DiscourseAdapter)?.update(value.discourses)
-                        ?: run { grid.adapter = DiscourseAdapter(value.discourses, ::openDiscourse) }
+                    cardAdapter.update(value.discourses)
                 }
             }
             is DiscourseViewModel.State.Detail -> {
@@ -347,7 +351,7 @@ class DiscourseFragment : BaseFragment() {
     }
 
     private fun refreshProgress(change: DiscoursePlaybackStore.Change?) {
-        (grid.adapter as? DiscourseAdapter)?.refreshProgress(change)
+        cardAdapter.refreshProgress(change)
         trackAdapter?.refreshProgress(change)
         val value = model.state.value as? DiscourseViewModel.State.Detail ?: return
         if (change != null && value.discourse.id !in change.discourseIds) return
@@ -406,7 +410,7 @@ class DiscourseFragment : BaseFragment() {
             // Another screen may have started or removed a download while we were stopped.
             downloads.invalidate()
         }
-        (grid.adapter as? DiscourseAdapter)?.refreshDownloads()
+        cardAdapter.refreshDownloads()
         startDownloadPolling()
     }
 
@@ -507,25 +511,26 @@ class DiscourseFragment : BaseFragment() {
         ).joinToString(" · ")
     }
 
-    private fun loadImage(image: ImageView, url: String?) {
+    private fun loadImage(image: ImageView, url: String?): Job? {
         image.setImageDrawable(UiTools.getDefaultAudioDrawable(requireContext()))
         val imageUrl = org.videolan.vlc.discourse.resolveDiscourseUrl(url)
         image.tag = imageUrl
-        if (imageUrl.isNullOrBlank()) return
-        viewLifecycleOwner.lifecycleScope.launch {
+        if (imageUrl.isNullOrBlank()) return null
+        return viewLifecycleOwner.lifecycleScope.launch {
             val bitmap = HttpImageLoader.downloadBitmap(imageUrl)
             if (image.tag == imageUrl && bitmap != null) image.setImageBitmap(bitmap)
         }
     }
 
-    private inner class DiscourseAdapter(
-        items: List<Discourse>,
-        private val click: (Discourse) -> Unit
-    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        private var items = items
-        private var positions = items.mapIndexed { index, item -> item.id to index }.toMap()
-        private var loadingMore = false
+    private inner class DiscourseAdapter(private val click: (Discourse) -> Unit) :
+        ListAdapter<CatalogueRow, RecyclerView.ViewHolder>(CatalogueDiff) {
+        init { stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY }
+        private var positions = emptyMap<String, Int>()
+        override fun onCurrentListChanged(previousList: MutableList<CatalogueRow>, currentList: MutableList<CatalogueRow>) {
+            positions = currentList.mapIndexed { index, row -> row.discourse.id to index }.toMap()
+        }
         inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
+            var artworkJob: Job? = null
             val card: View = view.findViewById(R.id.discourse_catalogue_card)
             val heading: View = view.findViewById(R.id.discourse_letter_heading)
             val letter: TextView = view.findViewById(R.id.discourse_letter)
@@ -539,26 +544,18 @@ class DiscourseFragment : BaseFragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
-            if (viewType == 1) object : RecyclerView.ViewHolder(FrameLayout(parent.context).apply {
-                layoutParams = RecyclerView.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    (56 * parent.resources.displayMetrics.density).toInt()
-                )
-                addView(ProgressBar(context).apply { isIndeterminate = true }, FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    Gravity.CENTER
-                ))
-            }) {} else Holder(layoutInflater.inflate(R.layout.discourse_catalogue_card, parent, false))
+            Holder(layoutInflater.inflate(R.layout.discourse_catalogue_card, parent, false))
 
-        override fun getItemViewType(position: Int) = if (position == items.size) 1 else 0
+        override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+            likesUi.unbind(holder.itemView)
+            (holder as Holder).image.tag = null
+            holder.artworkJob?.cancel()
+        }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            if (position == items.size) return
             holder as Holder
-            val item = items[position]
-            val heading = discourseCatalogueHeading(item.title, items.getOrNull(position - 1)?.title,
-                model.sortFilter == DiscourseViewModel.SortFilter.DEFAULT)
+            val item = getItem(position).discourse
+            val heading = getItem(position).heading
             holder.heading.isVisible = heading != null
             holder.letter.text = heading
             holder.title.text = item.title
@@ -568,7 +565,8 @@ class DiscourseFragment : BaseFragment() {
             bindDiscourseDownloadIndicator(holder, item)
             bindDiscourseDownloadProgress(holder.downloaded, item)
             holder.card.setOnClickListener { click(item) }
-            loadImage(holder.image, item.thumbnailUrl)
+            holder.artworkJob?.cancel()
+            holder.artworkJob = loadImage(holder.image, item.thumbnailUrl)
             bindProgress(holder, item)
         }
 
@@ -582,37 +580,27 @@ class DiscourseFragment : BaseFragment() {
             ).filterNotNull().filter(CharSequence::isNotBlank).joinToString(". ")
         }
         fun refreshProgress(change: DiscoursePlaybackStore.Change?) {
-            if (change == null) notifyItemRangeChanged(0, items.size, "progress")
+            if (change == null) notifyItemRangeChanged(0, itemCount, "progress")
             else change.discourseIds.forEach { id -> positions[id]?.let { notifyItemChanged(it, "progress") } }
         }
-        fun refreshDownloads() = notifyItemRangeChanged(0, items.size, "download")
+        fun refreshDownloads() = notifyItemRangeChanged(0, itemCount, "download")
         fun refreshDownloads(changed: Set<String>) {
             changed.forEach { id -> positions[id]?.let { notifyItemChanged(it, "download") } }
         }
-        override fun getItemCount() = items.size + if (loadingMore) 1 else 0
-
-        fun setLoadingMore(loading: Boolean) {
-            if (loadingMore == loading) return
-            loadingMore = loading
-            if (loading) notifyItemInserted(items.size) else notifyItemRemoved(items.size)
-        }
-
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
             if (payloads.isEmpty()) onBindViewHolder(holder, position)
             else if (holder !is Holder) return
             else if ("download" in payloads) {
-                val item = items[position]
+                val item = getItem(position).discourse
                 bindDiscourseDownloadIndicator(holder, item)
                 bindDiscourseDownloadProgress(holder.downloaded, item)
                 bindProgress(holder, item)
             }
-            else bindProgress(holder, items[position])
+            else bindProgress(holder, getItem(position).discourse)
         }
 
         fun update(items: List<Discourse>) {
-            this.items = items
-            positions = items.mapIndexed { index, item -> item.id to index }.toMap()
-            notifyDataSetChanged()
+            submitList(catalogueRows(items, model.sortFilter == DiscourseViewModel.SortFilter.DEFAULT))
         }
 
         private fun bindDiscourseDownloadProgress(view: ProgressBar, item: Discourse) {
@@ -634,6 +622,22 @@ class DiscourseFragment : BaseFragment() {
             holder.downloadedCount.isVisible = completed > 0
             holder.downloadedCount.text = completed.toString()
         }
+    }
+
+    internal class LoadingFooter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        private var loading = false
+        override fun getItemCount() = if (loading) 1 else 0
+        fun setLoadingMore(value: Boolean) {
+            if (loading == value) return
+            loading = value
+            if (value) notifyItemInserted(0) else notifyItemRemoved(0)
+        }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = object : RecyclerView.ViewHolder(
+            FrameLayout(parent.context).apply {
+                layoutParams = RecyclerView.LayoutParams(-1, (56 * resources.displayMetrics.density).toInt())
+                addView(ProgressBar(context), FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+            }) {}
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) = Unit
     }
 
     private inner class TrackAdapter(

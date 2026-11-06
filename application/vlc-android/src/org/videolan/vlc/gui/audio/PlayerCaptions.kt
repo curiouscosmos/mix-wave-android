@@ -29,11 +29,9 @@ internal class PlayerCaptions(
     private val follow: View = panel.findViewById(R.id.caption_follow)
     private val scope = player.viewLifecycleOwner.lifecycleScope
     private val loader = DiscourseCaptions(player.requireContext())
-    private var job: Job? = null
     private var audio: DiscourseAudio? = null
     private var currentId: String? = saved?.getString("captions_audio")
     private var initialized = false
-    private var refreshedId: String? = saved?.getString("captions_refreshed_id")
     private var requested = saved?.getBoolean("captions_visible") == true
     private var followPlayback = saved?.getBoolean("captions_follow", true) ?: true
     private var cues = emptyList<CaptionCue>()
@@ -66,6 +64,25 @@ internal class PlayerCaptions(
         }
     }
 
+    private val requests by lazy {
+        CaptionLoader(scope, { original ->
+            DiscourseRepository(player.requireContext()).getDiscourseAudios(original.discourseId, forceRefresh = true)
+                .data.firstOrNull { it.id == original.id }
+        }, { loader.load(it) }) { updated, result, error ->
+            if (player.playlistModel.currentMediaWrapper?.discourseAudioSnapshot()?.id != updated.id) return@CaptionLoader
+            audio = updated
+            player.playlistModel.currentMediaWrapper?.takeIf { it.discourseAudioSnapshot()?.id == updated.id }
+                ?.updateCaptionSnapshot(updated)
+            cues = result.orEmpty()
+            active = -1
+            rows.notifyDataSetChanged()
+            status.setText(if (error) R.string.caption_error else R.string.caption_empty)
+            status.isVisible = error || cues.isEmpty()
+            retry.isVisible = error || cues.isEmpty()
+            render()
+        }
+    }
+
     init {
         list.layoutManager = LinearLayoutManager(player.requireContext())
         list.adapter = rows
@@ -77,7 +94,7 @@ internal class PlayerCaptions(
                 }
             }
         })
-        button.setOnClickListener { requested = !requested; render() }
+        button.setOnClickListener { requested = !requested; if (requested) load(false); render() }
         retry.setOnClickListener { load(true) }
         follow.setOnClickListener {
             followPlayback = true
@@ -100,7 +117,7 @@ internal class PlayerCaptions(
         val media = player.playlistModel.currentMediaWrapper
         val snapshot = media?.discourseAudioSnapshot()
         if (snapshot == null) {
-            job?.cancel()
+            requests.select(null)
             audio = null
             initialized = false
             if (media != null) { currentId = null; requested = false; followPlayback = true }
@@ -112,54 +129,24 @@ internal class PlayerCaptions(
         val changed = currentId != null && currentId != snapshot.id
         initialized = true
         currentId = snapshot.id
-        job?.cancel()
+        requests.select(snapshot)
         audio = snapshot
         cues = emptyList()
         active = -1
         rows.notifyDataSetChanged()
         if (changed) { requested = false; followPlayback = true }
         render()
-        load(refreshedId != snapshot.id)
+        if (requested) load(false)
     }
 
     private fun load(refresh: Boolean) {
-        job?.cancel()
-        val original = audio ?: return
+        if (!requests.request(refresh) || !requests.isLoading) return
         status.setText(R.string.caption_loading)
         status.isVisible = true
         retry.isVisible = false
-        job = scope.launch {
-            try {
-                if (refresh) {
-                    try {
-                        val updated = DiscourseRepository(player.requireContext())
-                            .getDiscourseAudios(original.discourseId, forceRefresh = true).data.firstOrNull { it.id == original.id }
-                        if (updated != null) {
-                            refreshedId = original.id
-                            audio = updated
-                            player.playlistModel.currentMediaWrapper?.updateCaptionSnapshot(updated)
-                        }
-                    } catch (cancel: CancellationException) { throw cancel }
-                    catch (_: Exception) { /* Persisted metadata still allows offline caption use. */ }
-                }
-                render()
-                val current = audio ?: return@launch
-                cues = if (current.hasCc == true && !current.ccPath.isNullOrBlank()) loader.load(current.ccPath) else emptyList()
-                active = -1
-                rows.notifyDataSetChanged()
-                status.setText(R.string.caption_empty)
-                status.isVisible = cues.isEmpty()
-                retry.isVisible = cues.isEmpty()
-            } catch (cancel: CancellationException) { throw cancel }
-            catch (_: Exception) {
-                status.setText(R.string.caption_error)
-                status.isVisible = true
-                retry.isVisible = true
-            }
-        }
     }
 
-    fun openForClip() { requested = true; followPlayback = true; render() }
+    fun openForClip() { requested = true; followPlayback = true; load(false); render() }
 
     fun onSlide(offset: Float) { slideOffset = offset; render() }
 
@@ -169,7 +156,7 @@ internal class PlayerCaptions(
             val bottom = if (editor.isOpen) R.id.clip_controls else R.id.player_timeline_background
             if (params.bottomToTop != bottom) { params.bottomToTop = bottom; panel.layoutParams = params }
         }
-        val available = audio?.let { it.hasCc == true && !it.ccPath.isNullOrBlank() } == true
+        val available = audio != null
         button.isEnabled = available
         button.alpha = slideOffset * if (available) 1f else .4f
         button.isSelected = available && requested
@@ -208,11 +195,10 @@ internal class PlayerCaptions(
 
     fun save(out: Bundle) {
         out.putString("captions_audio", currentId)
-        out.putString("captions_refreshed_id", refreshedId)
         out.putBoolean("captions_visible", requested)
         out.putBoolean("captions_follow", followPlayback)
     }
 
-    fun dispose() { job?.cancel(); list.adapter = null; list.clearOnScrollListeners() }
+    fun dispose() { requests.cancel(); list.adapter = null; list.clearOnScrollListeners() }
     private class Row(val text: TextView) : RecyclerView.ViewHolder(text)
 }
