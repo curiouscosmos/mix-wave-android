@@ -43,6 +43,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     private var output = ClipOutput.AUDIO
     private var visualUri: String? = null
     private var exporting = false
+    private var exportCaptions = false
     private var sheetBehavior: BottomSheetBehavior<FrameLayout>? = null
     private var lastPercent: Int? = null
 
@@ -55,6 +56,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         exporting = savedInstanceState?.getBoolean("exporting") == true
+        exportCaptions = savedInstanceState?.getBoolean("captions") == true
         output = ClipOutput.valueOf(savedInstanceState?.getString("output") ?: "AUDIO")
         visualUri = savedInstanceState?.getString("visual_uri")
     }
@@ -70,6 +72,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("exporting", exporting)
+        outState.putBoolean("captions", exportCaptions)
         outState.putString("output", output.name)
         outState.putString("visual_uri", visualUri)
     }
@@ -109,6 +112,20 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         val options = exportOptions()
         binding.clipExportNoiseSwitch.isChecked = options.noiseLevel != NoiseCancellationLevel.OFF
         binding.clipExportMusicSwitch.isChecked = options.mixer != null
+        val captionsAvailable = audio.hasCc == true && !audio.ccPath.isNullOrBlank()
+        binding.clipExportCaptionsRow.isEnabled = captionsAvailable
+        binding.clipExportCaptionsRow.isFocusable = captionsAvailable
+        binding.clipExportCaptionsRow.isClickable = captionsAvailable
+        binding.clipExportCaptionsRow.alpha = if (captionsAvailable) 1f else 0.5f
+        binding.clipExportCaptionsStatus.isVisible = !captionsAvailable
+        binding.clipExportCaptions.isEnabled = captionsAvailable
+        binding.clipExportCaptions.isChecked = captionsAvailable && exportCaptions
+        binding.clipExportCaptions.setOnCheckedChangeListener { _, checked ->
+            exportCaptions = captionsAvailable && checked
+        }
+        binding.clipExportCaptionsRow.setOnClickListener {
+            if (captionsAvailable) binding.clipExportCaptions.toggle()
+        }
         binding.clipExportClose.setOnClickListener { dismiss() }
         binding.clipExportShare.setOnClickListener { shareClip() }
         binding.clipExportDownload.setOnClickListener {
@@ -182,7 +199,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         }
 
         val video = output == ClipOutput.VIDEO
-        val success = !running && state.message == R.string.clip_saved
+        val success = !running && (state.message == R.string.clip_saved || state.message == R.string.clip_saved_no_captions)
         val failure = !running && !success
         binding.clipExportProgressTitle.setText(when {
             success -> if (video) R.string.clip_created_video else R.string.clip_created_audio
@@ -190,7 +207,8 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
             else -> if (video) R.string.clip_creating_video else R.string.clip_creating_audio
         })
         binding.clipExportProgressSubtitle.text = when {
-            success -> getString(R.string.clip_export_saved_message)
+            success -> if (state.message == R.string.clip_saved_no_captions) getString(state.message)
+                else getString(R.string.clip_export_saved_message)
             failure -> getString(state.message)
             else -> getString(R.string.clip_export_wait)
         }
@@ -247,7 +265,11 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         try {
             val args = requireArguments()
             val started = DiscourseClipService.start(requireContext(), audio, ClipRange(args.getLong("start"), args.getLong("end")),
-                exportOptions().copy(output = output, visualUri = visualUri))
+                exportOptions().copy(
+                    output = output,
+                    visualUri = visualUri,
+                    captionPath = if (binding.clipExportCaptions.isChecked) audio.ccPath else null
+                ))
             UiTools.snacker(requireActivity(), if (started) R.string.clip_started else R.string.clip_busy)
             exporting = true
         } catch (_: Exception) {

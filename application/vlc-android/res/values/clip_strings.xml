@@ -7,6 +7,8 @@
     <string name="clip_export_title">Export Clip</string>
     <string name="clip_noise_cancellation">Noise cancellation</string>
     <string name="clip_background_music">Background music</string>
+    <string name="clip_export_captions">Export closed captions</string>
+    <string name="clip_captions_unavailable">Not available for this track</string>
     <string name="clip_range">%1$s – %2$s</string>
     <string name="clip_share_text">%1$s\n%2$s\n%3$s</string>
     <string name="clip_creating_video">Creating Video Clip</string>
@@ -32,6 +34,7 @@
     <string name="clip_downloading_source">Downloading the full track…</string>
     <string name="clip_cutting">Cutting and saving clip…</string>
     <string name="clip_saved">Clip saved to Downloads/Rajneesh Discourse</string>
+    <string name="clip_saved_no_captions">Clip saved without captions</string>
     <string name="clip_failed">Could not save clip</string>
     <string name="clip_retry">Check your connection and free storage, then try exporting the clip again.</string>
     <string name="clip_unsupported">This audio format does not support fast clipping</string>

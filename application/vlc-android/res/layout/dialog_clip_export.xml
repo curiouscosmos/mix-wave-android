@@ -207,6 +207,63 @@
                                 app:thumbTint="@color/clip_export_switch_thumb"
                                 app:trackTint="@color/clip_export_switch_track" />
                     </LinearLayout>
+
+                    <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginHorizontal="16dp"
+                            android:background="@color/clip_export_divider" />
+
+                    <LinearLayout
+                            android:id="@+id/clip_export_captions_row"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="64dp"
+                            android:paddingHorizontal="16dp"
+                            android:paddingVertical="8dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                        <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_subtitles"
+                                android:tint="@color/clip_export_icon" />
+
+                        <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="16dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                            <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/clip_export_captions"
+                                    android:textColor="@color/clip_export_text"
+                                    android:textSize="16sp" />
+
+                            <TextView
+                                    android:id="@+id/clip_export_captions_status"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/clip_captions_unavailable"
+                                    android:textColor="@color/clip_export_text_secondary"
+                                    android:textSize="12sp"
+                                    android:visibility="gone"
+                                    tools:visibility="visible" />
+                        </LinearLayout>
+
+                        <com.google.android.material.checkbox.MaterialCheckBox
+                                android:id="@+id/clip_export_captions"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:enabled="false"
+                                app:buttonTint="@color/clip_export_check_tint" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout

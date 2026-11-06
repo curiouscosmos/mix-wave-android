@@ -25,9 +25,11 @@ class DiscourseClipServiceTest {
     @Test fun processedExportPublishesM4aAndPreservesOfflineSource() = checkExport(true)
     @Test fun persistedVideoRequestResumesAndPublishesMp4() = checkExport(true, true)
     @Test fun removedVisualFailsPersistedRequestAndCleansTemporaryFiles() = checkExport(true, true, true)
+    @Test fun missingCaptionsPublishesClipWithWarning() = checkExport(false, captions = true)
 
     @Suppress("DEPRECATION")
-    private fun checkExport(processed: Boolean, video: Boolean = false, removedVisual: Boolean = false) = runBlocking<Unit> {
+    private fun checkExport(processed: Boolean, video: Boolean = false, removedVisual: Boolean = false,
+                            captions: Boolean = false) = runBlocking<Unit> {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val id = UUID.randomUUID().toString()
@@ -48,6 +50,7 @@ class DiscourseClipServiceTest {
             instrumentation.uiAutomation.adoptShellPermissionIdentity()
             var options = if (processed) ClipExportOptions(NoiseCancellationLevel.LOW,
                 ClipMixerOptions(android.net.Uri.fromFile(source).toString(), "Background", 37, true)) else ClipExportOptions()
+            if (captions) options = options.copy(captionPath = "http://example.invalid/captions.srt")
             // The request is persisted before starting the service and removed only after completion.
             val preferences = context.getSharedPreferences("discourse_clip_export", Context.MODE_PRIVATE)
             if (video) {
@@ -68,11 +71,13 @@ class DiscourseClipServiceTest {
                 assertFalse(File(context.cacheDir, "discourse-clip-audio.tmp").exists())
                 return@runBlocking
             }
-            assertEquals(R.string.clip_saved, DiscourseClipService.status.value?.message)
+            assertEquals(if (captions) R.string.clip_saved_no_captions else R.string.clip_saved,
+                DiscourseClipService.status.value?.message)
             assertTrue(source.isFile)
             context.contentResolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
                 arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.IS_PENDING, MediaStore.MediaColumns.MIME_TYPE),
                 "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?", arrayOf("Clip test $id%"), null)!!.use { cursor ->
+                assertEquals(1, cursor.count)
                 assertTrue("No public clip was published", cursor.moveToFirst())
                 assertTrue(cursor.getLong(1) > 0)
                 assertEquals(0, cursor.getInt(2))

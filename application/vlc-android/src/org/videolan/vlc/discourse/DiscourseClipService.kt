@@ -118,17 +118,21 @@ class DiscourseClipService : Service() {
                     } else if (processing) ProcessedClipExporter.export(this@DiscourseClipService, source, range, options, temporary, onProgress)
                         else DiscourseClipExporter.export(source, range, temporary, onProgress)
                     ensureActive()
-                    val uri = publish(temporary, audio.title, range, mime)
+                    val baseName = clipBaseName(audio.title, range)
+                    val uri = publish(temporary, "$baseName.${clipExtension(mime)}", mime)
+                    val captionsSaved = options.captionPath?.let { exportCaptions(it, range, baseName) } ?: false
+                    val savedMessage = if (options.captionPath != null && !captionsSaved)
+                        R.string.clip_saved_no_captions else R.string.clip_saved
                     val open = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
                     val completed = NotificationCompat.Builder(this@DiscourseClipService, CHANNEL)
-                        .setSmallIcon(R.drawable.ic_player_clip).setContentTitle(getString(R.string.clip_saved))
+                        .setSmallIcon(R.drawable.ic_player_clip).setContentTitle(getString(savedMessage))
                         .setContentText(audio.title).setAutoCancel(true)
                         .setContentIntent(PendingIntent.getActivity(this@DiscourseClipService, 0, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
                         .build()
                     notifications.notify(RESULT_NOTIFICATION, completed)
-                    mutableStatus.value = ClipExportStatus(R.string.clip_saved, running = false)
-                    mutableResults.tryEmit(R.string.clip_saved)
+                    mutableStatus.value = ClipExportStatus(savedMessage, running = false)
+                    mutableResults.tryEmit(savedMessage)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
@@ -140,6 +144,7 @@ class DiscourseClipService : Service() {
                     cleanupOutput()
                     File(cacheDir, "discourse-clip-export.tmp").delete()
                     File(cacheDir, "discourse-clip-audio.tmp").delete()
+                    File(cacheDir, "discourse-clip-captions.tmp").delete()
                     finish()
                 }
             }
@@ -168,10 +173,38 @@ class DiscourseClipService : Service() {
             .addAction(0, getString(android.R.string.cancel), cancel)
     }
 
-    private suspend fun publish(source: File, title: String, range: ClipRange, mime: String): Uri {
-        val extension = if (mime == "video/mp4") "mp4" else if (mime == "audio/mpeg") "mp3" else "m4a"
+    private fun clipBaseName(title: String, range: ClipRange): String {
         val safeTitle = title.replace(Regex("[\\p{Cntrl}/\\\\:*?\"<>|]"), "_").take(80).ifBlank { "Discourse" }
-        val name = "${safeTitle}_${clipTimestamp(range.startMs).replace(':', '-')}-${clipTimestamp(range.endMs).replace(':', '-')}_${UUID.randomUUID().toString().take(8)}.$extension"
+        return "${safeTitle}_${clipTimestamp(range.startMs).replace(':', '-')}-${clipTimestamp(range.endMs).replace(':', '-')}_${UUID.randomUUID().toString().take(8)}"
+    }
+
+    private fun clipExtension(mime: String) = if (mime == "video/mp4") "mp4" else if (mime == "audio/mpeg") "mp3" else "m4a"
+
+    private suspend fun exportCaptions(path: String, range: ClipRange, baseName: String): Boolean {
+        val cues = try {
+            DiscourseCaptions(this).load(path)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            return false
+        }
+        val trimmed = clipCaptions(cues, range)
+        if (trimmed.isEmpty()) return false
+        val captionTemp = File(cacheDir, "discourse-clip-captions.tmp")
+        return try {
+            captionTemp.writeText(formatSrt(trimmed), Charsets.UTF_8)
+            publish(captionTemp, "$baseName.srt", "application/x-subrip")
+            true
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            false
+        } finally {
+            captionTemp.delete()
+        }
+    }
+
+    private suspend fun publish(source: File, name: String, mime: String): Uri {
         val uri: Uri
         if (Build.VERSION.SDK_INT >= 29) {
             uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, ContentValues().apply {
