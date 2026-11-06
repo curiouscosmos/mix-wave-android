@@ -315,7 +315,7 @@ class StartActivity : FragmentActivity() {
                 DiscourseRepository(this@StartActivity).getDiscourseById(link.discourseId)
             }
             if (discourse != null) {
-                DiscourseDetailActivity.open(this@StartActivity, discourse, link.audioId)
+                DiscourseDetailActivity.open(this@StartActivity, discourse, link.audioId, link.clipRange)
             } else {
                 Toast.makeText(this@StartActivity, R.string.discourse_load_failed, Toast.LENGTH_LONG).show()
                 startApplication(showTvUi(), firstRun = false, upgrade = false, target = 0)

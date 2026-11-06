@@ -3,7 +3,7 @@ package org.videolan.vlc.discourse
 import android.net.Uri
 
 /** Parsed https://rajneeshdiscourse.com/discourses/... link. */
-data class DiscourseDeepLink(val discourseId: String, val audioId: String?) {
+data class DiscourseDeepLink(val discourseId: String, val audioId: String?, val clipRange: ClipRange? = null) {
     companion object {
         private const val HOST = "rajneeshdiscourse.com"
 
@@ -22,7 +22,15 @@ data class DiscourseDeepLink(val discourseId: String, val audioId: String?) {
                     segments[3].trim().takeIf(String::isNotEmpty) ?: return null
                 else -> return null
             }
-            return DiscourseDeepLink(discourseId, audioId)
+            fun milliseconds(name: String): Long? {
+                val seconds = uri.getQueryParameter(name)?.toBigDecimalOrNull() ?: return null
+                return runCatching { seconds.multiply(java.math.BigDecimal(1000)).longValueExact() }.getOrNull()
+            }
+            val start = if (audioId != null) milliseconds("start") else null
+            val end = if (audioId != null) milliseconds("end") else null
+            val clip = if (start != null && end != null && start >= 0 && end > start && end - start >= 1000)
+                ClipRange(start, end) else null
+            return DiscourseDeepLink(discourseId, audioId, clip)
         }
     }
 }

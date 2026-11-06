@@ -16,14 +16,31 @@ import com.google.android.material.appbar.AppBarLayout
 import org.videolan.resources.util.parcelable
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.Discourse
+import org.videolan.vlc.discourse.ClipRange
 import org.videolan.vlc.gui.ContentActivity
 
 class DiscourseDetailActivity : ContentActivity() {
     override val displayTitle = true
+    private var clipPlaybackRequested = false
+
+    fun requestLinkedClipPlayback(): Boolean {
+        if (!intent.hasExtra(ARG_CLIP_START) || clipPlaybackRequested) return false
+        clipPlaybackRequested = true
+        return true
+    }
+
+    fun takeLinkedClip(audioId: String): ClipRange? {
+        if (!clipPlaybackRequested || intent.getStringExtra(ARG_AUDIO_ID) != audioId || !intent.hasExtra(ARG_CLIP_START)) return null
+        val range = ClipRange(intent.getLongExtra(ARG_CLIP_START, 0), intent.getLongExtra(ARG_CLIP_END, 0))
+        intent.removeExtra(ARG_CLIP_START)
+        intent.removeExtra(ARG_CLIP_END)
+        return range
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        clipPlaybackRequested = savedInstanceState?.getBoolean("clip_playback_requested") ?: false
         setContentView(R.layout.secondary)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
@@ -53,6 +70,11 @@ class DiscourseDetailActivity : ContentActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu) = true
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("clip_playback_requested", clipPlaybackRequested)
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) { finish(); return true }
         return super.onOptionsItemSelected(item)
@@ -61,10 +83,17 @@ class DiscourseDetailActivity : ContentActivity() {
     companion object {
         const val ARG_DISCOURSE = "detail_discourse"
         const val ARG_AUDIO_ID = "detail_audio_id"
-        fun open(context: Context, discourse: Discourse, audioId: String? = null) {
+        private const val ARG_CLIP_START = "detail_clip_start"
+        private const val ARG_CLIP_END = "detail_clip_end"
+        fun open(context: Context, discourse: Discourse, audioId: String? = null, clipRange: ClipRange? = null) {
             context.startActivity(Intent(context, DiscourseDetailActivity::class.java)
                 .putExtra(ARG_DISCOURSE, discourse)
-                .putExtra(ARG_AUDIO_ID, audioId))
+                .putExtra(ARG_AUDIO_ID, audioId).apply {
+                    clipRange?.let {
+                        putExtra(ARG_CLIP_START, it.startMs)
+                        putExtra(ARG_CLIP_END, it.endMs)
+                    }
+                })
         }
     }
 }

@@ -245,6 +245,16 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
         binding.playerClip.alpha = if (binding.playerClip.isEnabled) 1f else 0.4f
         controls.findViewById<View>(R.id.clip_cut).isEnabled = player.playlistModel.service?.noiseCancellation?.value?.loading != true
         render()
+        val activity = player.activity as? DiscourseDetailActivity
+        val behavior = activity?.getBehavior()
+        if (audio != null && duration >= 1_000 && player.playlistModel.service != null && behavior != null &&
+            behavior.state != com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN) {
+            activity.takeLinkedClip(audio.id)?.let { selected ->
+                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                player.playlistModel.service?.pause()
+                restoreHistory(audio.id, selected)
+            }
+        }
     }
 
     private fun commitTimes(): Boolean {

@@ -57,6 +57,7 @@ import org.videolan.vlc.discourse.DiscoursePlaybackStore
 import org.videolan.vlc.discourse.playDiscourseAudios
 import org.videolan.vlc.discourse.shouldEnqueue
 import org.videolan.vlc.discourse.toMediaWrapper
+import org.videolan.vlc.discourse.discourseAudioSnapshot
 import org.videolan.vlc.gui.BaseFragment
 import org.videolan.vlc.gui.helpers.UiTools
 import org.videolan.vlc.gui.helpers.UiTools.addToPlaylist
@@ -334,6 +335,14 @@ class DiscourseFragment : BaseFragment() {
         val adapter = trackAdapter ?: return
         pendingScrollAudioId = null
         val index = adapter.indexOfAudio(audioId) ?: return
+        val activity = activity as? DiscourseDetailActivity
+        if (activity?.requestLinkedClipPlayback() == true) {
+            val current = org.videolan.vlc.PlaybackService.instance?.currentMediaWrapper
+            if (current?.discourseAudioSnapshot()?.id != audioId) {
+                val value = model.state.value as? DiscourseViewModel.State.Detail
+                value?.tracks?.let { requireContext().playDiscourseAudios(it, index) }
+            }
+        }
         // Wait for the ConcatAdapter to lay out the newly attached track list, then scroll.
         // The header is the first item in the ConcatAdapter.
         val position = index + 1
