@@ -7,6 +7,36 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 class ClipPcmTest {
+    @Test fun fadesHaveSilentEndpointsAndFullVolumeMiddle() {
+        val frames = 6 * 48_000L
+        assertEquals(1f, clipFadeGain(0, frames, false, false), 0f)
+        assertEquals(1f, clipFadeGain(frames - 1, frames, false, false), 0f)
+        assertEquals(0f, clipFadeGain(0, frames, true, false), 0f)
+        assertEquals(0.5f, clipFadeGain(48_000, frames, true, false), 0.0001f)
+        assertEquals(1f, clipFadeGain(frames - 1, frames, true, false), 0f)
+        assertEquals(1f, clipFadeGain(0, frames, false, true), 0f)
+        assertEquals(0.5f, clipFadeGain(frames - 48_001, frames, false, true), 0.0001f)
+        assertEquals(0f, clipFadeGain(frames - 1, frames, false, true), 0f)
+        assertEquals(1f, clipFadeGain(3 * 48_000, frames, true, true), 0f)
+        assertEquals(0f, clipFadeGain(0, frames, true, true), 0f)
+        assertEquals(0f, clipFadeGain(frames - 1, frames, true, true), 0f)
+    }
+
+    @Test fun shortFadesFitWithoutOverlapAndUseClipRelativePositions() {
+        for (seconds in 1..4) {
+            val frames = seconds * 48_000L
+            assertEquals(0f, clipFadeGain(0, frames, true, true), 0f)
+            assertEquals(1f, clipFadeGain(frames / 2, frames, true, true), 0f)
+            assertEquals(0f, clipFadeGain(frames - 1, frames, true, true), 0f)
+            assertEquals(0.5f, clipFadeGain(frames / 4, frames, true, true), 0.0001f)
+        }
+        val frames = 48_000L
+        assertEquals(0.5f, clipFadeGain(frames / 2, frames, true, false), 0.0001f)
+        assertEquals(0.5f, clipFadeGain(frames / 2, frames, false, true), 0.0001f)
+        assertEquals(1f, clipFadeGain(frames - 1, frames, true, false), 0f)
+        assertEquals(1f, clipFadeGain(0, frames, false, true), 0f)
+    }
+
     @Test fun mixerUsesAndroidVolumeAndLimitsBothChannelsTogether() {
         assertEquals(0.5f, clipMixerGain(50))
         val output = FloatArray(2)

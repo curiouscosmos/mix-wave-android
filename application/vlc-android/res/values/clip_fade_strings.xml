@@ -1,0 +1,5 @@
+<resources>
+    <string name="clip_fade_in">Fade in (2 seconds)</string>
+    <string name="clip_fade_out">Fade out (2 seconds)</string>
+    <string name="clip_fade_hint">Applies to exported audio, including video sound. Fades shorten automatically for short clips.</string>
+</resources>

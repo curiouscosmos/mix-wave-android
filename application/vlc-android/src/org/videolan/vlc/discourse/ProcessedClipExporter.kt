@@ -70,6 +70,9 @@ internal object ProcessedClipExporter {
                                 val right = if (denoise) left else stereo[i * 2 + 1]
                                 background.next(music)
                                 mixClipFrame(left, right, music, background.gain, mixed, count * 2)
+                                val fade = clipFadeGain(position, clipFrames, options.fadeIn, options.fadeOut)
+                                mixed[count * 2] *= fade
+                                mixed[count * 2 + 1] *= fade
                                 count++
                             }
                             if (count > 0) encoder.write(mixed, count)

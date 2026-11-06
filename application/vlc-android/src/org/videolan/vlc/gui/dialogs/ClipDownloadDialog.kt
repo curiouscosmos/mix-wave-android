@@ -44,6 +44,8 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     private var visualUri: String? = null
     private var exporting = false
     private var exportCaptions = false
+    private var fadeIn = false
+    private var fadeOut = false
     private var sheetBehavior: BottomSheetBehavior<FrameLayout>? = null
     private var lastPercent: Int? = null
 
@@ -57,6 +59,8 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         super.onCreate(savedInstanceState)
         exporting = savedInstanceState?.getBoolean("exporting") == true
         exportCaptions = savedInstanceState?.getBoolean("captions") == true
+        fadeIn = savedInstanceState?.getBoolean("fade_in") == true
+        fadeOut = savedInstanceState?.getBoolean("fade_out") == true
         output = ClipOutput.valueOf(savedInstanceState?.getString("output") ?: "AUDIO")
         visualUri = savedInstanceState?.getString("visual_uri")
     }
@@ -73,6 +77,8 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         super.onSaveInstanceState(outState)
         outState.putBoolean("exporting", exporting)
         outState.putBoolean("captions", exportCaptions)
+        outState.putBoolean("fade_in", fadeIn)
+        outState.putBoolean("fade_out", fadeOut)
         outState.putString("output", output.name)
         outState.putString("visual_uri", visualUri)
     }
@@ -112,6 +118,10 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         val options = exportOptions()
         binding.clipExportNoiseSwitch.isChecked = options.noiseLevel != NoiseCancellationLevel.OFF
         binding.clipExportMusicSwitch.isChecked = options.mixer != null
+        binding.clipExportFadeIn.isChecked = fadeIn
+        binding.clipExportFadeOut.isChecked = fadeOut
+        binding.clipExportFadeIn.setOnCheckedChangeListener { _, checked -> fadeIn = checked }
+        binding.clipExportFadeOut.setOnCheckedChangeListener { _, checked -> fadeOut = checked }
         val captionsAvailable = audio.hasCc == true && !audio.ccPath.isNullOrBlank()
         binding.clipExportCaptionsRow.isEnabled = captionsAvailable
         binding.clipExportCaptionsRow.isFocusable = captionsAvailable
@@ -294,6 +304,8 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
                 exportOptions().copy(
                     output = output,
                     visualUri = visualUri,
+                    fadeIn = fadeIn,
+                    fadeOut = fadeOut,
                     captionPath = if (binding.clipExportCaptions.isChecked) audio.ccPath else null
                 ))
             UiTools.snacker(requireActivity(), if (started) R.string.clip_started else R.string.clip_busy)

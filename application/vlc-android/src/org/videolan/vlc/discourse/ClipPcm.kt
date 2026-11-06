@@ -8,6 +8,16 @@ import kotlin.math.sin
 // Android's LibVLC AudioTrack output uses linear gain for mixer volumes from 0 to 100.
 internal fun clipMixerGain(volume: Int) = volume.coerceIn(0, 100) / 100f
 
+/** Clip-relative envelope at the exporter's 48 kHz rate, including silent endpoints. */
+internal fun clipFadeGain(position: Long, totalFrames: Long, fadeIn: Boolean, fadeOut: Boolean): Float {
+    if (!fadeIn && !fadeOut) return 1f
+    val fadeFrames = minOf(96_000L, if (fadeIn && fadeOut) totalFrames / 2 else totalFrames)
+    val span = (fadeFrames - 1).coerceAtLeast(1).toFloat()
+    val start = if (fadeIn) (position / span).coerceIn(0f, 1f) else 1f
+    val end = if (fadeOut) ((totalFrames - 1 - position) / span).coerceIn(0f, 1f) else 1f
+    return minOf(start, end)
+}
+
 internal fun mixClipFrame(left: Float, right: Float, music: FloatArray, gain: Float, output: FloatArray, offset: Int) {
     val l = left + music[0] * gain
     val r = right + music[1] * gain

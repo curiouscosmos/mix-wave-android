@@ -120,7 +120,7 @@ class ProcessedClipExporterTest {
     }
 
     @Test fun settingsSurviveBundleRoundTripAndOldRequestsHaveNoEffects() {
-        val expected = ClipExportOptions(NoiseCancellationLevel.MEDIUM, ClipMixerOptions("content://test/music", "Background", 37, true))
+        val expected = ClipExportOptions(NoiseCancellationLevel.MEDIUM, ClipMixerOptions("content://test/music", "Background", 37, true), fadeIn = true, fadeOut = true)
         val parcel = Parcel.obtain()
         try {
             Bundle().apply { putString("options", expected.toJson().toString()) }.writeToParcel(parcel, 0)
@@ -128,6 +128,12 @@ class ProcessedClipExporterTest {
             val restored = Bundle.CREATOR.createFromParcel(parcel)
             assertEquals(expected, ClipExportOptions.fromJson(JSONObject(restored.getString("options")!!)))
             assertFalse(ClipExportOptions.fromJson(null).processed)
+            val old = ClipExportOptions.fromJson(JSONObject("{\"noise\":\"OFF\"}"))
+            assertFalse(old.fadeIn)
+            assertFalse(old.fadeOut)
+            assertFalse(old.processed)
+            assertTrue(ClipExportOptions(fadeIn = true).processed)
+            assertTrue(ClipExportOptions(fadeOut = true).processed)
         } finally { parcel.recycle() }
     }
 
@@ -148,6 +154,27 @@ class ProcessedClipExporterTest {
             ProcessedClipExporter.export(context, source, ClipRange(0, 1_000), options, output) {}
             checkContainer(output, 1_000)
         } finally { source.delete(); output.delete() }
+    }
+
+    @Test fun fadesAffectFinalStereoMixWithoutChangingDuration() = runBlocking {
+        val source = wav("fade-speech", 48_000, 2, 8_000) { sample, _ -> (0.3 * sin(2 * PI * 440 * sample / 48_000)).toFloat() }
+        val music = wav("fade-music", 48_000, 2, 8_000) { sample, _ -> (0.2 * sin(2 * PI * 660 * sample / 48_000)).toFloat() }
+        val plain = File(context.cacheDir, "fade-plain.m4a")
+        val faded = File(context.cacheDir, "fade-enabled.m4a")
+        try {
+            val range = ClipRange(1_000, 7_000)
+            val options = ClipExportOptions(mixer = ClipMixerOptions(Uri.fromFile(music).toString(), "Music", 100, true))
+            ProcessedClipExporter.export(context, source, range, options, plain) {}
+            ProcessedClipExporter.export(context, source, range, options.copy(fadeIn = true, fadeOut = true), faded) {}
+            checkContainer(faded, 6_000)
+            val normal = decode(plain)
+            val result = decode(faded)
+            assertEquals(normal.size, result.size)
+            assertTrue(rms(result, 50, 150) < rms(normal, 50, 150) * 0.15)
+            assertTrue(rms(result, 5_850, 5_950) < rms(normal, 5_850, 5_950) * 0.15)
+            assertEquals(rms(normal, 2_500, 3_500), rms(result, 2_500, 3_500), 0.02)
+            for (i in result.indices step 2) assertEquals(result[i], result[i + 1], 0.005f)
+        } finally { listOf(source, music, plain, faded).forEach(File::delete) }
     }
 
     private fun wav(name: String, rate: Int, channels: Int, duration: Int, sample: (Int, Int) -> Float): File {

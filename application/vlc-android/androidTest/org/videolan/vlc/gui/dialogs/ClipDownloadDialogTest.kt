@@ -48,12 +48,34 @@ class ClipDialogTestActivity : FragmentActivity() {
 
 @RunWith(AndroidJUnit4::class)
 class ClipDownloadDialogTest {
+    @Test fun fadeSwitchesSurviveRecreationIndependently() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        ActivityScenario.launch<ClipDialogTestActivity>(Intent(context, ClipDialogTestActivity::class.java)).use { scenario ->
+            awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+            onView(withId(R.id.clip_export_fade_in)).inRoot(isDialog()).check(matches(not(androidx.test.espresso.matcher.ViewMatchers.isChecked())))
+            onView(withId(R.id.clip_export_fade_out)).inRoot(isDialog()).check(matches(not(androidx.test.espresso.matcher.ViewMatchers.isChecked())))
+            onView(withId(R.id.clip_export_fade_in)).inRoot(isDialog()).perform(scrollTo(), click())
+            scenario.recreate()
+            awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+            onView(withId(R.id.clip_export_fade_in)).inRoot(isDialog()).check(matches(androidx.test.espresso.matcher.ViewMatchers.isChecked()))
+            onView(withId(R.id.clip_export_fade_out)).inRoot(isDialog()).check(matches(not(androidx.test.espresso.matcher.ViewMatchers.isChecked())))
+            onView(withId(R.id.clip_export_fade_out)).inRoot(isDialog()).perform(scrollTo(), click())
+            scenario.recreate()
+            awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+            onView(withId(R.id.clip_export_fade_in)).inRoot(isDialog()).check(matches(androidx.test.espresso.matcher.ViewMatchers.isChecked()))
+            onView(withId(R.id.clip_export_fade_out)).inRoot(isDialog()).check(matches(androidx.test.espresso.matcher.ViewMatchers.isChecked()))
+        }
+    }
+
     @Test fun pickerCancellationAndRotationKeepBothActionsWithoutExporting() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         Intents.init()
         try {
             intending(hasAction(Intent.ACTION_OPEN_DOCUMENT)).respondWith(Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null))
             ActivityScenario.launch<ClipDialogTestActivity>(Intent(context, ClipDialogTestActivity::class.java)).use { scenario ->
+                awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                onView(withId(R.id.clip_export_fade_in)).inRoot(isDialog()).perform(scrollTo(), click())
+                onView(withId(R.id.clip_export_fade_out)).inRoot(isDialog()).perform(scrollTo(), click())
                 for (orientation in listOf(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)) {
                     scenario.onActivity { it.requestedOrientation = orientation }
                     awaitDialog(scenario, orientation)
@@ -65,6 +87,8 @@ class ClipDownloadDialogTest {
                     onView(withText(R.string.clip_download)).inRoot(isDialog()).perform(scrollTo()).check(matches(isDisplayed()))
                     onView(withText(R.string.clip_create_video)).inRoot(isDialog()).perform(scrollTo(), click())
                     onView(withText(R.string.clip_create_video)).inRoot(isDialog()).check(matches(isDisplayed()))
+                    onView(withId(R.id.clip_export_fade_in)).inRoot(isDialog()).check(matches(androidx.test.espresso.matcher.ViewMatchers.isChecked()))
+                    onView(withId(R.id.clip_export_fade_out)).inRoot(isDialog()).check(matches(androidx.test.espresso.matcher.ViewMatchers.isChecked()))
                     assertFalse(context.getSharedPreferences("discourse_clip_export", 0).contains("request"))
                 }
                 scenario.recreate()

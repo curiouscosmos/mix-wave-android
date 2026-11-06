@@ -46,7 +46,7 @@ class ClipVideoExporterTest {
 
     @Test fun requestRoundTripIncludesVisualAndOldRequestsDefaultToAudio() {
         val options = ClipExportOptions(NoiseCancellationLevel.HIGH,
-            ClipMixerOptions("content://music/1", "Music", 37, true), ClipOutput.VIDEO, "content://photos/1")
+            ClipMixerOptions("content://music/1", "Music", 37, true), ClipOutput.VIDEO, "content://photos/1", fadeIn = true, fadeOut = true)
         assertEquals(options, ClipExportOptions.fromJson(JSONObject(options.toJson().toString())))
         assertEquals(ClipOutput.AUDIO, ClipExportOptions.fromJson(JSONObject("{\"noise\":\"OFF\"}")).output)
         assertEquals(ClipOutput.AUDIO, ClipExportOptions.fromJson(null).output)
@@ -164,12 +164,22 @@ class ClipVideoExporterTest {
         }
     }
 
-    private suspend fun withAudio(duration: Long, sourceName: String = "sample.m4a", block: suspend (File, File) -> Unit) {
+    @Test fun videoPreservesPreparedFadedAudio() = runBlocking {
+        val visual = asset("visual.mp4")
+        try {
+            withAudio(2_000, options = ClipExportOptions(fadeIn = true, fadeOut = true)) { audio, output ->
+                ClipVideoExporter.export(context, Uri.fromFile(visual), audio, output) {}
+                checkTracks(audio, output, 1280, 720)
+            }
+        } finally { visual.delete() }
+    }
+
+    private suspend fun withAudio(duration: Long, sourceName: String = "sample.m4a", options: ClipExportOptions = ClipExportOptions(), block: suspend (File, File) -> Unit) {
         val source = asset(sourceName)
         val audio = File(context.cacheDir, "video-prepared.m4a")
         val output = File(context.cacheDir, "video-result.mp4")
         try {
-            ProcessedClipExporter.export(context, source, ClipRange(0, duration), ClipExportOptions(), audio) {}
+            ProcessedClipExporter.export(context, source, ClipRange(0, duration), options, audio) {}
             block(audio, output)
         } finally { listOf(source, audio, output).forEach(File::delete) }
     }
