@@ -56,6 +56,7 @@ class ClipDownloadDialogTest {
                     scenario.onActivity { it.requestedOrientation = orientation }
                     awaitDialog(scenario, orientation)
                     onView(withText(R.string.clip_export_title)).inRoot(isDialog()).check(matches(isDisplayed()))
+                    onView(withId(R.id.clip_export_progress_screen)).inRoot(isDialog()).check(matches(not(isDisplayed())))
                     onView(withId(R.id.clip_export_noise_switch)).inRoot(isDialog()).check(matches(not(isEnabled())))
                     onView(withId(R.id.clip_export_music_switch)).inRoot(isDialog()).check(matches(not(isEnabled())))
                     onView(withText(R.string.clip_download)).inRoot(isDialog()).perform(scrollTo()).check(matches(isDisplayed()))

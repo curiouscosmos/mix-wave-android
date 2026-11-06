@@ -16,7 +16,14 @@
                 android:layout_marginTop="10dp"
                 android:background="@drawable/clip_export_handle_background" />
 
-        <FrameLayout
+        <LinearLayout
+                android:id="@+id/clip_export_form"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="4dp"
@@ -273,51 +280,142 @@
                             app:strokeWidth="1dp" />
                 </LinearLayout>
 
-                <LinearLayout
-                        android:id="@+id/clip_export_progress_group"
+            </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+        </LinearLayout>
+
+        <androidx.core.widget.NestedScrollView
+                android:id="@+id/clip_export_progress_screen"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+            <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:gravity="center_horizontal"
-                        android:orientation="vertical"
-                        android:visibility="gone"
-                        tools:visibility="visible">
+                        android:layout_height="wrap_content">
 
-                    <TextView
-                            android:id="@+id/clip_export_status"
+                    <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="360dp"
+                            android:importantForAccessibility="no"
+                            android:scaleType="fitXY"
+                            android:src="@drawable/clip_export_progress_waves" />
+
+                    <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:accessibilityLiveRegion="polite"
-                            android:gravity="center"
-                            android:textColor="@color/clip_export_text_secondary"
-                            android:textSize="15sp" />
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="24dp"
+                            android:paddingTop="150dp">
 
-                    <ProgressBar
-                            android:id="@+id/clip_export_progress"
-                            style="?android:attr/progressBarStyleHorizontal"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:max="100" />
+                        <FrameLayout
+                                android:layout_width="240dp"
+                                android:layout_height="240dp">
 
-                    <com.google.android.material.button.MaterialButton
-                            android:id="@+id/clip_export_cancel"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:layout_marginTop="20dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="@string/cancel"
-                            android:textAllCaps="false"
-                            android:textColor="@color/clip_export_text"
-                            android:textSize="17sp"
-                            app:backgroundTint="@android:color/transparent"
-                            app:cornerRadius="16dp"
-                            app:rippleColor="@color/clip_export_accent_pressed"
-                            app:strokeColor="@color/clip_export_accent"
-                            app:strokeWidth="1dp" />
-                </LinearLayout>
+                            <View
+                                    android:layout_width="240dp"
+                                    android:layout_height="240dp"
+                                    android:layout_gravity="center"
+                                    android:background="@drawable/clip_export_progress_glow"
+                                    android:importantForAccessibility="no" />
+
+                            <com.google.android.material.progressindicator.CircularProgressIndicator
+                                    android:id="@+id/clip_export_progress_ring"
+                                    android:layout_width="180dp"
+                                    android:layout_height="180dp"
+                                    android:layout_gravity="center"
+                                    android:indeterminate="false"
+                                    android:progress="0"
+                                    app:indicatorColor="@color/clip_export_accent"
+                                    app:indicatorInset="0dp"
+                                    app:indicatorSize="180dp"
+                                    app:trackColor="@color/clip_export_ring_track"
+                                    app:trackCornerRadius="5dp"
+                                    app:trackThickness="10dp" />
+
+                            <ImageView
+                                    android:id="@+id/clip_export_progress_icon"
+                                    android:layout_width="72dp"
+                                    android:layout_height="72dp"
+                                    android:layout_gravity="center"
+                                    android:contentDescription="@null"
+                                    android:src="@drawable/ic_clip_video_creation" />
+                        </FrameLayout>
+
+                        <TextView
+                                android:id="@+id/clip_export_progress_title"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="32dp"
+                                android:gravity="center"
+                                android:textColor="@color/clip_export_text"
+                                android:textSize="28sp"
+                                android:textStyle="bold"
+                                tools:text="Creating Video Clip" />
+
+                        <TextView
+                                android:id="@+id/clip_export_progress_subtitle"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="14dp"
+                                android:gravity="center"
+                                android:lineSpacingExtra="3dp"
+                                android:text="@string/clip_export_wait"
+                                android:textColor="@color/clip_export_text_secondary"
+                                android:textSize="16sp" />
+
+                        <TextView
+                                android:id="@+id/clip_export_progress_percent"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="28dp"
+                                android:gravity="center"
+                                android:textColor="@color/clip_export_accent"
+                                android:textSize="34sp"
+                                android:textStyle="bold"
+                                tools:text="9%" />
+
+                        <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/clip_export_progress_bar"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp"
+                                android:indeterminate="false"
+                                android:progress="0"
+                                app:indicatorColor="@color/clip_export_accent"
+                                app:trackColor="@color/clip_export_progress_track"
+                                app:trackCornerRadius="4dp"
+                                app:trackStopIndicatorSize="0dp"
+                                app:trackThickness="8dp" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <com.google.android.material.button.MaterialButton
+                        android:id="@+id/clip_export_cancel"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginHorizontal="24dp"
+                        android:layout_marginTop="32dp"
+                        android:layout_marginBottom="32dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:letterSpacing="0.08"
+                        android:text="@string/cancel"
+                        android:textAllCaps="true"
+                        android:textColor="@color/clip_export_text"
+                        android:textSize="17sp"
+                        app:backgroundTint="@color/clip_export_progress_button"
+                        app:cornerRadius="12dp"
+                        app:rippleColor="@color/clip_export_accent_pressed" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </LinearLayout>

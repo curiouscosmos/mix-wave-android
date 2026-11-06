@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="72dp"
+        android:height="72dp"
+        android:viewportWidth="72"
+        android:viewportHeight="72">
+    <path
+            android:fillColor="@color/clip_export_ring_icon"
+            android:pathData="M15,22h42l-4,10H19z" />
+    <path
+            android:fillColor="@color/clip_export_accent"
+            android:pathData="M23,22l-5,10h6l5,-10zM36,22l-5,10h6l5,-10zM49,22l-5,10h6l5,-10z" />
+    <path
+            android:fillColor="@color/clip_export_ring_icon"
+            android:pathData="M19,32h34a6,6 0 0 1 6,6v16a6,6 0 0 1 -6,6H19a6,6 0 0 1 -6,-6V38a6,6 0 0 1 6,-6z" />
+    <path
+            android:fillColor="@color/clip_export_accent"
+            android:pathData="M32,39l11,7 -11,7z" />
+</vector>

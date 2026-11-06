@@ -9,6 +9,16 @@
     <string name="clip_background_music">Background music</string>
     <string name="clip_range">%1$s – %2$s</string>
     <string name="clip_share_text">%1$s\n%2$s\n%3$s</string>
+    <string name="clip_creating_video">Creating Video Clip</string>
+    <string name="clip_creating_audio">Creating Audio Clip</string>
+    <string name="clip_export_wait">Please wait while your clip is being created and saved.</string>
+    <string name="clip_export_percent">%1$d%%</string>
+    <string name="clip_created_video">Video Clip Created</string>
+    <string name="clip_created_audio">Audio Clip Created</string>
+    <string name="clip_export_saved_message">Your clip has been saved to Downloads/Rajneesh Discourse.</string>
+    <string name="clip_create_failed_video">Could Not Create Video Clip</string>
+    <string name="clip_create_failed_audio">Could Not Create Audio Clip</string>
+    <string name="clip_done">Done</string>
     <string name="clip_video_processing">Creating and saving video…</string>
     <string name="clip_visual_failed">Cannot use the selected photo or video. Check file access and choose supported SDR media.</string>
     <string name="clip_start">Clip start time</string>

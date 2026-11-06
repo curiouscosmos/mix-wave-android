@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -17,6 +18,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -41,6 +43,8 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     private var output = ClipOutput.AUDIO
     private var visualUri: String? = null
     private var exporting = false
+    private var sheetBehavior: BottomSheetBehavior<FrameLayout>? = null
+    private var lastPercent: Int? = null
 
     override fun getDefaultState() = STATE_EXPANDED
 
@@ -57,8 +61,10 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
 
     override fun onStart() {
         super.onStart()
-        dialog?.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
-            ?.setBackgroundColor(Color.TRANSPARENT)
+        val sheet = dialog?.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+        sheet?.setBackgroundColor(Color.TRANSPARENT)
+        sheetBehavior = sheet?.let { BottomSheetBehavior.from(it) }
+        renderStatus(DiscourseClipService.status.value)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -161,21 +167,70 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     }
 
     private fun renderStatus(state: ClipExportStatus?) {
-        binding.clipExportStatus.text = state?.let { getString(it.message) + (it.percent?.let { percent -> " $percent%" } ?: "") }.orEmpty()
         val running = state?.running == true
         if (running) exporting = true
+        if (running) state?.percent?.let { lastPercent = it }
         isCancelable = !running
-        binding.clipExportMedia.isVisible = !exporting
-        binding.clipExportEffects.isVisible = !exporting
-        binding.clipExportActions.isVisible = !exporting
-        binding.clipExportClose.isVisible = !exporting
-        binding.clipExportProgressGroup.isVisible = exporting
-        binding.clipExportProgress.isVisible = running
-        binding.clipExportProgress.isIndeterminate = state?.percent == null
-        binding.clipExportProgress.progress = state?.percent ?: 0
-        binding.clipExportCancel.setText(if (running || !exporting) R.string.cancel else android.R.string.ok)
+        sheetBehavior?.isDraggable = !running
+        sheetBehavior?.isHideable = !running
+        binding.clipExportForm.isVisible = !exporting
+        binding.clipExportProgressScreen.isVisible = exporting
+        if (!exporting) return
+        if (state == null) {
+            dismiss()
+            return
+        }
+
+        val video = output == ClipOutput.VIDEO
+        val success = !running && state.message == R.string.clip_saved
+        val failure = !running && !success
+        binding.clipExportProgressTitle.setText(when {
+            success -> if (video) R.string.clip_created_video else R.string.clip_created_audio
+            failure -> if (video) R.string.clip_create_failed_video else R.string.clip_create_failed_audio
+            else -> if (video) R.string.clip_creating_video else R.string.clip_creating_audio
+        })
+        binding.clipExportProgressSubtitle.text = when {
+            success -> getString(R.string.clip_export_saved_message)
+            failure -> getString(state.message)
+            else -> getString(R.string.clip_export_wait)
+        }
+        if (video) {
+            binding.clipExportProgressIcon.setImageResource(R.drawable.ic_clip_video_creation)
+            binding.clipExportProgressIcon.imageTintList = null
+        } else {
+            binding.clipExportProgressIcon.setImageResource(R.drawable.ic_song)
+            binding.clipExportProgressIcon.imageTintList =
+                ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.clip_export_ring_icon))
+        }
+
+        val percent = when {
+            success -> 100
+            failure -> null
+            else -> state.percent
+        }
+        val indeterminate = percent == null && !failure
+        binding.clipExportProgressRing.isIndeterminate = indeterminate
+        binding.clipExportProgressBar.isIndeterminate = indeterminate
+        binding.clipExportProgressBar.isVisible = !failure
+        if (percent != null) {
+            binding.clipExportProgressPercent.isVisible = true
+            binding.clipExportProgressPercent.text = getString(R.string.clip_export_percent, percent)
+            binding.clipExportProgressRing.setProgressCompat(percent, true)
+            binding.clipExportProgressBar.setProgressCompat(percent, true)
+        } else {
+            binding.clipExportProgressPercent.isVisible = false
+            if (failure) {
+                binding.clipExportProgressRing.isIndeterminate = false
+                binding.clipExportProgressRing.setProgressCompat(lastPercent ?: 0, false)
+            }
+        }
+
+        binding.clipExportCancel.setText(when {
+            running -> R.string.cancel
+            success -> R.string.clip_done
+            else -> R.string.close
+        })
         if (!running) binding.clipExportCancel.isEnabled = true
-        if (exporting && state == null) dismiss()
     }
 
     private fun requestExport() {

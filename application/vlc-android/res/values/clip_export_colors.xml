@@ -17,4 +17,10 @@
     <color name="clip_export_close_background">#5A4A4A</color>
     <color name="clip_export_switch_track_off">#5A5A5A</color>
     <color name="clip_export_switch_thumb">#FFFFFF</color>
+    <color name="clip_export_ring_track">#4C3B3B</color>
+    <color name="clip_export_ring_icon">#FFD9D5</color>
+    <color name="clip_export_progress_track">#6B6262</color>
+    <color name="clip_export_progress_button">#C93630</color>
+    <color name="clip_export_wave_fill">#4A171A</color>
+    <color name="clip_export_wave_stroke">#B33B3E</color>
 </resources>
