@@ -5,6 +5,7 @@ import android.app.Instrumentation
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
+import androidx.core.content.IntentCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
@@ -24,6 +25,7 @@ import org.hamcrest.Matchers.not
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.videolan.vlc.R
@@ -81,6 +83,9 @@ class ClipDownloadDialogTest {
                 awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
                 onView(withId(R.id.clip_export_share)).inRoot(isDialog()).perform(scrollTo(), click())
                 intended(hasAction(Intent.ACTION_CHOOSER))
+                val chooser = Intents.getIntents().last { it.action == Intent.ACTION_CHOOSER }
+                val send = IntentCompat.getParcelableExtra(chooser, Intent.EXTRA_INTENT, Intent::class.java)
+                assertTrue(send?.getStringExtra(Intent.EXTRA_TEXT)?.contains("?start=1&end=3") == true)
             }
         } finally { Intents.release() }
     }

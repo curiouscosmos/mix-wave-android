@@ -155,7 +155,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         val text = getString(
             R.string.clip_share_text,
             audio.title.ifBlank { audio.discourseName },
-            audio.webUrl(),
+            "${audio.webUrl()}?start=${range.startMs / 1_000}&end=${range.endMs / 1_000}",
             getString(R.string.clip_range, clipTimestamp(range.startMs), clipTimestamp(range.endMs))
         )
         val intent = Intent(Intent.ACTION_SEND).apply {
