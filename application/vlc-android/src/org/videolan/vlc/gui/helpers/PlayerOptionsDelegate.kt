@@ -126,7 +126,7 @@ class PlayerOptionsDelegate(val activity: FragmentActivity, val service: Playbac
         }
         val chaptersCount = service.getChapters(-1)?.size ?: 0
         if (chaptersCount > 1) options.add(PlayerOption(ID_CHAPTER_TITLE, R.drawable.ic_chapter, res.getString(R.string.go_to_chapter)))
-        if (::bookmarkClickedListener.isInitialized) options.add(PlayerOption(ID_BOOKMARK, R.drawable.ic_bookmark, res.getString(R.string.bookmarks)))
+        if (video && ::bookmarkClickedListener.isInitialized) options.add(PlayerOption(ID_BOOKMARK, R.drawable.ic_bookmark, res.getString(R.string.bookmarks)))
         if (!video && clipHistoryAvailable()) options.add(PlayerOption(ID_CLIP_HISTORY, R.drawable.ic_bookmark, res.getString(R.string.clip_history)))
         if (showABReapeat) options.add(PlayerOption(ID_ABREPEAT, R.drawable.ic_abrepeat, res.getString(R.string.ab_repeat)))
         options.add(PlayerOption(ID_SAVE_PLAYLIST, R.drawable.ic_addtoplaylist, res.getString(R.string.playlist_save)))
