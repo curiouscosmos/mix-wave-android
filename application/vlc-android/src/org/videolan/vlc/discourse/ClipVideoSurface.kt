@@ -21,13 +21,21 @@ import kotlin.coroutines.CoroutineContext
 /** Recordable EGL window shared by the decoder texture and H.264 encoder. */
 internal class ClipVideoSurface(
     private val encoderSurface: Surface, photo: Bitmap?, private val width: Int, private val height: Int,
-    sourceWidth: Int, sourceHeight: Int
+    sourceWidth: Int, sourceHeight: Int, endCard: Bitmap
 ) : Closeable {
     private var display = EGL14.EGL_NO_DISPLAY
     private var context = EGL14.EGL_NO_CONTEXT
     private var window = EGL14.EGL_NO_SURFACE
     private var program = 0
     private var texture = 0
+    private var endCardProgram = 0
+    private var endCardTexture = 0
+    private val identity = FloatArray(16).apply { Matrix.setIdentityM(this, 0) }
+    private val endCardVertices = ByteBuffer.allocateDirect(16 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+        put(floatArrayOf(-1f, -1f, 0f, 1f, 1f, -1f, 1f, 1f,
+            -1f, 1f, 0f, 0f, 1f, 1f, 1f, 0f))
+        position(0)
+    }
     private var surfaceTexture: SurfaceTexture? = null
     var decoderSurface: Surface? = null
         private set
@@ -91,11 +99,33 @@ internal class ClipVideoSurface(
             GLES20.glAttachShader(program, vertex)
             GLES20.glAttachShader(program, fragment)
             GLES20.glLinkProgram(program)
+            val endFragment = shader(GLES20.GL_FRAGMENT_SHADER, """
+                precision mediump float;
+                varying vec2 texCoord;
+                uniform sampler2D image;
+                uniform float opacity;
+                void main() { gl_FragColor = vec4(texture2D(image, texCoord).rgb, opacity); }
+            """.trimIndent())
+            endCardProgram = GLES20.glCreateProgram()
+            GLES20.glAttachShader(endCardProgram, vertex)
+            GLES20.glAttachShader(endCardProgram, endFragment)
+            GLES20.glLinkProgram(endCardProgram)
+            GLES20.glDeleteShader(endFragment)
             GLES20.glDeleteShader(vertex); GLES20.glDeleteShader(fragment)
             val linked = IntArray(1)
             GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linked, 0)
             check(linked[0] != 0) { GLES20.glGetProgramInfoLog(program) }
+            GLES20.glGetProgramiv(endCardProgram, GLES20.GL_LINK_STATUS, linked, 0)
+            check(linked[0] != 0) { GLES20.glGetProgramInfoLog(endCardProgram) }
             val textures = IntArray(1)
+            GLES20.glGenTextures(1, textures, 0)
+            endCardTexture = textures[0]
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, endCardTexture)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, endCard, 0)
             GLES20.glGenTextures(1, textures, 0)
             texture = textures[0]
             GLES20.glBindTexture(target, texture)
@@ -129,11 +159,27 @@ internal class ClipVideoSurface(
         surfaceTexture!!.getTransformMatrix(transform)
     }
 
-    fun draw(timeUs: Long) {
+    fun draw(timeUs: Long, endCardOpacity: Float) {
         GLES20.glViewport(0, 0, width, height)
         GLES20.glClearColor(0f, 0f, 0f, 1f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
         GLES20.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
+        drawTexture(program, target, texture, transform, vertices)
+        if (endCardOpacity > 0f) {
+            GLES20.glViewport(0, 0, width, height)
+            GLES20.glEnable(GLES20.GL_BLEND)
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+            GLES20.glUseProgram(endCardProgram)
+            GLES20.glUniform1f(GLES20.glGetUniformLocation(endCardProgram, "opacity"), endCardOpacity)
+            drawTexture(endCardProgram, GLES20.GL_TEXTURE_2D, endCardTexture, identity, endCardVertices)
+            GLES20.glDisable(GLES20.GL_BLEND)
+        }
+        check(GLES20.glGetError() == GLES20.GL_NO_ERROR) { "Video drawing failed" }
+        check(EGLExt.eglPresentationTimeANDROID(display, window, timeUs * 1_000))
+        check(EGL14.eglSwapBuffers(display, window)) { "Video surface swap failed" }
+    }
+
+    private fun drawTexture(program: Int, target: Int, texture: Int, transform: FloatArray, vertices: java.nio.FloatBuffer) {
         GLES20.glUseProgram(program)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(target, texture)
@@ -148,9 +194,6 @@ internal class ClipVideoSurface(
         GLES20.glVertexAttribPointer(uv, 2, GLES20.GL_FLOAT, false, 16, vertices)
         GLES20.glEnableVertexAttribArray(uv)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
-        check(GLES20.glGetError() == GLES20.GL_NO_ERROR) { "Video drawing failed" }
-        check(EGLExt.eglPresentationTimeANDROID(display, window, timeUs * 1_000))
-        check(EGL14.eglSwapBuffers(display, window)) { "Video surface swap failed" }
     }
 
     private fun shader(type: Int, source: String): Int {
@@ -173,6 +216,8 @@ internal class ClipVideoSurface(
         callbackThread?.quitSafely(); callbackThread = null
         if (display != EGL14.EGL_NO_DISPLAY) {
             if (program != 0) GLES20.glDeleteProgram(program)
+            if (endCardProgram != 0) GLES20.glDeleteProgram(endCardProgram)
+            if (endCardTexture != 0) GLES20.glDeleteTextures(1, intArrayOf(endCardTexture), 0)
             if (texture != 0) GLES20.glDeleteTextures(1, intArrayOf(texture), 0)
             EGL14.eglMakeCurrent(display, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
             if (window != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(display, window)

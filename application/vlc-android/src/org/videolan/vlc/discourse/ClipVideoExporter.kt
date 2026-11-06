@@ -3,7 +3,11 @@ package org.videolan.vlc.discourse
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.RectF
 import android.media.ExifInterface
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
@@ -26,6 +30,7 @@ internal object ClipVideoExporter {
         val coroutine = currentCoroutineContext()
         val sound = MediaExtractor()
         var picture: Bitmap? = null
+        var endCard: Bitmap? = null
         var decoder: VideoFrames? = null
         var encoder: MediaCodec? = null
         var gl: ClipVideoSurface? = null
@@ -59,6 +64,7 @@ internal object ClipVideoExporter {
                 width = decoder.width; height = decoder.height
             }
             val (canvasWidth, canvasHeight) = clipVideoCanvas(width, height)
+            endCard = endCard(context, canvasWidth, canvasHeight)
             val format = MediaFormat.createVideoFormat("video/avc", canvasWidth, canvasHeight).apply {
                 setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
                 setInteger(MediaFormat.KEY_BIT_RATE, 4_000_000)
@@ -70,7 +76,7 @@ internal object ClipVideoExporter {
             }
             encoder = MediaCodec.createEncoderByType("video/avc")
             encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-            gl = ClipVideoSurface(encoder.createInputSurface(), picture, canvasWidth, canvasHeight, width, height)
+            gl = ClipVideoSurface(encoder.createInputSurface(), picture, canvasWidth, canvasHeight, width, height, endCard)
             decoder?.start(gl.decoderSurface!!)
             encoder.start()
             muxer = MediaMuxer(destination.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
@@ -110,7 +116,7 @@ internal object ClipVideoExporter {
                 coroutine.ensureActive()
                 val pts = frame * 1_000_000 / 30
                 decoder?.render(pts, gl)
-                gl.draw(pts)
+                gl.draw(pts, clipEndCardOpacity(pts, duration))
                 drain()
                 val percent = (frame * 99 / frames).toInt()
                 if (percent != lastPercent) { progress(percent); lastPercent = percent }
@@ -148,10 +154,30 @@ internal object ClipVideoExporter {
             encoder?.let { runCatching { it.stop() }; runCatching { it.release() } }
             gl?.close()
             picture?.recycle()
+            endCard?.recycle()
             sound.release()
             muxer?.let { if (started) runCatching { it.stop() }; runCatching { it.release() } }
             if (!complete) destination.delete()
         }
+    }
+
+    private fun endCard(context: Context, width: Int, height: Int): Bitmap {
+        val image = context.assets.open("images/cliip-image/clip-image.png").use {
+            BitmapFactory.decodeStream(it) ?: error("Cannot decode clip end card")
+        }
+        try {
+            val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            try {
+                val scale = minOf(width.toFloat() / image.width, height.toFloat() / image.height)
+                val left = (width - image.width * scale) / 2f
+                val top = (height - image.height * scale) / 2f
+                Canvas(result).apply {
+                    drawColor(Color.WHITE)
+                    drawBitmap(image, null, RectF(left, top, width - left, height - top), Paint(Paint.FILTER_BITMAP_FLAG))
+                }
+                return result
+            } catch (error: Throwable) { result.recycle(); throw error }
+        } finally { image.recycle() }
     }
 
     private fun photo(context: Context, uri: Uri): Bitmap {
@@ -295,4 +321,11 @@ internal fun clipVideoCanvas(width: Int, height: Int): Pair<Int, Int> = when {
     width > height -> 1280 to 720
     height > width -> 720 to 1280
     else -> 720 to 720
+}
+
+internal fun clipEndCardOpacity(timeUs: Long, durationUs: Long): Float {
+    require(durationUs > 0)
+    val start = (durationUs - 5_000_000).coerceAtLeast(0)
+    val fade = minOf(1_000_000L, durationUs)
+    return ((timeUs - start).toFloat() / fade).coerceIn(0f, 1f)
 }

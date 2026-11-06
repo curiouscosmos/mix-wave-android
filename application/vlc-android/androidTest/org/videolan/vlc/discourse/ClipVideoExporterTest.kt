@@ -63,7 +63,7 @@ class ClipVideoExporterTest {
             setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
             saveAttributes()
         }
-        withAudio(1_000) { audio, output ->
+        withAudio(6_000) { audio, output ->
             try {
                 ClipVideoExporter.export(context, Uri.fromFile(photo), audio, output) {}
                 checkTracks(audio, output, 720, 1280)
@@ -83,7 +83,7 @@ class ClipVideoExporterTest {
 
     @Test fun videoLoopsAndDiscardsOriginalSound() = runBlocking {
         val visual = asset("visual.mp4")
-        withAudio(4_000) { audio, output ->
+        withAudio(9_000, "caption-seek-vbr.mp3") { audio, output ->
             try {
                 ClipVideoExporter.export(context, Uri.fromFile(visual), audio, output) {}
                 checkTracks(audio, output, 1280, 720)
@@ -116,6 +116,59 @@ class ClipVideoExporterTest {
         }
     }
 
+    @Test fun endCardFadesOverPhotoAndVideoWithWhiteMargins() = runBlocking {
+        val photo = File(context.cacheDir, "end-card-source.png")
+        val video = asset("visual.mp4")
+        val image = context.assets.open("images/cliip-image/clip-image.png").use {
+            android.graphics.BitmapFactory.decodeStream(it)!!
+        }
+        try {
+            withAudio(6_000) { audio, output ->
+                for (dimensions in listOf(400 to 200, 200 to 400, 300 to 300, null)) {
+                    val source = if (dimensions == null) video else {
+                        val bitmap = Bitmap.createBitmap(dimensions.first, dimensions.second, Bitmap.Config.ARGB_8888)
+                        bitmap.eraseColor(Color.RED)
+                        photo.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                        bitmap.recycle()
+                        photo
+                    }
+                    ClipVideoExporter.export(context, Uri.fromFile(source), audio, output) {}
+                    val canvas = dimensions?.let { clipVideoCanvas(it.first, it.second) } ?: (1280 to 720)
+                    checkTracks(audio, output, canvas.first, canvas.second)
+                    withFrames(output) { retriever ->
+                        // The top-left corner is outside the square image for non-square exports.
+                        if (canvas.first != canvas.second) {
+                            val values = listOf(0L, 1_500_000L, 2_500_000L).map { time ->
+                                val frame = retriever.getFrameAtTime(time, MediaMetadataRetriever.OPTION_CLOSEST)!!
+                                val green = Color.green(frame.getPixel(5, 5))
+                                frame.recycle()
+                                green
+                            }
+                            assertTrue("Original visual should precede end card", values[0] < 30)
+                            assertTrue("Expected partial blend: $values", values[1] in 70..190)
+                            assertTrue("Expected white margin: $values", values[2] > 230)
+                        }
+                        for (time in listOf(2_500_000L, 5_500_000L)) {
+                            val frame = retriever.getFrameAtTime(time, MediaMetadataRetriever.OPTION_CLOSEST)!!
+                            val size = minOf(frame.width, frame.height)
+                            for (x in listOf(0.1f, 0.3f, 0.5f, 0.7f, 0.9f)) {
+                                for (y in listOf(0.1f, 0.3f, 0.5f, 0.7f, 0.9f)) {
+                                    val expected = image.getPixel((image.width * x).toInt(), (image.height * y).toInt())
+                                    val actual = frame.getPixel(((frame.width - size) / 2 + size * x).toInt(),
+                                        ((frame.height - size) / 2 + size * y).toInt())
+                                    for (shift in listOf(0, 8, 16)) {
+                                        assertTrue("End card orientation/scale mismatch", abs((expected shr shift and 255) - (actual shr shift and 255)) < 65)
+                                    }
+                                }
+                            }
+                            frame.recycle()
+                        }
+                    }
+                }
+            }
+        } finally { image.recycle(); photo.delete(); video.delete() }
+    }
+
     @Test fun rotatedVideoTrimsAndCancellationAllowsRetry() = runBlocking {
         val visual = asset("rotated.mp4")
         withAudio(1_000) { audio, output ->
@@ -127,7 +180,7 @@ class ClipVideoExporterTest {
                 ClipVideoExporter.export(context, Uri.fromFile(visual), audio, output) {}
                 checkTracks(audio, output, 720, 1280)
                 withFrames(output) { retriever ->
-                    val frame = retriever.getFrameAtTime(300_000, MediaMetadataRetriever.OPTION_CLOSEST)!!
+                    val frame = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST)!!
                     assertTrue("Rotation metadata lost", Color.green(frame.getPixel(100, 1100)) > 180)
                     assertTrue("Rotation metadata lost", Color.red(frame.getPixel(100, 100)) > 180)
                     frame.recycle()
