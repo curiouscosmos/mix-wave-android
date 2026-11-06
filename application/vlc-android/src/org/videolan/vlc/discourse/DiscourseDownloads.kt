@@ -2,11 +2,17 @@ package org.videolan.vlc.discourse
 
 import android.app.DownloadManager
 import android.content.Context
+import android.content.SharedPreferences
 import android.database.Cursor
 import android.net.Uri
 import androidx.core.content.getSystemService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.transform
 import org.videolan.tools.ErrorReporter
 import org.videolan.tools.Settings
 import java.io.File
@@ -56,6 +62,8 @@ class DiscourseDownloadStore(context: Context) {
     private val reportedFailures = mutableSetOf<Long>()
     private val cache = HashMap<String, Snapshot>()
     private data class Snapshot(val state: DiscourseDownloadState, val progress: DiscourseDownloadProgress)
+    private data class Summary(val downloaded: Int = 0, val active: Int = 0)
+    @Volatile private var summaries = emptyMap<String, Summary>()
 
     /** Cheap values for row binding. Call [refresh] first; missing entries report as not downloaded. */
     fun cachedState(audio: DiscourseAudio): DiscourseDownloadState =
@@ -120,21 +128,59 @@ class DiscourseDownloadStore(context: Context) {
     fun playbackUri(audio: DiscourseAudio): Uri? = verifiedFile(audio)?.let(Uri::fromFile)
         ?: resolveDiscourseUrl(audio.audioUrl)?.let(Uri::parse)
 
-    fun downloadedCount(discourseId: String): Int = downloadDiscourses()
-        .filterValues { it == discourseId }
-        .keys
-        .count { File(context.getExternalFilesDir("discourses") ?: context.filesDir, "$it.audio").isFile }
+    /** Cached card counts. Populate with [refreshSummaries] before displaying download indicators. */
+    fun downloadedCount(discourseId: String): Int = summaries[discourseId]?.downloaded ?: 0
 
-    fun activeDownloadCount(discourseId: String): Int = downloadDiscourses()
-        .filterValues { it == discourseId }
-        .keys
-        .count { id ->
-            downloads()[id]?.let { downloadInfo(it).status } in listOf(
-                DownloadManager.STATUS_PENDING,
-                DownloadManager.STATUS_RUNNING,
-                DownloadManager.STATUS_PAUSED
-            )
+    fun activeDownloadCount(discourseId: String): Int = summaries[discourseId]?.active ?: 0
+
+    /** Refresh on entry and download changes; poll only while downloads are active. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun summaryChanges() = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == KEY_DOWNLOADS || key == KEY_DOWNLOAD_DISCOURSES) trySend(Unit)
         }
+        settings.registerOnSharedPreferenceChangeListener(listener)
+        trySend(Unit)
+        awaitClose { settings.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.conflate().transform {
+        do {
+            emit(refreshSummaries())
+            if (summaries.values.none { it.active > 0 }) break
+            delay(1000)
+        } while (true)
+    }
+
+    /** One DownloadManager query for all cards, never a query from a row binding. */
+    suspend fun refreshSummaries(): Set<String> {
+        val next = withContext(Dispatchers.IO) { readSummaries() }
+        val previous = summaries
+        summaries = next
+        return (previous.keys + next.keys).filterTo(mutableSetOf()) { previous[it] != next[it] }
+    }
+
+    private fun readSummaries(): Map<String, Summary> {
+        val (ids, discourses) = synchronized(downloadsLock) { downloads() to downloadDiscourses() }
+        val audioIds = ids.entries.associate { it.value to it.key }
+        val next = mutableMapOf<String, Summary>()
+        if (ids.isNotEmpty()) manager.query(DownloadManager.Query().setFilterById(*ids.values.toLongArray())).use { cursor ->
+            val directory = context.getExternalFilesDir("discourses") ?: context.filesDir
+            while (cursor.moveToNext()) {
+                val audioId = audioIds[cursor.long(DownloadManager.COLUMN_ID)] ?: continue
+                val discourseId = discourses[audioId] ?: continue
+                val status = cursor.int(DownloadManager.COLUMN_STATUS)
+                val active = status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_RUNNING ||
+                    status == DownloadManager.STATUS_PAUSED
+                val downloaded = status == DownloadManager.STATUS_SUCCESSFUL &&
+                    File(directory, "$audioId.audio").let { file ->
+                        file.isFile && isCompletedDownload(file.length(), true, cursor.long(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    }
+                val previous = next[discourseId] ?: Summary()
+                next[discourseId] = Summary(previous.downloaded + if (downloaded) 1 else 0,
+                    previous.active + if (active) 1 else 0)
+            }
+        }
+        return next
+    }
 
     fun isFullyDownloaded(discourseId: String, totalTracks: Int) =
         totalTracks > 0 && downloadedCount(discourseId) >= totalTracks

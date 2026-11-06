@@ -93,6 +93,15 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         viewLifecycleOwner.lifecycleScope.launch {
             playbackStore.initialize()
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                launch {
+                    downloads.summaryChanges().collect { changed ->
+                        changed.forEach { id ->
+                            discourseCards[id]?.forEach { card ->
+                                bindDownloadSummary(card, id, progressCards.getValue(card).second ?: 0)
+                            }
+                        }
+                    }
+                }
                 progressCards.forEach { (card, item) -> updateProgress(card, item.first, item.second) }
                 playbackStore.changes.collect { change ->
                     audioCards[change.audioId]?.forEach { updateProgress(it, change.audioId, null) }
@@ -239,7 +248,17 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         card.findViewById<TextView>(R.id.discourse_language).text = discourse.language.replaceFirstChar(Char::uppercase)
         card.findViewById<TextView>(R.id.discourse_counts).text = metadata
         likesUi.bind(card, discourse.id, false, discourse.title, discourse.totalLikes, discourse = discourse)
-        val completed = downloads.downloadedCount(discourse.id)
+        bindDownloadSummary(card, discourse.id, discourse.totalTracks)
+        loadImage(card.findViewById(R.id.discourse_image), discourse)
+        card.findViewById<View>(R.id.discourse_catalogue_card).setOnClickListener {
+            (parentFragment as? HomeFragment)?.openDiscourse(discourse)
+        }
+        bindProgress(card, discourse.id, discourse.totalTracks)
+        container.addView(card)
+    }
+
+    private fun bindDownloadSummary(card: View, discourseId: String, totalTracks: Int) {
+        val completed = downloads.downloadedCount(discourseId)
         card.findViewById<ImageView>(R.id.discourse_download_icon).setColorFilter(
             ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500)
         )
@@ -247,18 +266,12 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             isVisible = completed > 0
             text = completed.toString()
         }
-        val active = downloads.activeDownloadCount(discourse.id)
+        val active = downloads.activeDownloadCount(discourseId)
         card.findViewById<ProgressBar>(R.id.discourse_download_progress).apply {
             isVisible = active > 0
             isIndeterminate = false
-            progress = (completed * 100 / discourse.totalTracks.coerceAtLeast(1)).coerceAtMost(100)
+            progress = (completed * 100 / totalTracks.coerceAtLeast(1)).coerceAtMost(100)
         }
-        loadImage(card.findViewById(R.id.discourse_image), discourse)
-        card.findViewById<View>(R.id.discourse_catalogue_card).setOnClickListener {
-            (parentFragment as? HomeFragment)?.openDiscourse(discourse)
-        }
-        bindProgress(card, discourse.id, discourse.totalTracks)
-        container.addView(card)
     }
 
     private fun loadImage(image: ImageView, discourse: Discourse) {

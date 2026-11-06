@@ -24,8 +24,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import androidx.appcompat.view.ActionMode
 import kotlinx.coroutines.launch
 import org.videolan.tools.HttpImageLoader
@@ -54,11 +52,6 @@ class SearchFragment : BaseFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?) =
         inflater.inflate(R.layout.search_fragment, container, false)
 
-    override fun onResume() {
-        super.onResume()
-        results.adapter?.notifyDataSetChanged()
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         input = view.findViewById(R.id.search_input)
@@ -81,9 +74,8 @@ class SearchFragment : BaseFragment() {
         model.state.observe(viewLifecycleOwner, ::render)
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                while (isActive) {
-                    results.adapter?.notifyDataSetChanged()
-                    delay(500)
+                downloads.summaryChanges().collect { changed ->
+                    (results.adapter as? SearchAdapter)?.refreshDownloads(changed)
                 }
             }
         }
@@ -153,6 +145,12 @@ class SearchFragment : BaseFragment() {
                     }
                 }
             }
+            bindDownloadSummary(holder, item)
+            holder.itemView.setOnClickListener { click(item) }
+            loadImage(holder.image, item.thumbnailUrl)
+        }
+
+        private fun bindDownloadSummary(holder: Holder, item: Discourse) {
             val completed = downloads.downloadedCount(item.id)
             holder.downloadIcon.setColorFilter(ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500))
             holder.downloadedCount.isVisible = completed > 0
@@ -164,8 +162,15 @@ class SearchFragment : BaseFragment() {
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text,
                 completed.takeIf { it > 0 }?.let { getString(R.string.discourse_download_count, it, item.totalTracks) }
             ).filterNotNull().filter(CharSequence::isNotBlank).joinToString(". ")
-            holder.itemView.setOnClickListener { click(item) }
-            loadImage(holder.image, item.thumbnailUrl)
+        }
+
+        override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
+            if (payloads.isEmpty()) onBindViewHolder(holder, position)
+            else bindDownloadSummary(holder, items[position])
+        }
+
+        fun refreshDownloads(changed: Set<String>) {
+            items.forEachIndexed { index, item -> if (item.id in changed) notifyItemChanged(index, "download") }
         }
 
         override fun getItemCount() = items.size
