@@ -409,6 +409,14 @@
                             app:rippleColor="@color/clip_export_accent_pressed"
                             app:strokeColor="@color/clip_export_accent"
                             app:strokeWidth="1dp" />
+                    <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center"
+                            android:text="@string/clip_select_video_or_photo"
+                            android:textColor="@color/clip_export_text_secondary"
+                            android:textSize="12sp" />
                 </LinearLayout>
 
             </LinearLayout>

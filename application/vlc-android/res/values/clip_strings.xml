@@ -4,6 +4,7 @@
     <string name="clip_share_link">Share clip link</string>
     <string name="clip_download">Download clip audio</string>
     <string name="clip_create_video">Create video from clip</string>
+    <string name="clip_select_video_or_photo">Select video or photo</string>
     <string name="clip_export_title">Export Clip</string>
     <string name="clip_noise_cancellation">Noise cancellation</string>
     <string name="clip_background_music">Background music</string>
