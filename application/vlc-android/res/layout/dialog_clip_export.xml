@@ -525,7 +525,6 @@
                                 app:indicatorColor="@color/clip_export_accent"
                                 app:trackColor="@color/clip_export_progress_track"
                                 app:trackCornerRadius="4dp"
-                                app:trackStopIndicatorSize="0dp"
                                 app:trackThickness="8dp" />
                     </LinearLayout>
                 </FrameLayout>
