@@ -28,6 +28,22 @@ internal object ClipExportFolder {
             throw ClipExportFolderUnavailable()
         }
     }
+
+    fun discourseDirectory(parent: DocumentFile, name: String): DocumentFile {
+        try {
+            val directory = parent.findFile(name) ?: parent.createDirectory(name)
+            return directory?.takeIf { it.isDirectory && it.canWrite() }
+                ?: throw ClipExportFolderUnavailable()
+        } catch (error: ClipExportFolderUnavailable) {
+            throw error
+        } catch (_: Exception) {
+            throw ClipExportFolderUnavailable()
+        }
+    }
 }
+
+internal fun clipDiscourseFolderName(name: String): String =
+    name.replace(Regex("[\\p{Cntrl}/\\\\:*?\"<>|]"), "_").trim().take(120)
+        .takeUnless { it.isBlank() || it == "." || it == ".." } ?: "Discourse"
 
 internal class ClipExportFolderUnavailable : IllegalStateException("Export folder is unavailable")

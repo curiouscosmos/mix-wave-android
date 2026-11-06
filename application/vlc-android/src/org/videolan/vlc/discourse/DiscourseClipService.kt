@@ -17,6 +17,7 @@ import android.provider.MediaStore
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.documentfile.provider.DocumentFile
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.CancellationException
@@ -120,8 +121,12 @@ class DiscourseClipService : Service() {
                         else DiscourseClipExporter.export(source, range, temporary, onProgress)
                     ensureActive()
                     val baseName = clipBaseName(audio.title, range)
-                    val uri = publish(temporary, "$baseName.${clipExtension(mime)}", mime, options.exportFolderUri)
-                    val captionsSaved = options.captionPath?.let { exportCaptions(it, range, baseName, options.exportFolderUri) } ?: false
+                    val folderName = clipDiscourseFolderName(audio.discourseName)
+                    val directory = options.exportFolderUri?.let {
+                        ClipExportFolder.discourseDirectory(ClipExportFolder.directory(this@DiscourseClipService, it), folderName)
+                    }
+                    val uri = publish(temporary, "$baseName.${clipExtension(mime)}", mime, directory, folderName)
+                    val captionsSaved = options.captionPath?.let { exportCaptions(it, range, baseName, directory, folderName) } ?: false
                     val savedMessage = if (options.captionPath != null && !captionsSaved)
                         R.string.clip_saved_no_captions else R.string.clip_saved
                     val open = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
@@ -181,7 +186,7 @@ class DiscourseClipService : Service() {
 
     private fun clipExtension(mime: String) = if (mime == "video/mp4") "mp4" else if (mime == "audio/mpeg") "mp3" else "m4a"
 
-    private suspend fun exportCaptions(path: String, range: ClipRange, baseName: String, folderUri: String?): Boolean {
+    private suspend fun exportCaptions(path: String, range: ClipRange, baseName: String, directory: DocumentFile?, folderName: String): Boolean {
         val cues = try {
             DiscourseCaptions(this).load(path)
         } catch (cancelled: CancellationException) {
@@ -194,7 +199,7 @@ class DiscourseClipService : Service() {
         val captionTemp = File(cacheDir, "discourse-clip-captions.tmp")
         return try {
             captionTemp.writeText(formatSrt(trimmed), Charsets.UTF_8)
-            publish(captionTemp, "$baseName.srt", "application/x-subrip", folderUri)
+            publish(captionTemp, "$baseName.srt", "application/x-subrip", directory, folderName)
             true
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -205,10 +210,9 @@ class DiscourseClipService : Service() {
         }
     }
 
-    private suspend fun publish(source: File, name: String, mime: String, folderUri: String?): Uri {
+    private suspend fun publish(source: File, name: String, mime: String, directory: DocumentFile?, folderName: String): Uri {
         val uri: Uri
-        if (folderUri != null) {
-            val directory = ClipExportFolder.directory(this, folderUri)
+        if (directory != null) {
             val document = directory.createFile(mime, name) ?: throw ClipExportFolderUnavailable()
             uri = document.uri
             if (!preferences.edit().putString(OUTPUT_URI, uri.toString()).commit()) {
@@ -230,7 +234,7 @@ class DiscourseClipService : Service() {
             uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, name)
                 put(MediaStore.MediaColumns.MIME_TYPE, mime)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/Rajneesh Discourse")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/Rajneesh Discourse/$folderName")
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }) ?: error("Cannot create clip")
             if (!preferences.edit().putString(OUTPUT_URI, uri.toString()).commit()) {
@@ -250,7 +254,7 @@ class DiscourseClipService : Service() {
             } ?: error("Cannot write clip")
             check(contentResolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null) == 1)
         } else {
-            val directory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Rajneesh Discourse")
+            val directory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Rajneesh Discourse/$folderName")
             check(directory.isDirectory || directory.mkdirs())
             val file = File(directory, name)
             val partial = File(directory, "$name.partial")
