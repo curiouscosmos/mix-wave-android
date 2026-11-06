@@ -97,6 +97,7 @@ import org.videolan.vlc.discourse.DiscoursePlaybackIds
 import org.videolan.vlc.discourse.DiscourseRepository
 import org.videolan.vlc.discourse.DiscourseDownloadStore
 import org.videolan.vlc.discourse.discourseAudioSnapshot
+import org.videolan.vlc.discourse.resolveDiscourseUrl
 import org.videolan.vlc.discourse.restoreDiscourseMetadata
 import org.videolan.vlc.discourse.discourseContinuation
 import org.videolan.vlc.discourse.toMediaWrapper
@@ -596,11 +597,16 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
         if (mw.type != MediaWrapper.TYPE_VIDEO || isVideoPlaying || player.hasRenderer
                 || mw.hasFlag(MediaWrapper.MEDIA_FORCE_AUDIO)) {
             var uri = withContext(Dispatchers.IO) {
-                val offline = if (!player.hasRenderer) mw.discourseAudioSnapshot()?.let { DiscourseDownloadStore(ctx).verifiedFile(it) } else null
-                FileUtils.getUri(offline?.let(android.net.Uri::fromFile) ?: mw.uri)
+                val audio = mw.discourseAudioSnapshot()
+                val source = if (audio == null) mw.uri else if (player.hasRenderer)
+                    resolveDiscourseUrl(audio.audioUrl)?.toUri() else DiscourseDownloadStore(ctx).playbackUri(audio)
+                FileUtils.getUri(source)?.takeUnless { resolved ->
+                    resolved.scheme == "file" && resolved.path?.let { !java.io.File(it).isFile } != false
+                }
             }
             if (uri == null) {
-                skipMedia()
+                service.showToast(service.getString(R.string.playback_file_unavailable), Toast.LENGTH_SHORT, true)
+                stop()
                 return
             }
             //PiP TV
@@ -677,11 +683,6 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             if (player.isPlaying()) player.stop()
             VideoPlayerActivity.startOpened(ctx, mw.uri, currentIndex)
         }
-    }
-
-    private fun skipMedia() {
-        if (currentIndex != nextIndex) next()
-        else stop()
     }
 
     fun onServiceDestroyed() {
@@ -1371,17 +1372,25 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                     }
                 }
                 MediaPlayer.Event.EncounteredError -> {
+                    val failedMedia = getCurrentMedia() ?: return
                     val location = try {
-                        getCurrentMedia()?.location
+                        failedMedia.location
                     } catch (e: NullPointerException) {
                         null
                     }
                     Log.w(TAG, "Invalid location $location")
-
-                    service.showToast(if (location != null && location.toUri().scheme == "missing") service.getString(R.string.missing_location) else service.getString(R.string.invalid_location, location
+                    val discourse = failedMedia.discoursePlaybackIds() != null
+                    val missingFile = withContext(Dispatchers.IO) {
+                        location?.toUri()?.takeIf { it.scheme == "file" }?.path?.let { !java.io.File(it).isFile } ?: false
+                    }
+                    service.showToast(if (discourse) service.getString(R.string.discourse_playback_unavailable)
+                        else if (missingFile) service.getString(R.string.playback_file_unavailable)
+                        else if (location != null && location.toUri().scheme == "missing") service.getString(R.string.missing_location) else service.getString(R.string.invalid_location, location
                             ?: ""), Toast.LENGTH_SHORT, true)
                     if (location != null) PlaybackService.lastError.postValue(location)
-                    if (currentIndex != nextIndex) next() else stop()
+                    // Repeat-one retries the same failed input; discourse queues may all be unavailable offline.
+                    if (discourse || missingFile || repeating.value == PlaybackStateCompat.REPEAT_MODE_ONE || currentIndex == nextIndex) stop()
+                    else next()
                 }
                 MediaPlayer.Event.TimeChanged -> {
                     abRepeat.value?.let {

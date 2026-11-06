@@ -1,0 +1,4 @@
+<resources>
+    <string name="playback_file_unavailable">This track’s file is unavailable. It may have been moved or deleted.</string>
+    <string name="discourse_playback_unavailable">This track is unavailable. Check your internet connection or download it again.</string>
+</resources>

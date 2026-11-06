@@ -107,6 +107,8 @@ class DiscourseDownloadStore(context: Context) {
         val info = downloadInfo(id)
         val state = when (info.status) {
             DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> DiscourseDownloadState.DOWNLOADING
+            DownloadManager.STATUS_SUCCESSFUL -> if (!file(audio).isFile) DiscourseDownloadState.MISSING
+                else DiscourseDownloadState.FAILED.also { reportFailure(audio, id, info) }
             else -> DiscourseDownloadState.FAILED.also { reportFailure(audio, id, info) }
         }
         val progress = if (state == DiscourseDownloadState.DOWNLOADING)
@@ -138,6 +140,8 @@ class DiscourseDownloadStore(context: Context) {
         totalTracks > 0 && downloadedCount(discourseId) >= totalTracks
 
     fun download(audio: DiscourseAudio): Boolean = synchronized(downloadsLock) {
+        // A settled cache entry can outlive a file deleted outside the app.
+        invalidate(audio.id)
         if (!shouldEnqueue(state(audio))) return@synchronized true
         val url = resolveDiscourseUrl(audio.audioUrl) ?: return@synchronized false.also {
             ErrorReporter.error(TAG, "Cannot resolve download URL for track ${audio.id} (${audio.title})")
