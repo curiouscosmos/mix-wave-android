@@ -21,6 +21,19 @@ import java.util.UUID
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = 29)
 class DiscourseClipServiceTest {
+    @Test fun inaccessibleExportFolderFailsWithoutFallingBackToDownloads() = runBlocking<Unit> {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val audio = DiscourseAudio("missing-folder", "test", "Test", null, "english", "Folder test",
+            "https://example.invalid/unused.mp3", 6.0, 100, "audio/mpeg", 1, "", "")
+        val preferences = context.getSharedPreferences("discourse_clip_export", Context.MODE_PRIVATE)
+        assertTrue(DiscourseClipService.start(context, audio, ClipRange(0, 2_000),
+            ClipExportOptions(exportFolderUri = "content://unavailable/tree/clips")))
+        withTimeout(10_000) { while (preferences.contains("request")) delay(50) }
+        assertEquals(R.string.clip_export_folder_unavailable, DiscourseClipService.status.value?.message)
+        assertFalse(preferences.contains("output_uri"))
+        assertFalse(File(context.cacheDir, "discourse-clip-export.tmp").exists())
+    }
+
     @Test fun backgroundExportReusesCompletedDownloadAndPublishesClip() = checkExport(false)
     @Test fun processedExportPublishesM4aAndPreservesOfflineSource() = checkExport(true)
     @Test fun persistedVideoRequestResumesAndPublishesMp4() = checkExport(true, true)

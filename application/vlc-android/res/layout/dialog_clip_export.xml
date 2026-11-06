@@ -302,6 +302,45 @@
                 </LinearLayout>
 
                 <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:paddingHorizontal="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+                    <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+                        <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/clip_export_folder"
+                                android:textColor="@color/clip_export_text"
+                                android:textSize="16sp" />
+                        <TextView
+                                android:id="@+id/clip_export_folder_name"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="@string/clip_export_folder_default"
+                                android:textColor="@color/clip_export_text_secondary"
+                                android:textSize="12sp" />
+                    </LinearLayout>
+                    <com.google.android.material.button.MaterialButton
+                            android:id="@+id/clip_export_folder_change"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp"
+                            android:text="@string/clip_export_folder_change"
+                            android:contentDescription="@string/clip_export_folder_choose"
+                            android:textAllCaps="false"
+                            android:textColor="@color/clip_export_accent" />
+                </LinearLayout>
+
+                <LinearLayout
                         android:id="@+id/clip_export_actions"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

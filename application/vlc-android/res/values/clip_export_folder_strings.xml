@@ -1,0 +1,9 @@
+<resources>
+    <string name="clip_export_folder">Export folder</string>
+    <string name="clip_export_folder_default">Downloads / Rajneesh Discourse</string>
+    <string name="clip_export_folder_choose">Choose folder…</string>
+    <string name="clip_export_folder_change">Change</string>
+    <string name="clip_export_folder_selected">Selected folder</string>
+    <string name="clip_export_folder_unavailable">Cannot write to the export folder. Choose it again or select another folder.</string>
+    <string name="clip_export_folder_save_failed">Could not save the export folder. Please try again.</string>
+</resources>

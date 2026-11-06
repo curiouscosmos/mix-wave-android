@@ -80,6 +80,7 @@ class DiscourseClipService : Service() {
                     val audio = audioAdapter.fromJson(request.getString("audio")) ?: error("Missing audio")
                     val range = ClipRange(request.getLong("start"), request.getLong("end"))
                     val options = ClipExportOptions.fromJson(request.optJSONObject("options"))
+                    options.exportFolderUri?.let { ClipExportFolder.directory(this@DiscourseClipService, it) }
                     video = options.output == ClipOutput.VIDEO
                     processing = options.processed
                     if (video) {
@@ -119,8 +120,8 @@ class DiscourseClipService : Service() {
                         else DiscourseClipExporter.export(source, range, temporary, onProgress)
                     ensureActive()
                     val baseName = clipBaseName(audio.title, range)
-                    val uri = publish(temporary, "$baseName.${clipExtension(mime)}", mime)
-                    val captionsSaved = options.captionPath?.let { exportCaptions(it, range, baseName) } ?: false
+                    val uri = publish(temporary, "$baseName.${clipExtension(mime)}", mime, options.exportFolderUri)
+                    val captionsSaved = options.captionPath?.let { exportCaptions(it, range, baseName, options.exportFolderUri) } ?: false
                     val savedMessage = if (options.captionPath != null && !captionsSaved)
                         R.string.clip_saved_no_captions else R.string.clip_saved
                     val open = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
@@ -154,7 +155,7 @@ class DiscourseClipService : Service() {
 
     private fun reportFailure(error: Throwable, processing: Boolean, video: Boolean) {
         ErrorReporter.error("DiscourseClip", "Clip export failed", error)
-        val message = if (video) R.string.clip_visual_failed else if (processing) {
+        val message = if (error is ClipExportFolderUnavailable) R.string.clip_export_folder_unavailable else if (video) R.string.clip_visual_failed else if (processing) {
             if (error is UnsupportedClipFormat) R.string.clip_processing_unsupported else R.string.clip_processing_failed
         } else if (error is UnsupportedClipFormat) R.string.clip_unsupported else R.string.clip_failed
         mutableStatus.value = ClipExportStatus(message, running = false)
@@ -180,7 +181,7 @@ class DiscourseClipService : Service() {
 
     private fun clipExtension(mime: String) = if (mime == "video/mp4") "mp4" else if (mime == "audio/mpeg") "mp3" else "m4a"
 
-    private suspend fun exportCaptions(path: String, range: ClipRange, baseName: String): Boolean {
+    private suspend fun exportCaptions(path: String, range: ClipRange, baseName: String, folderUri: String?): Boolean {
         val cues = try {
             DiscourseCaptions(this).load(path)
         } catch (cancelled: CancellationException) {
@@ -193,7 +194,7 @@ class DiscourseClipService : Service() {
         val captionTemp = File(cacheDir, "discourse-clip-captions.tmp")
         return try {
             captionTemp.writeText(formatSrt(trimmed), Charsets.UTF_8)
-            publish(captionTemp, "$baseName.srt", "application/x-subrip")
+            publish(captionTemp, "$baseName.srt", "application/x-subrip", folderUri)
             true
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -204,9 +205,28 @@ class DiscourseClipService : Service() {
         }
     }
 
-    private suspend fun publish(source: File, name: String, mime: String): Uri {
+    private suspend fun publish(source: File, name: String, mime: String, folderUri: String?): Uri {
         val uri: Uri
-        if (Build.VERSION.SDK_INT >= 29) {
+        if (folderUri != null) {
+            val directory = ClipExportFolder.directory(this, folderUri)
+            val document = directory.createFile(mime, name) ?: throw ClipExportFolderUnavailable()
+            uri = document.uri
+            if (!preferences.edit().putString(OUTPUT_URI, uri.toString()).commit()) {
+                document.delete()
+                error("Cannot persist output")
+            }
+            contentResolver.openOutputStream(uri, "w")?.use { output ->
+                source.inputStream().use { input ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        kotlin.coroutines.coroutineContext.ensureActive()
+                        val size = input.read(buffer)
+                        if (size < 0) break
+                        output.write(buffer, 0, size)
+                    }
+                }
+            } ?: throw ClipExportFolderUnavailable()
+        } else if (Build.VERSION.SDK_INT >= 29) {
             uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, name)
                 put(MediaStore.MediaColumns.MIME_TYPE, mime)
@@ -253,7 +273,12 @@ class DiscourseClipService : Service() {
     }
 
     private fun cleanupOutput() {
-        preferences.getString(OUTPUT_URI, null)?.let { runCatching { contentResolver.delete(Uri.parse(it), null, null) } }
+        preferences.getString(OUTPUT_URI, null)?.let { runCatching {
+            val uri = Uri.parse(it)
+            if (android.provider.DocumentsContract.isDocumentUri(this, uri))
+                android.provider.DocumentsContract.deleteDocument(contentResolver, uri)
+            else contentResolver.delete(uri, null, null)
+        } }
         preferences.getString(OUTPUT_FILE, null)?.let { File(it).delete() }
         preferences.edit().remove(OUTPUT_URI).remove(OUTPUT_FILE).commit()
     }

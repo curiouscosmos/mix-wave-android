@@ -30,6 +30,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.ClipExportOptions
+import org.videolan.vlc.discourse.ClipExportFolder
 import org.videolan.vlc.discourse.ClipRange
 import org.videolan.vlc.discourse.DiscourseAudio
 
@@ -48,6 +49,41 @@ class ClipDialogTestActivity : FragmentActivity() {
 
 @RunWith(AndroidJUnit4::class)
 class ClipDownloadDialogTest {
+    @Test fun exportFolderIsRememberedAndCancelledPickerKeepsDownloads() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val previousUri = ClipExportFolder.uri(context)
+        val previousName = ClipExportFolder.name(context)
+        Intents.init()
+        try {
+            ClipExportFolder.save(context, "content://documents/tree/test-clips", "Test clips")
+            intending(hasAction(Intent.ACTION_OPEN_DOCUMENT_TREE)).respondWith(Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null))
+            ActivityScenario.launch<ClipDialogTestActivity>(Intent(context, ClipDialogTestActivity::class.java)).use { scenario ->
+                awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                onView(withId(R.id.clip_export_folder_name)).inRoot(isDialog()).check(matches(withText("Test clips")))
+                scenario.recreate()
+                awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                onView(withId(R.id.clip_export_folder_name)).inRoot(isDialog()).check(matches(withText("Test clips")))
+                onView(withId(R.id.clip_export_folder_change)).inRoot(isDialog()).perform(scrollTo(), click())
+                onView(withText(R.string.clip_export_folder_default)).inRoot(isDialog()).perform(click())
+                // Preference writes happen off the UI thread.
+                val deadline = android.os.SystemClock.elapsedRealtime() + 5_000
+                while (ClipExportFolder.uri(context) != null && android.os.SystemClock.elapsedRealtime() < deadline) Thread.sleep(50)
+                org.junit.Assert.assertNull(ClipExportFolder.uri(context))
+                onView(withId(R.id.clip_export_folder_name)).inRoot(isDialog()).check(matches(withText(R.string.clip_export_folder_default)))
+                onView(withId(R.id.clip_export_folder_change)).inRoot(isDialog()).perform(scrollTo(), click())
+                onView(withText(R.string.clip_export_folder_choose)).inRoot(isDialog()).perform(click())
+                intended(hasAction(Intent.ACTION_OPEN_DOCUMENT_TREE))
+                onView(withId(R.id.clip_export_folder_name)).inRoot(isDialog()).check(matches(withText(R.string.clip_export_folder_default)))
+                scenario.recreate()
+                awaitDialog(scenario, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                onView(withId(R.id.clip_export_folder_name)).inRoot(isDialog()).check(matches(withText(R.string.clip_export_folder_default)))
+            }
+        } finally {
+            ClipExportFolder.save(context, previousUri, previousName)
+            Intents.release()
+        }
+    }
+
     @Test fun fadeSwitchesSurviveRecreationIndependently() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         ActivityScenario.launch<ClipDialogTestActivity>(Intent(context, ClipDialogTestActivity::class.java)).use { scenario ->

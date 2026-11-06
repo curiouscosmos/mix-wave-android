@@ -17,7 +17,8 @@ internal data class ClipExportOptions(
     val visualUri: String? = null,
     val captionPath: String? = null,
     val fadeIn: Boolean = false,
-    val fadeOut: Boolean = false
+    val fadeOut: Boolean = false,
+    val exportFolderUri: String? = null
 ) {
     val processed get() = noiseLevel != NoiseCancellationLevel.OFF || mixer != null || fadeIn || fadeOut
 
@@ -26,6 +27,7 @@ internal data class ClipExportOptions(
         put("output", output.name)
         put("fade_in", fadeIn)
         put("fade_out", fadeOut)
+        exportFolderUri?.let { put("export_folder_uri", it) }
         visualUri?.let { put("visual_uri", it) }
         captionPath?.let { put("caption_path", it) }
         mixer?.let {
@@ -43,7 +45,8 @@ internal data class ClipExportOptions(
             if (json.has("visual_uri")) json.getString("visual_uri") else null,
             if (json.has("caption_path")) json.getString("caption_path") else null,
             json.optBoolean("fade_in", false),
-            json.optBoolean("fade_out", false)
+            json.optBoolean("fade_out", false),
+            if (json.has("export_folder_uri")) json.getString("export_folder_uri") else null
         )
     }
 }

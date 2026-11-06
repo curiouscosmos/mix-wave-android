@@ -120,7 +120,8 @@ class ProcessedClipExporterTest {
     }
 
     @Test fun settingsSurviveBundleRoundTripAndOldRequestsHaveNoEffects() {
-        val expected = ClipExportOptions(NoiseCancellationLevel.MEDIUM, ClipMixerOptions("content://test/music", "Background", 37, true), fadeIn = true, fadeOut = true)
+        val expected = ClipExportOptions(NoiseCancellationLevel.MEDIUM, ClipMixerOptions("content://test/music", "Background", 37, true), fadeIn = true, fadeOut = true,
+            exportFolderUri = "content://documents/tree/clips")
         val parcel = Parcel.obtain()
         try {
             Bundle().apply { putString("options", expected.toJson().toString()) }.writeToParcel(parcel, 0)
@@ -132,6 +133,9 @@ class ProcessedClipExporterTest {
             assertFalse(old.fadeIn)
             assertFalse(old.fadeOut)
             assertFalse(old.processed)
+            assertNull(old.exportFolderUri)
+            assertNull(ClipExportOptions.fromJson(null).exportFolderUri)
+            assertFalse(ClipExportOptions(exportFolderUri = "content://documents/tree/clips").processed)
             assertTrue(ClipExportOptions(fadeIn = true).processed)
             assertTrue(ClipExportOptions(fadeOut = true).processed)
         } finally { parcel.recycle() }

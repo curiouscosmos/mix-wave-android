@@ -15,18 +15,22 @@ import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.videolan.tools.HttpImageLoader
 import org.videolan.vlc.R
 import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.videolan.vlc.databinding.DialogClipExportBinding
 import org.videolan.vlc.discourse.ClipExportOptions
+import org.videolan.vlc.discourse.ClipExportFolder
 import org.videolan.vlc.discourse.ClipExportStatus
 import org.videolan.vlc.discourse.ClipOutput
 import org.videolan.vlc.discourse.ClipRange
@@ -46,6 +50,8 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     private var exportCaptions = false
     private var fadeIn = false
     private var fadeOut = false
+    private var exportFolderUri: String? = null
+    private var exportFolderName: String? = null
     private var sheetBehavior: BottomSheetBehavior<FrameLayout>? = null
     private var lastPercent: Int? = null
 
@@ -61,6 +67,8 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         exportCaptions = savedInstanceState?.getBoolean("captions") == true
         fadeIn = savedInstanceState?.getBoolean("fade_in") == true
         fadeOut = savedInstanceState?.getBoolean("fade_out") == true
+        exportFolderUri = if (savedInstanceState != null) savedInstanceState.getString("export_folder_uri") else ClipExportFolder.uri(requireContext())
+        exportFolderName = if (savedInstanceState != null) savedInstanceState.getString("export_folder_name") else ClipExportFolder.name(requireContext())
         output = ClipOutput.valueOf(savedInstanceState?.getString("output") ?: "AUDIO")
         visualUri = savedInstanceState?.getString("visual_uri")
     }
@@ -79,8 +87,34 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         outState.putBoolean("captions", exportCaptions)
         outState.putBoolean("fade_in", fadeIn)
         outState.putBoolean("fade_out", fadeOut)
+        outState.putString("export_folder_uri", exportFolderUri)
+        outState.putString("export_folder_name", exportFolderName)
         outState.putString("output", output.name)
         outState.putString("visual_uri", visualUri)
+    }
+
+    private val folderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            val context = requireContext().applicationContext
+            lifecycleScope.launch {
+                try {
+                    val name = withContext(Dispatchers.IO) {
+                        context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        val directory = ClipExportFolder.directory(context, uri.toString())
+                        val name = directory.name ?: uri.lastPathSegment.orEmpty()
+                        ClipExportFolder.save(context, uri.toString(), name)
+                        name
+                    }
+                    exportFolderUri = uri.toString()
+                    exportFolderName = name
+                    if (view != null) renderExportFolder()
+                } catch (error: kotlinx.coroutines.CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    if (isAdded) UiTools.snacker(requireActivity(), R.string.clip_export_folder_unavailable)
+                }
+            }
+        }
     }
 
     private val visualPicker = registerForActivityResult(object : ActivityResultContracts.OpenDocument() {
@@ -99,7 +133,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         }
     }
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        if (Build.VERSION.SDK_INT >= 29 || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+        if (exportFolderUri != null || Build.VERSION.SDK_INT >= 29 || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
             export()
         else UiTools.snacker(requireActivity(), R.string.clip_permission)
     }
@@ -122,6 +156,28 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         binding.clipExportFadeOut.isChecked = fadeOut
         binding.clipExportFadeIn.setOnCheckedChangeListener { _, checked -> fadeIn = checked }
         binding.clipExportFadeOut.setOnCheckedChangeListener { _, checked -> fadeOut = checked }
+        renderExportFolder()
+        binding.clipExportFolderChange.setOnClickListener {
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.clip_export_folder)
+                .setItems(arrayOf(getString(R.string.clip_export_folder_default), getString(R.string.clip_export_folder_choose))) { _, which ->
+                    if (which == 0) {
+                        val context = requireContext().applicationContext
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { ClipExportFolder.save(context, null, null) }
+                                exportFolderUri = null
+                                exportFolderName = null
+                                renderExportFolder()
+                            } catch (error: kotlinx.coroutines.CancellationException) {
+                                throw error
+                            } catch (_: Exception) {
+                                UiTools.snacker(requireActivity(), R.string.clip_export_folder_save_failed)
+                            }
+                        }
+                    } else folderPicker.launch(exportFolderUri?.let(android.net.Uri::parse))
+                }.show()
+        }
         val captionsAvailable = audio.hasCc == true && !audio.ccPath.isNullOrBlank()
         binding.clipExportCaptionsRow.isEnabled = captionsAvailable
         binding.clipExportCaptionsRow.isFocusable = captionsAvailable
@@ -288,9 +344,29 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     }
 
     private fun requestExport() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val context = requireContext().applicationContext
+                val folder = exportFolderUri
+                if (folder != null) withContext(Dispatchers.IO) { ClipExportFolder.directory(context, folder) }
+                requestExportPermissions()
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                UiTools.snacker(requireActivity(), R.string.clip_export_folder_unavailable)
+            }
+        }
+    }
+
+    private fun renderExportFolder() {
+        binding.clipExportFolderName.text = if (exportFolderUri == null) getString(R.string.clip_export_folder_default)
+            else exportFolderName ?: getString(R.string.clip_export_folder_selected)
+    }
+
+    private fun requestExportPermissions() {
         val context = requireContext()
         val needed = mutableListOf<String>()
-        if (Build.VERSION.SDK_INT < 29 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+        if (exportFolderUri == null && Build.VERSION.SDK_INT < 29 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
             needed.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             needed.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -306,6 +382,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
                     visualUri = visualUri,
                     fadeIn = fadeIn,
                     fadeOut = fadeOut,
+                    exportFolderUri = exportFolderUri,
                     captionPath = if (binding.clipExportCaptions.isChecked) audio.ccPath else null
                 ))
             UiTools.snacker(requireActivity(), if (started) R.string.clip_started else R.string.clip_busy)
