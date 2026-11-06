@@ -6,9 +6,13 @@
         android:layout_height="wrap_content" android:padding="16dp" android:textColor="?attr/font_default" />
     <Button android:id="@+id/caption_retry" android:layout_width="wrap_content"
         android:layout_height="48dp" android:text="@string/caption_retry" />
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/caption_list"
+    <ScrollView android:id="@+id/caption_list"
         android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-        android:clipToPadding="false" android:padding="12dp" />
+        android:clipToPadding="false" android:padding="12dp">
+        <org.videolan.vlc.gui.audio.CaptionTextView android:id="@+id/caption_text"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="16dp" android:textSize="22sp" />
+    </ScrollView>
     <Button android:id="@+id/caption_follow" android:layout_width="wrap_content"
         android:layout_height="48dp" android:layout_gravity="center_horizontal" android:text="@string/caption_follow" />
 </LinearLayout>

@@ -18,6 +18,33 @@ import org.videolan.vlc.gui.view.ClipRangeView
 
 @RunWith(AndroidJUnit4::class)
 class PlayerCaptionsTest {
+    @Test fun captionsFlowTogetherAndOnlyTheSpokenPhraseChangesColor() = onMain {
+        val context = ContextThemeWrapper(InstrumentationRegistry.getInstrumentation().targetContext, R.style.Theme_VLC_Black)
+        val view = CaptionTextView(context)
+        val first = org.videolan.vlc.discourse.CaptionCue(0, 1000, "First\nphrase")
+        val second = org.videolan.vlc.discourse.CaptionCue(1000, 2000, "Second phrase")
+        view.setCues(listOf(first, second))
+        assertEquals("First phrase Second phrase", view.text.toString())
+        val text = view.text as android.text.Spannable
+        fun highlighted(): String {
+            val span = text.getSpans(0, text.length, android.text.style.ForegroundColorSpan::class.java).single()
+            return text.subSequence(text.getSpanStart(span), text.getSpanEnd(span)).toString()
+        }
+        view.setActive(0)
+        assertEquals("First phrase", highlighted())
+        view.setActive(1)
+        assertEquals("Second phrase", highlighted())
+        view.setActive(-1)
+        assertTrue(text.getSpans(0, text.length, android.text.style.ForegroundColorSpan::class.java).isEmpty())
+        var clicked: org.videolan.vlc.discourse.CaptionCue? = null
+        view.onCueClick = { clicked = it }
+        text.getSpans(0, text.length, android.text.style.ClickableSpan::class.java)[1].onClick(view)
+        assertEquals(second, clicked)
+        view.setClipRange(ClipRange(1000, 2000))
+        val selected = text.getSpans(0, text.length, android.text.style.BackgroundColorSpan::class.java).single()
+        assertEquals("Second phrase", text.subSequence(text.getSpanStart(selected), text.getSpanEnd(selected)).toString())
+    }
+
     @Test fun touchingEitherHandleActivatesWithoutMovingTheRange() = onMain {
         val view = rangeView()
         var activeStart = true

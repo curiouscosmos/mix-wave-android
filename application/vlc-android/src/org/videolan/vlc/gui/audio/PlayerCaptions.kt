@@ -1,16 +1,15 @@
 package org.videolan.vlc.gui.audio
 
-import android.graphics.Color
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import android.widget.ScrollView
 import kotlinx.coroutines.*
 import org.videolan.vlc.R
 import org.videolan.vlc.databinding.AudioPlayerBinding
@@ -23,7 +22,8 @@ internal class PlayerCaptions(
 ) {
     private val panel: View = binding.root.findViewById(R.id.caption_panel)
     private val button: View = binding.root.findViewById(R.id.player_cc)
-    private val list: RecyclerView = panel.findViewById(R.id.caption_list)
+    private val list: ScrollView = panel.findViewById(R.id.caption_list)
+    private val transcript: CaptionTextView = panel.findViewById(R.id.caption_text)
     private val status: TextView = panel.findViewById(R.id.caption_status)
     private val retry: View = panel.findViewById(R.id.caption_retry)
     private val follow: View = panel.findViewById(R.id.caption_follow)
@@ -38,32 +38,6 @@ internal class PlayerCaptions(
     private var active = -1
     private var slideOffset = 0f
     private var selectedRange: ClipRange? = null
-    private val rows = object : RecyclerView.Adapter<Row>() {
-        override fun getItemCount() = cues.size
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Row {
-            val text = TextView(parent.context)
-            text.layoutParams = RecyclerView.LayoutParams(-1, -2)
-            val padding = (16 * text.resources.displayMetrics.density).toInt()
-            text.setPadding(padding, padding, padding, padding)
-            text.textSize = 22f
-            text.isFocusable = true
-            text.isClickable = true
-            return Row(text)
-        }
-        override fun onBindViewHolder(holder: Row, position: Int) {
-            val cue = cues[position]
-            holder.text.text = cue.text
-            holder.text.setTextColor(if (position == active) Color.rgb(255, 110, 90) else Color.WHITE)
-            holder.text.isSelected = position == active
-            holder.text.setBackgroundColor(if (selectedRange?.let { cue.startMs < it.endMs && cue.endMs > it.startMs } == true)
-                0x303F8CFF else Color.TRANSPARENT)
-            holder.text.setOnClickListener {
-                if (editor.isOpen) editor.selectCaption(cue)
-                else player.playlistModel.service?.seek(cue.startMs, fromUser = true)
-            }
-        }
-    }
-
     private val requests by lazy {
         CaptionLoader(scope, { original ->
             DiscourseRepository(player.requireContext()).getDiscourseAudios(original.discourseId, forceRefresh = true)
@@ -75,7 +49,7 @@ internal class PlayerCaptions(
                 ?.updateCaptionSnapshot(updated)
             cues = result.orEmpty()
             active = -1
-            rows.notifyDataSetChanged()
+            transcript.setCues(cues); transcript.setClipRange(selectedRange)
             status.setText(if (error) R.string.caption_error else R.string.caption_empty)
             status.isVisible = error || cues.isEmpty()
             retry.isVisible = error || cues.isEmpty()
@@ -84,22 +58,28 @@ internal class PlayerCaptions(
     }
 
     init {
-        list.layoutManager = LinearLayoutManager(player.requireContext())
-        list.adapter = rows
-        list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
+        transcript.onCueClick = { cue ->
+            if (editor.isOpen) editor.selectCaption(cue)
+            else player.playlistModel.service?.seek(cue.startMs, fromUser = true)
+        }
+        var touchY = 0f
+        val slop = ViewConfiguration.get(player.requireContext()).scaledTouchSlop
+        list.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> touchY = event.y
+                MotionEvent.ACTION_MOVE -> if (kotlin.math.abs(event.y - touchY) > slop) {
                     followPlayback = false
                     follow.isVisible = true
                 }
             }
-        })
+            false
+        }
         button.setOnClickListener { requested = !requested; if (requested) load(false); render() }
         retry.setOnClickListener { load(true) }
         follow.setOnClickListener {
             followPlayback = true
             follow.isVisible = false
-            if (active >= 0) list.smoothScrollToPosition(active)
+            scrollToActive()
         }
         scope.launch {
             player.viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -121,7 +101,7 @@ internal class PlayerCaptions(
             audio = null
             initialized = false
             if (media != null) { currentId = null; requested = false; followPlayback = true }
-            if (cues.isNotEmpty()) { cues = emptyList(); active = -1; rows.notifyDataSetChanged() }
+            if (cues.isNotEmpty()) { cues = emptyList(); active = -1; transcript.setCues(cues); transcript.setClipRange(selectedRange) }
             render()
             return
         }
@@ -133,7 +113,7 @@ internal class PlayerCaptions(
         audio = snapshot
         cues = emptyList()
         active = -1
-        rows.notifyDataSetChanged()
+        transcript.setCues(cues); transcript.setClipRange(selectedRange)
         if (changed) { requested = false; followPlayback = true }
         render()
         if (requested) load(false)
@@ -168,12 +148,8 @@ internal class PlayerCaptions(
         follow.isVisible = !followPlayback
         val value = editor.selection
         if (selectedRange != value) {
-            val old = selectedRange
             selectedRange = value
-            cues.forEachIndexed { index, cue ->
-                fun inside(range: ClipRange?) = range?.let { cue.startMs < it.endMs && cue.endMs > it.startMs } == true
-                if (inside(old) != inside(value)) rows.notifyItemChanged(index)
-            }
+            transcript.setClipRange(value)
         }
     }
 
@@ -184,12 +160,14 @@ internal class PlayerCaptions(
         // Binary search keeps a long transcript cheap, including gaps between cues.
         val next = activeCaption(cues, time)
         if (next == active) return
-        val previous = active
         active = next
-        if (previous >= 0) rows.notifyItemChanged(previous)
-        if (next >= 0) {
-            rows.notifyItemChanged(next)
-            if (followPlayback) (list.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(next, list.height / 3)
+        transcript.setActive(next)
+        if (followPlayback) scrollToActive()
+    }
+
+    private fun scrollToActive() {
+        transcript.cueTop(active)?.let { top ->
+            list.smoothScrollTo(0, (transcript.top + top - list.height / 3).coerceAtLeast(0))
         }
     }
 
@@ -199,6 +177,5 @@ internal class PlayerCaptions(
         out.putBoolean("captions_follow", followPlayback)
     }
 
-    fun dispose() { requests.cancel(); list.adapter = null; list.clearOnScrollListeners() }
-    private class Row(val text: TextView) : RecyclerView.ViewHolder(text)
+    fun dispose() { requests.cancel(); transcript.onCueClick = null; list.setOnTouchListener(null) }
 }
