@@ -138,6 +138,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                     audio.totalLikes != other.audio.totalLikes || audio.plays != other.audio.plays)) return false
             if (track != null && (other.track == null || track.key != other.track.key || track.title != other.track.title ||
                     track.subtitle != other.track.subtitle || track.artwork != other.track.artwork ||
+                    track.audio?.discourseThumbnailUrl != other.track.audio?.discourseThumbnailUrl ||
                     track.audio?.totalLikes != other.track.audio?.totalLikes)) return false
             return children.size == other.children.size && children.zip(other.children).all { (old, new) ->
                 old.key == new.key && old.kind == new.kind && old.sameContent(new)
@@ -262,7 +263,9 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         val track = snapshot.media
         val image = card.findViewById<ImageView>(R.id.discourse_track_image)
         image.setImageDrawable(getAudioIconDrawable(requireContext(), MediaLibraryItem.TYPE_MEDIA, true))
-        imageJobs[card] = viewLifecycleOwner.lifecycleScope.launch {
+        val thumbnail = snapshot.audio?.discourseThumbnailUrl
+        if (!thumbnail.isNullOrBlank()) loadStatsImage(card, image, thumbnail)
+        else imageJobs[card] = viewLifecycleOwner.lifecycleScope.launch {
             val bitmap = ThumbnailsProvider.obtainBitmap(track, dp(48))
             currentCoroutineContext().ensureActive()
             if (bitmap != null) image.setImageBitmap(bitmap)
