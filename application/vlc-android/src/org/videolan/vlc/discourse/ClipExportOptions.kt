@@ -8,6 +8,7 @@ internal data class ClipMixerOptions(val uri: String, val title: String, val vol
 }
 
 internal enum class ClipOutput { AUDIO, VIDEO }
+internal enum class ClipVideoRatio { ORIGINAL, PORTRAIT, LANDSCAPE }
 
 /** Export snapshot; independent of the service's subsequent playback settings. */
 internal data class ClipExportOptions(
@@ -18,13 +19,15 @@ internal data class ClipExportOptions(
     val captionPath: String? = null,
     val fadeIn: Boolean = false,
     val fadeOut: Boolean = false,
-    val exportFolderUri: String? = null
+    val exportFolderUri: String? = null,
+    val videoRatio: ClipVideoRatio = ClipVideoRatio.ORIGINAL
 ) {
     val processed get() = noiseLevel != NoiseCancellationLevel.OFF || mixer != null || fadeIn || fadeOut
 
     fun toJson() = JSONObject().apply {
         put("noise", noiseLevel.name)
         put("output", output.name)
+        put("video_ratio", videoRatio.name)
         put("fade_in", fadeIn)
         put("fade_out", fadeOut)
         exportFolderUri?.let { put("export_folder_uri", it) }
@@ -46,7 +49,8 @@ internal data class ClipExportOptions(
             if (json.has("caption_path")) json.getString("caption_path") else null,
             json.optBoolean("fade_in", false),
             json.optBoolean("fade_out", false),
-            if (json.has("export_folder_uri")) json.getString("export_folder_uri") else null
+            if (json.has("export_folder_uri")) json.getString("export_folder_uri") else null,
+            ClipVideoRatio.valueOf(json.optString("video_ratio", "ORIGINAL"))
         )
     }
 }

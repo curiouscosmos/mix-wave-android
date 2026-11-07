@@ -12,6 +12,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ArrayAdapter
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
@@ -33,6 +35,7 @@ import org.videolan.vlc.discourse.ClipExportOptions
 import org.videolan.vlc.discourse.ClipExportFolder
 import org.videolan.vlc.discourse.ClipExportStatus
 import org.videolan.vlc.discourse.ClipOutput
+import org.videolan.vlc.discourse.ClipVideoRatio
 import org.videolan.vlc.discourse.ClipRange
 import org.videolan.vlc.discourse.DiscourseAudio
 import org.videolan.vlc.discourse.DiscourseClipService
@@ -46,6 +49,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     private lateinit var audio: DiscourseAudio
     private var output = ClipOutput.AUDIO
     private var visualUri: String? = null
+    private var videoRatio = ClipVideoRatio.ORIGINAL
     private var exporting = false
     private var exportCaptions = false
     private var fadeIn = false
@@ -71,6 +75,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         exportFolderName = if (savedInstanceState != null) savedInstanceState.getString("export_folder_name") else ClipExportFolder.name(requireContext())
         output = ClipOutput.valueOf(savedInstanceState?.getString("output") ?: "AUDIO")
         visualUri = savedInstanceState?.getString("visual_uri")
+        videoRatio = ClipVideoRatio.valueOf(savedInstanceState?.getString("video_ratio") ?: "ORIGINAL")
     }
 
     override fun onStart() {
@@ -91,6 +96,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         outState.putString("export_folder_name", exportFolderName)
         outState.putString("output", output.name)
         outState.putString("visual_uri", visualUri)
+        outState.putString("video_ratio", videoRatio.name)
     }
 
     private val folderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -203,8 +209,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
         }
         binding.clipExportVideo.setOnClickListener {
             saveHistoryThen {
-                output = ClipOutput.VIDEO
-                visualPicker.launch(arrayOf("image/*", "video/*"))
+                showVideoRatioPicker()
             }
         }
         binding.clipExportCancel.setOnClickListener {
@@ -363,6 +368,35 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
             else exportFolderName ?: getString(R.string.clip_export_folder_selected)
     }
 
+    private fun showVideoRatioPicker() {
+        videoRatio = ClipVideoRatio.ORIGINAL
+        val ratios = ClipVideoRatio.values()
+        val labels = arrayOf(getString(R.string.clip_ratio_original), getString(R.string.clip_ratio_portrait), getString(R.string.clip_ratio_landscape))
+        val icons = intArrayOf(R.drawable.ic_clip_ratio_original, R.drawable.ic_clip_ratio_portrait, R.drawable.ic_clip_ratio_landscape)
+        val adapter = object : ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_single_choice, labels) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                return (super.getView(position, convertView, parent) as TextView).apply {
+                    val icon = ContextCompat.getDrawable(context, icons[position])!!.mutate()
+                    val size = (24 * resources.displayMetrics.density).toInt()
+                    icon.setBounds(0, 0, size, size)
+                    icon.setTint(currentTextColor)
+                    setCompoundDrawablesRelative(icon, null, null, null)
+                    compoundDrawablePadding = (16 * resources.displayMetrics.density).toInt()
+                }
+            }
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.clip_ratio_title)
+            .setSingleChoiceItems(adapter, 0) { dialog, position ->
+                videoRatio = ratios[position]
+                output = ClipOutput.VIDEO
+                dialog.dismiss()
+                visualPicker.launch(arrayOf("image/*", "video/*"))
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun requestExportPermissions() {
         val context = requireContext()
         val needed = mutableListOf<String>()
@@ -380,6 +414,7 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
                 exportOptions().copy(
                     output = output,
                     visualUri = visualUri,
+                    videoRatio = videoRatio,
                     fadeIn = fadeIn,
                     fadeOut = fadeOut,
                     exportFolderUri = exportFolderUri,

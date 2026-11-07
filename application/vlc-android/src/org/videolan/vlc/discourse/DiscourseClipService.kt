@@ -114,7 +114,7 @@ class DiscourseClipService : Service() {
                     val mime = if (video) {
                         val prepared = File(cacheDir, "discourse-clip-audio.tmp")
                         ProcessedClipExporter.export(this@DiscourseClipService, source, range, options, prepared) { onProgress(it / 3) }
-                        ClipVideoExporter.export(this@DiscourseClipService, Uri.parse(options.visualUri), prepared, temporary) {
+                        ClipVideoExporter.export(this@DiscourseClipService, Uri.parse(options.visualUri), prepared, temporary, options.videoRatio) {
                             onProgress(33 + it * 66 / 100)
                         }
                     } else if (processing) ProcessedClipExporter.export(this@DiscourseClipService, source, range, options, temporary, onProgress)

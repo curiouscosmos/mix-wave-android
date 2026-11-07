@@ -5,6 +5,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ClipExportOptionsTest {
+    @Test fun videoRatioSurvivesExportRequests() {
+        for (ratio in ClipVideoRatio.values()) {
+            val options = ClipExportOptions(output = ClipOutput.VIDEO, visualUri = "content://visual", videoRatio = ratio)
+            assertEquals(options, ClipExportOptions.fromJson(JSONObject(options.toJson().toString())))
+        }
+        assertEquals(ClipVideoRatio.ORIGINAL, ClipExportOptions.fromJson(null).videoRatio)
+        assertEquals(ClipVideoRatio.ORIGINAL, ClipExportOptions.fromJson(JSONObject("{\"noise\":\"OFF\"}")).videoRatio)
+    }
+
     @Test fun folderSurvivesPersistedAudioAndVideoRequests() {
         for (output in ClipOutput.values()) {
             val options = ClipExportOptions(output = output, fadeIn = true, fadeOut = true,

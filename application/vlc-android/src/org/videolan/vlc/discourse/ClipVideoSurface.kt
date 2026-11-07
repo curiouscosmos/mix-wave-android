@@ -52,13 +52,13 @@ internal class ClipVideoSurface(
             -1f, 1f, 0f, top, 1f, 1f, 1f, top))
         position(0)
     }
-    private val viewport: IntArray
-
     init {
-        val scale = minOf(width.toFloat() / sourceWidth, height.toFloat() / sourceHeight)
-        val w = (sourceWidth * scale).toInt().coerceAtLeast(1)
-        val h = (sourceHeight * scale).toInt().coerceAtLeast(1)
-        viewport = intArrayOf((width - w) / 2, (height - h) / 2, w, h)
+        val viewport = clipVideoViewport(width, height, sourceWidth, sourceHeight)
+        // Scale the quad rather than the GL viewport, which has device-specific size limits.
+        for (index in 0 until 4) {
+            vertices.put(index * 4, vertices.get(index * 4) * viewport[2] / width)
+            vertices.put(index * 4 + 1, vertices.get(index * 4 + 1) * viewport[3] / height)
+        }
         try {
             display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
             check(display != EGL14.EGL_NO_DISPLAY)
@@ -163,7 +163,6 @@ internal class ClipVideoSurface(
         GLES20.glViewport(0, 0, width, height)
         GLES20.glClearColor(0f, 0f, 0f, 1f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-        GLES20.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
         drawTexture(program, target, texture, transform, vertices)
         if (endCardOpacity > 0f) {
             GLES20.glViewport(0, 0, width, height)

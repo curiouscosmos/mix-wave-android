@@ -25,6 +25,38 @@ class ClipVideoExporterTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
 
+    @Test fun chosenRatiosCropPhotosAndVideosToFillFrame() = runBlocking {
+        val photo = File(context.cacheDir, "ratio-photo.png")
+        val video = asset("visual.mp4")
+        try {
+            val bitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888)
+            bitmap.eraseColor(Color.RED)
+            android.graphics.Canvas(bitmap).drawRect(200f, 0f, 800f, 1000f,
+                android.graphics.Paint().apply { color = Color.GREEN })
+            photo.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+            withAudio(1_000) { audio, output ->
+                for (ratio in ClipVideoRatio.values()) {
+                    for (source in listOf(photo, video)) {
+                        ClipVideoExporter.export(context, Uri.fromFile(source), audio, output, ratio) {}
+                        val canvas = if (source == photo) clipVideoCanvas(1000, 1000, ratio)
+                            else clipVideoCanvas(1280, 720, ratio)
+                        checkTracks(audio, output, canvas.first, canvas.second)
+                        withFrames(output) { retriever ->
+                            val frame = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST)!!
+                            try {
+                                val corner = frame.getPixel(5, 5)
+                                if (source == photo && ratio == ClipVideoRatio.PORTRAIT)
+                                    assertTrue("Portrait must centre crop the photo", Color.green(corner) > 180)
+                                else assertTrue("Visual must fill output without black bars", Color.red(corner) > 180)
+                            } finally { frame.recycle() }
+                        }
+                    }
+                }
+            }
+        } finally { photo.delete(); video.delete() }
+    }
+
     @Test fun lowSampleRateMp3WorksWithPhotoAndVideo() = runBlocking {
         val visual = asset("visual.mp4")
         val photo = File(context.cacheDir, "speech-photo.png")
@@ -36,7 +68,7 @@ class ClipVideoExporterTest {
             withAudio(2_000, "speech-24k.mp3") { audio, output ->
                 for (file in listOf(photo, visual)) {
                     val updates = mutableListOf<Int>()
-                    ClipVideoExporter.export(context, Uri.fromFile(file), audio, output, updates::add)
+                    ClipVideoExporter.export(context, Uri.fromFile(file), audio, output, progress = updates::add)
                     assertEquals(100, updates.last())
                     checkTracks(audio, output, 1280, 720)
                 }
@@ -66,14 +98,14 @@ class ClipVideoExporterTest {
         withAudio(6_000) { audio, output ->
             try {
                 ClipVideoExporter.export(context, Uri.fromFile(photo), audio, output) {}
-                checkTracks(audio, output, 720, 1280)
+                checkTracks(audio, output, 640, 1280)
                 withFrames(output) { retriever ->
                     for (time in listOf(0L, 800_000L)) {
                         val frame = retriever.getFrameAtTime(time, MediaMetadataRetriever.OPTION_CLOSEST)!!
-                        assertTrue(Color.green(frame.getPixel(360, 640)) > 180)
-                        assertTrue("Expected black pillarbox", Color.green(frame.getPixel(5, 640)) < 30)
-                        assertTrue("EXIF rotation or vertical orientation lost", Color.red(frame.getPixel(360, 300)) < 40)
-                        assertTrue("EXIF rotation or vertical orientation lost", Color.red(frame.getPixel(360, 1000)) > 180)
+                        assertTrue(Color.green(frame.getPixel(320, 640)) > 180)
+                        assertTrue("Original ratio must fill frame", Color.green(frame.getPixel(5, 640)) > 180)
+                        assertTrue("EXIF rotation or vertical orientation lost", Color.red(frame.getPixel(320, 300)) < 40)
+                        assertTrue("EXIF rotation or vertical orientation lost", Color.red(frame.getPixel(320, 1000)) > 180)
                         frame.recycle()
                     }
                 }

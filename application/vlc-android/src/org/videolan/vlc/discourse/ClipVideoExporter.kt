@@ -26,7 +26,7 @@ import kotlin.coroutines.CoroutineContext
 
 /** All codec and GL work stays on the calling IO thread, without suspension points. */
 internal object ClipVideoExporter {
-    suspend fun export(context: Context, visual: Uri, audio: File, destination: File, progress: (Int) -> Unit): String {
+    suspend fun export(context: Context, visual: Uri, audio: File, destination: File, ratio: ClipVideoRatio = ClipVideoRatio.ORIGINAL, progress: (Int) -> Unit): String {
         val coroutine = currentCoroutineContext()
         val sound = MediaExtractor()
         var picture: Bitmap? = null
@@ -63,7 +63,7 @@ internal object ClipVideoExporter {
                 decoder = VideoFrames(context, visual, coroutine)
                 width = decoder.width; height = decoder.height
             }
-            val (canvasWidth, canvasHeight) = clipVideoCanvas(width, height)
+            val (canvasWidth, canvasHeight) = clipVideoCanvas(width, height, ratio)
             endCard = endCard(context, canvasWidth, canvasHeight)
             val format = MediaFormat.createVideoFormat("video/avc", canvasWidth, canvasHeight).apply {
                 setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
@@ -317,10 +317,24 @@ internal object ClipVideoExporter {
     }
 }
 
-internal fun clipVideoCanvas(width: Int, height: Int): Pair<Int, Int> = when {
-    width > height -> 1280 to 720
-    height > width -> 720 to 1280
-    else -> 720 to 720
+internal fun clipVideoCanvas(width: Int, height: Int, ratio: ClipVideoRatio = ClipVideoRatio.ORIGINAL): Pair<Int, Int> {
+    require(width > 0 && height > 0)
+    return when (ratio) {
+        ClipVideoRatio.PORTRAIT -> 720 to 1280
+        ClipVideoRatio.LANDSCAPE -> 1280 to 720
+        ClipVideoRatio.ORIGINAL -> {
+            val scale = 1280.0 / maxOf(width, height)
+            fun even(value: Int) = ((value * scale / 2).toInt() * 2).coerceAtLeast(2)
+            even(width) to even(height)
+        }
+    }
+}
+
+internal fun clipVideoViewport(width: Int, height: Int, sourceWidth: Int, sourceHeight: Int): IntArray {
+    val scale = maxOf(width.toDouble() / sourceWidth, height.toDouble() / sourceHeight)
+    val w = kotlin.math.ceil(sourceWidth * scale).toInt()
+    val h = kotlin.math.ceil(sourceHeight * scale).toInt()
+    return intArrayOf((width - w) / 2, (height - h) / 2, w, h)
 }
 
 internal fun clipEndCardOpacity(timeUs: Long, durationUs: Long): Float {
