@@ -298,8 +298,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun bindDiscourseCard(card: View, discourse: Discourse, metadata: String) {
         card.findViewById<View>(R.id.discourse_letter_heading).isVisible = false
         card.findViewById<TextView>(R.id.discourse_title).text = discourse.title
-        card.findViewById<TextView>(R.id.discourse_language).text = discourse.language.replaceFirstChar(Char::uppercase)
-        card.findViewById<TextView>(R.id.discourse_counts).text = metadata
+        card.findViewById<TextView>(R.id.discourse_language).text = discourse.cardLanguage()
+        card.findViewById<TextView>(R.id.discourse_counts).text = discourse.cardMetadata(metadata)
         likesUi.bind(card, discourse.id, false, discourse.title, discourse.totalLikes, discourse = discourse)
         bindDownloadSummary(card, discourse.id, discourse.totalTracks)
         loadStatsImage(card, card.findViewById(R.id.discourse_image), discourse.thumbnailUrl)

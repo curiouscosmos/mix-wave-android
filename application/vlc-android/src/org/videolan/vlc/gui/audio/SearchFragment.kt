@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
-import android.text.style.ImageSpan
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.Menu
@@ -132,19 +131,8 @@ class SearchFragment : BaseFragment() {
                     }
                 }
             }
-            holder.language.text = item.language.replaceFirstChar(Char::uppercase)
-            val counts = getString(R.string.discourse_counts, item.totalTracks, item.totalLikes)
-            val separator = counts.indexOf('·')
-            holder.counts.text = SpannableString("  " + counts.substring(0, separator + 1) + "   " + counts.substring(separator + 1)).apply {
-                listOf(0 to R.drawable.ic_search_headphones, separator + 4 to R.drawable.ic_header_media_favorite_outline).forEach { (position, icon) ->
-                    ContextCompat.getDrawable(requireContext(), icon)?.mutate()?.let { drawable ->
-                        val size = (18 * resources.displayMetrics.density).toInt()
-                        drawable.setBounds(0, 0, size, size)
-                        drawable.setTint(ContextCompat.getColor(requireContext(), R.color.discourse_catalogue_secondary))
-                        setSpan(ImageSpan(drawable, ImageSpan.ALIGN_BASELINE), position, position + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                }
-            }
+            holder.language.text = item.cardLanguage()
+            holder.counts.text = item.cardMetadata(getString(R.string.discourse_track_count, item.totalTracks))
             bindDownloadSummary(holder, item)
             holder.itemView.setOnClickListener { click(item) }
             loadImage(holder.image, item.thumbnailUrl)

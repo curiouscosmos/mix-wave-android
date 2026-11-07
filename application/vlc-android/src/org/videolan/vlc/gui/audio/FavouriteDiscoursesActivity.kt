@@ -112,8 +112,8 @@ class FavouriteDiscoursesActivity : AppCompatActivity() {
             val item = items[position]
             holder.heading.isVisible = false
             holder.title.text = item.title
-            holder.language.text = item.language.replaceFirstChar(Char::uppercase)
-            holder.counts.text = getString(R.string.discourse_track_count, item.totalTracks)
+            holder.language.text = item.cardLanguage()
+            holder.counts.text = item.cardMetadata(getString(R.string.discourse_track_count, item.totalTracks))
             holder.downloadIcon.isVisible = false
             holder.downloadedCount.isVisible = false
             holder.downloadProgress.isVisible = false

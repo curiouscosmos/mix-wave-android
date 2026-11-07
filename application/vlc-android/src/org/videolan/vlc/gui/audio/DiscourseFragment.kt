@@ -560,8 +560,8 @@ class DiscourseFragment : BaseFragment() {
             holder.heading.isVisible = heading != null
             holder.letter.text = heading
             holder.title.text = item.title
-            holder.language.text = item.language.replaceFirstChar(Char::uppercase)
-            holder.counts.text = getString(R.string.discourse_track_count, item.totalTracks)
+            holder.language.text = item.cardLanguage()
+            holder.counts.text = item.cardMetadata(getString(R.string.discourse_track_count, item.totalTracks))
             likesUi.bind(holder.itemView, item.id, false, item.title, item.totalLikes, discourse = item)
             bindDiscourseDownloadIndicator(holder, item)
             bindDiscourseDownloadProgress(holder.downloaded, item)

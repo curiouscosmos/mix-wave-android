@@ -23,7 +23,9 @@ data class Discourse(
     @Json(name = "updated_at") val updatedAt: String,
     @Json(name = "total_tracks") val totalTracks: Int = 0,
     @Json(name = "total_likes") val totalLikes: Int = 0,
-    val plays: Int = 0
+    val plays: Int = 0,
+    @Json(name = "location") val location: String? = null,
+    @Json(name = "date") val date: String? = null
 ) : Parcelable
 
 data class DiscourseAudio(
