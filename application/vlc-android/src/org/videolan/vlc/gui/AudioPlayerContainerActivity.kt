@@ -90,6 +90,7 @@ import org.videolan.vlc.MediaParsingService
 import org.videolan.vlc.PlaybackService
 import org.videolan.vlc.R
 import org.videolan.vlc.VlcMigrationHelper
+import org.videolan.vlc.discourse.discoursePlaybackIds
 import org.videolan.vlc.gui.audio.AudioPlayer
 import org.videolan.vlc.gui.audio.AudioPlaylistTipsDelegate
 import org.videolan.vlc.gui.audio.AudioTipsDelegate
@@ -120,6 +121,7 @@ private const val ACTION_SHOW_PLAYER = "action_show_player"
 private const val ACTION_HIDE_PLAYER = "action_hide_player"
 private const val BOTTOM_IS_HIDDEN = "bottom_is_hidden"
 private const val PLAYER_OPENED = "player_opened"
+private const val EXPAND_FOR_AUDIO = "expand_for_audio"
 private const val SHOWN_TIPS = "shown_tips"
 private const val BOOKMARK_VISIBLE: String = "bookmark_visible"
 
@@ -144,6 +146,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     private lateinit var resumeCard: Snackbar
     private var preventRescan = false
     private var showAudioPlayerWhenResumed = false
+    private var expandForAudioId: String? = null
 
     private var playerShown = false
     private var mixerControlsAtNavigation = false
@@ -201,6 +204,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
 
         //Init Medialibrary if KO
         if (savedInstanceState != null) {
+            expandForAudioId = savedInstanceState.getString(EXPAND_FOR_AUDIO)
             this.startMedialibrary(firstRun = false, upgrade = false, parse = true)
             bottomIsHiddden = savedInstanceState.getBoolean(BOTTOM_IS_HIDDEN, false) && !savedInstanceState.getBoolean(PLAYER_OPENED, false)
             savedInstanceState.getIntegerArrayList(SHOWN_TIPS)?.let { shownTips.addAll(it) }
@@ -569,6 +573,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(BOTTOM_IS_HIDDEN, bottomBar?.let { it.translationY != 0F } == true)
         outState.putBoolean(PLAYER_OPENED, if (::playerBehavior.isInitialized) playerBehavior.state == STATE_EXPANDED else false)
+        outState.putString(EXPAND_FOR_AUDIO, expandForAudioId)
         outState.putIntegerArrayList(SHOWN_TIPS, shownTips)
         if (::audioPlayer.isInitialized) outState.putBoolean(BOOKMARK_VISIBLE, audioPlayer.areBookmarksVisible())
         super.onSaveInstanceState(outState)
@@ -710,6 +715,10 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         showAudioPlayerWhenResumed = true
     }
 
+    fun expandAudioPlayerFor(audioId: String) {
+        expandForAudioId = audioId
+    }
+
     private fun showAudioPlayerImpl() {
         if (isFinishing) return
         showAudioPlayerWhenResumed = false
@@ -719,6 +728,10 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         }
         playerBehavior.run {
             if (state == STATE_HIDDEN) state = STATE_COLLAPSED
+            if (expandForAudioId != null && PlaybackService.instance?.currentMediaWrapper?.discoursePlaybackIds()?.audioId == expandForAudioId) {
+                state = STATE_EXPANDED
+                expandForAudioId = null
+            }
             isHideable = false
             if (tipsDelegate.currentTip == null && playlistTipsDelegate.currentTip == null) lock(false)
         }

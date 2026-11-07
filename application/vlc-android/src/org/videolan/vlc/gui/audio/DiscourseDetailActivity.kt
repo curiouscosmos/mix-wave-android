@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.Toast
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
 import androidx.activity.enableEdgeToEdge
@@ -17,11 +18,28 @@ import org.videolan.resources.util.parcelable
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.Discourse
 import org.videolan.vlc.discourse.ClipRange
+import org.videolan.vlc.discourse.DiscourseAudio
+import org.videolan.vlc.discourse.playDiscourseAudios
 import org.videolan.vlc.gui.ContentActivity
 
 class DiscourseDetailActivity : ContentActivity() {
     override val displayTitle = true
     private var clipPlaybackRequested = false
+    private var autoplayConsumed = false
+
+    fun playNotificationTrack(tracks: List<DiscourseAudio>?, failed: Boolean) {
+        if (!intent.getBooleanExtra(ARG_AUTOPLAY, false) || autoplayConsumed || (tracks == null && !failed)) return
+        autoplayConsumed = true
+        val discourse = intent.parcelable<Discourse>(ARG_DISCOURSE)
+        val audioId = intent.getStringExtra(ARG_AUDIO_ID)
+        val index = tracks?.indexOfFirst { it.id == audioId && it.discourseId == discourse?.id } ?: -1
+        if (failed || index < 0) {
+            Toast.makeText(this, R.string.discourse_load_failed, Toast.LENGTH_LONG).show()
+            return
+        }
+        expandAudioPlayerFor(tracks!![index].id)
+        playDiscourseAudios(tracks, index, startFromBeginning = true)
+    }
 
     fun requestLinkedClipPlayback(): Boolean {
         if (!intent.hasExtra(ARG_CLIP_START) || clipPlaybackRequested) return false
@@ -41,6 +59,7 @@ class DiscourseDetailActivity : ContentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         clipPlaybackRequested = savedInstanceState?.getBoolean("clip_playback_requested") ?: false
+        autoplayConsumed = savedInstanceState?.getBoolean("autoplay_consumed") ?: false
         setContentView(R.layout.secondary)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
@@ -72,6 +91,7 @@ class DiscourseDetailActivity : ContentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("clip_playback_requested", clipPlaybackRequested)
+        outState.putBoolean("autoplay_consumed", autoplayConsumed)
         super.onSaveInstanceState(outState)
     }
 
@@ -85,10 +105,12 @@ class DiscourseDetailActivity : ContentActivity() {
         const val ARG_AUDIO_ID = "detail_audio_id"
         private const val ARG_CLIP_START = "detail_clip_start"
         private const val ARG_CLIP_END = "detail_clip_end"
-        fun open(context: Context, discourse: Discourse, audioId: String? = null, clipRange: ClipRange? = null) {
+        private const val ARG_AUTOPLAY = "detail_autoplay"
+        fun open(context: Context, discourse: Discourse, audioId: String? = null, clipRange: ClipRange? = null, autoplay: Boolean = false) {
             context.startActivity(Intent(context, DiscourseDetailActivity::class.java)
                 .putExtra(ARG_DISCOURSE, discourse)
                 .putExtra(ARG_AUDIO_ID, audioId).apply {
+                    putExtra(ARG_AUTOPLAY, autoplay)
                     clipRange?.let {
                         putExtra(ARG_CLIP_START, it.startMs)
                         putExtra(ARG_CLIP_END, it.endMs)

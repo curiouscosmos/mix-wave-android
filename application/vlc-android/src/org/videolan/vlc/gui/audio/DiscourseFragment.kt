@@ -256,6 +256,7 @@ class DiscourseFragment : BaseFragment() {
                 }
             }
             is DiscourseViewModel.State.Detail -> {
+                (activity as? DiscourseDetailActivity)?.playNotificationTrack(value.tracks, value.error)
                 backCallback.isEnabled = !detailOnly
                 catalogue.isVisible = false
                 grid.isVisible = false

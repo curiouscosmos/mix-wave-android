@@ -2,17 +2,31 @@ package org.videolan.vlc.discourse
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
+import org.videolan.medialibrary.interfaces.media.MediaWrapper
 import org.junit.Before
 import org.junit.Test
-import org.videolan.vlc.BaseTest
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.videolan.medialibrary.MLServiceLocator
+import org.videolan.vlc.VLCTestApplication
+import org.robolectric.annotation.Config
 
-class DiscoursePlaybackStoreTest : BaseTest() {
+@RunWith(RobolectricTestRunner::class)
+@Config(application = VLCTestApplication::class, manifest = Config.NONE, sdk = [28])
+class DiscoursePlaybackStoreTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
     private lateinit var store: DiscoursePlaybackStore
 
     @Before
     fun setUpStore() {
+        MLServiceLocator.getAbstractMedialibrary().init(context)
         store = DiscoursePlaybackStore(context)
         listOf("first", "second").forEach(store::clear)
+        listOf("first", "second").forEach(store::clearPlayed)
     }
 
     @Test
@@ -72,6 +86,23 @@ class DiscoursePlaybackStoreTest : BaseTest() {
         store.save("first", 1_234L)
 
         assertEquals(1_234L, audio("first").toMediaWrapper(context).time)
+    }
+
+    @Test
+    fun notificationTrackStartsAtZeroWithoutResettingOtherResumePositions() {
+        store.save("first", 1_234L)
+        store.save("second", 5_678L)
+
+        val selected = audio("first").toMediaWrapper(context, startFromBeginning = true)
+        val next = audio("second").toMediaWrapper(context)
+
+        assertEquals(0L, selected.time)
+        assertTrue(selected.hasFlag(MediaWrapper.MEDIA_FROM_START))
+        assertEquals(5_678L, next.time)
+        assertFalse(next.hasFlag(MediaWrapper.MEDIA_FROM_START))
+        assertEquals(1_234L, store.position("first"))
+        assertEquals("first", selected.discoursePlaybackIds()?.audioId)
+        assertEquals("second", next.discoursePlaybackIds()?.audioId)
     }
 
     private fun audio(id: String) = DiscourseAudio(

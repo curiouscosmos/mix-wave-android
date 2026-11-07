@@ -98,6 +98,9 @@ private const val SEND_CRASH_RESULT = 0
 private const val PROPAGATE_RESULT = 1
 private const val TAG = "VLC/StartActivity"
 class StartActivity : FragmentActivity() {
+    companion object {
+        const val EXTRA_AUTOPLAY_DISCOURSE = "autoplay_discourse"
+    }
 
     private val idFromShortcut: Int
         get() {
@@ -315,7 +318,8 @@ class StartActivity : FragmentActivity() {
                 DiscourseRepository(this@StartActivity).getDiscourseById(link.discourseId)
             }
             if (discourse != null) {
-                DiscourseDetailActivity.open(this@StartActivity, discourse, link.audioId, link.clipRange)
+                DiscourseDetailActivity.open(this@StartActivity, discourse, link.audioId, link.clipRange,
+                    autoplay = intent.getBooleanExtra(EXTRA_AUTOPLAY_DISCOURSE, false))
             } else {
                 Toast.makeText(this@StartActivity, R.string.discourse_load_failed, Toast.LENGTH_LONG).show()
                 startApplication(showTvUi(), firstRun = false, upgrade = false, target = 0)
