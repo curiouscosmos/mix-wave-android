@@ -31,14 +31,12 @@ import org.videolan.tools.KEY_FRAGMENT_ID
 import org.videolan.tools.KEY_MEDIALIBRARY_SCAN
 import org.videolan.tools.ML_SCAN_OFF
 import org.videolan.tools.ML_SCAN_ON
-import org.videolan.tools.NOTIFICATION_PERMISSION_ASKED
 import org.videolan.tools.RESULT_RESTART
 import org.videolan.tools.Settings
 import org.videolan.vlc.BuildConfig
 import org.videolan.vlc.MediaParsingService
 import org.videolan.vlc.R
 import org.videolan.vlc.gui.MainActivity
-import org.videolan.vlc.gui.helpers.hf.NotificationDelegate.Companion.getNotificationPermission
 import org.videolan.vlc.gui.helpers.hf.StoragePermissionsDelegate.Companion.getStoragePermission
 import org.videolan.vlc.util.Permissions
 
@@ -155,17 +153,6 @@ class OnboardingActivity : AppCompatActivity(), OnboardingFragmentListener {
         }
     }
 
-    private fun askNotificationPermission() {
-        lifecycleScope.launch {
-            viewModel.notificationPermissionAlreadyAsked = true
-            getNotificationPermission()
-            Settings.getInstance(this@OnboardingActivity).edit {
-                putBoolean(NOTIFICATION_PERMISSION_ASKED, true)
-            }
-            onNext()
-        }
-    }
-
     override fun onNext() {
         when(viewModel.currentFragment) {
             FragmentName.WELCOME -> if (Permissions.canReadStorage(this)) showFragment(FragmentName.SCAN) else showFragment(FragmentName.ASK_PERMISSION)
@@ -180,8 +167,8 @@ class OnboardingActivity : AppCompatActivity(), OnboardingFragmentListener {
                 )
             }
             FragmentName.NO_PERMISSION -> showFragment(if (Permissions.canReadStorage(applicationContext)) FragmentName.SCAN else FragmentName.THEME)
-            FragmentName.NOTIFICATION_PERMISSION -> if(!Permissions.canSendNotifications(applicationContext) && !viewModel.notificationPermissionAlreadyAsked) askNotificationPermission() else showFragment(FragmentName.THEME)
-            FragmentName.SCAN -> if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S && !Permissions.canSendNotifications(applicationContext)) showFragment(FragmentName.NOTIFICATION_PERMISSION) else showFragment(FragmentName.THEME)
+            FragmentName.NOTIFICATION_PERMISSION -> showFragment(FragmentName.THEME)
+            FragmentName.SCAN -> showFragment(FragmentName.THEME)
             else ->  onDone()
         }
         if (viewModel.currentFragment == FragmentName.THEME) nextButton.text = getString(R.string.done)

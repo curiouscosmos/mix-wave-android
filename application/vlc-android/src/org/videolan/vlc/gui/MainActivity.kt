@@ -66,7 +66,6 @@ import org.videolan.vlc.BuildConfig
 import org.videolan.vlc.R
 import org.videolan.vlc.StartActivity
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
-import org.videolan.vlc.gui.dialogs.NotificationPermissionManager
 import org.videolan.vlc.gui.dialogs.UPDATE_DATE
 import org.videolan.vlc.gui.dialogs.UPDATE_URL
 import org.videolan.vlc.gui.dialogs.UpdateDialog
@@ -121,10 +120,8 @@ class MainActivity : ContentActivity(),
         scanNeeded = savedInstanceState == null && settings.getBoolean(KEY_MEDIALIBRARY_AUTO_RESCAN, true)
         mediaLibrary = Medialibrary.getInstance()
 
-        if (!NotificationPermissionManager.launchIfNeeded(this)) {
-            if (!WidgetMigration.launchIfNeeded(this)) {
-               if (!Settings.firstRun)  WhatsNewManager.launchIfNeeded(this) else WhatsNewManager.markAsShown(settings)
-            }
+        if (!WidgetMigration.launchIfNeeded(this)) {
+           if (!Settings.firstRun)  WhatsNewManager.launchIfNeeded(this) else WhatsNewManager.markAsShown(settings)
         }
 
         lifecycleScope.launch {

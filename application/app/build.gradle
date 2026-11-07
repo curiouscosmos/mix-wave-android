@@ -201,6 +201,7 @@ android {
 }
 
 dependencies {
+    implementation 'com.onesignal:OneSignal:5.9.2'
     implementation platform('com.google.firebase:firebase-bom:33.7.0')
     implementation 'com.google.firebase:firebase-analytics'
     implementation project(':application:vlc-android')

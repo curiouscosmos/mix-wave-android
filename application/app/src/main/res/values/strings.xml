@@ -1,0 +1,5 @@
+<resources>
+    <string name="onesignal_integration_title">Your OneSignal SDK integration is complete!</string>
+    <string name="onesignal_integration_message">You can now send Push Notifications &amp; In-App Messages through OneSignal. Tap below to enable push notifications.</string>
+    <string name="onesignal_integration_confirm">Got it</string>
+</resources>

@@ -61,6 +61,7 @@ class VLCApplication : MultiDexApplication(), Dialog.Callbacks by DialogDelegate
         }
         HttpImageLoader.initialize(this)
         setupApplication()
+        OneSignalManager.initialize(this)
     }
 
     private fun startMainThreadWatchdog() {
