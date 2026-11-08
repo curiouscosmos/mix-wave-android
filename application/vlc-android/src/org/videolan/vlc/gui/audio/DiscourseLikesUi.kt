@@ -25,7 +25,7 @@ import java.util.WeakHashMap
 /** One binding path for catalogue cards, home rows and the detail header. */
 internal class DiscourseLikesUi(private val context: Context, private val owner: LifecycleOwner) {
     private val repository = DiscourseRepository(context)
-    private data class Binding(val target: DiscourseLikesStore.Target, val title: String, val count: Int)
+    private data class Binding(val target: DiscourseLikesStore.Target, val title: String, val count: Int, val card: Boolean)
     private val bindings = WeakHashMap<TextView, Binding>()
 
     init {
@@ -50,7 +50,8 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
     fun bind(root: View, id: String, audio: Boolean, title: String, count: Int = 0,
              discourse: Discourse? = null, audioItem: DiscourseAudio? = null) {
         val view = root.findViewById<TextView>(R.id.discourse_like)
-        val binding = Binding(DiscourseLikesStore.Target(id, audio), title, count)
+        val binding = Binding(DiscourseLikesStore.Target(id, audio), title, count,
+            root.findViewById<View>(R.id.discourse_catalogue_card) != null)
         bindings[view] = binding
         view.isVisible = true
         render(view, binding, repository.likes.value)
@@ -79,11 +80,13 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
     private fun render(view: TextView, binding: Binding, state: DiscourseLikesStore.State) {
         val liked = state.liked(binding.target)
         val count = (state.counts[binding.target] ?: binding.count).coerceAtLeast(0)
-        val color = Color.parseColor(if (liked) "#FF5269" else "#BEA8AA")
+        val color = if (!liked && binding.card) context.getColor(R.color.discourse_card_secondary)
+            else Color.parseColor(if (liked) "#FF5269" else "#BEA8AA")
         val drawable = AppCompatResources.getDrawable(context,
-            if (liked) R.drawable.ic_header_media_favorite else R.drawable.ic_header_media_favorite_outline)!!.mutate()
+            if (liked) R.drawable.ic_header_media_favorite
+            else if (binding.card) R.drawable.ic_discourse_heart else R.drawable.ic_header_media_favorite_outline)!!.mutate()
         DrawableCompat.setTint(drawable, color)
-        val size = (24 * context.resources.displayMetrics.density).toInt()
+        val size = ((if (binding.card) 22 else 24) * context.resources.displayMetrics.density).toInt()
         drawable.setBounds(0, 0, size, size)
         view.setCompoundDrawablesRelative(drawable, null, null, null)
         view.text = formatDiscourseLikes(count)

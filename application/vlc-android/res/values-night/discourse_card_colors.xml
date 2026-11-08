@@ -1,0 +1,8 @@
+<resources>
+    <color name="discourse_card_secondary">#D8C8C5</color>
+    <color name="discourse_card_glow">#485D3028</color>
+    <color name="discourse_card_glow_clear">#005D3028</color>
+    <color name="discourse_card_badge_start">#654441</color>
+    <color name="discourse_card_badge_end">#503330</color>
+    <color name="discourse_card_badge_border">#79514B</color>
+</resources>

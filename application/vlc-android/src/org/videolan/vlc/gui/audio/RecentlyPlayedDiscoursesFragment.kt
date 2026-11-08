@@ -315,7 +315,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun bindDownloadSummary(card: View, discourseId: String, totalTracks: Int) {
         val completed = downloads.downloadedCount(discourseId)
         card.findViewById<ImageView>(R.id.discourse_download_icon).setColorFilter(
-            ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500)
+            ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.discourse_card_secondary)
         )
         card.findViewById<TextView>(R.id.discourse_downloaded_count).apply {
             isVisible = completed > 0

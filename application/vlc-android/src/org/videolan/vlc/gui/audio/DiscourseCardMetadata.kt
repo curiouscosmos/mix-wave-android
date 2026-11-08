@@ -45,5 +45,4 @@ internal fun View.bindDiscourseCardMetadata(item: Discourse, counts: String) {
         isVisible = date != null
     }
     findViewById<View>(R.id.discourse_date_separator).isVisible = date != null
-    findViewById<View>(R.id.discourse_metadata_space).isVisible = date == null
 }

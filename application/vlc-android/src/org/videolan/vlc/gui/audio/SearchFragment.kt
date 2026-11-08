@@ -142,7 +142,7 @@ class SearchFragment : BaseFragment() {
 
         private fun bindDownloadSummary(holder: Holder, item: Discourse) {
             val completed = downloads.downloadedCount(item.id)
-            holder.downloadIcon.setColorFilter(ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.grey500))
+            holder.downloadIcon.setColorFilter(ContextCompat.getColor(requireContext(), if (completed > 0) R.color.green500 else R.color.discourse_card_secondary))
             holder.downloadedCount.isVisible = completed > 0
             holder.downloadedCount.text = completed.toString()
             val active = downloads.activeDownloadCount(item.id)
