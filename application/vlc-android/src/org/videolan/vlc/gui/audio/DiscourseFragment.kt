@@ -560,8 +560,7 @@ class DiscourseFragment : BaseFragment() {
             holder.heading.isVisible = heading != null
             holder.letter.text = heading
             holder.title.text = item.title
-            holder.language.text = item.cardLanguage()
-            holder.counts.text = item.cardMetadata(getString(R.string.discourse_track_count, item.totalTracks))
+            holder.itemView.bindDiscourseCardMetadata(item, getString(R.string.discourse_track_count, item.totalTracks))
             likesUi.bind(holder.itemView, item.id, false, item.title, item.totalLikes, discourse = item)
             bindDiscourseDownloadIndicator(holder, item)
             bindDiscourseDownloadProgress(holder.downloaded, item)
@@ -576,6 +575,7 @@ class DiscourseFragment : BaseFragment() {
             holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
             val completed = downloads.downloadedCount(item.id)
             holder.card.contentDescription = listOf(item.title, holder.language.text, holder.counts.text,
+                discourseCardLocation(item.location), discourseCardDate(item.date),
                 completed.takeIf { it > 0 }?.let { getString(R.string.discourse_download_count, it, item.totalTracks) },
                 getString(R.string.discourse_listening_percentage, percent)
             ).filterNotNull().filter(CharSequence::isNotBlank).joinToString(". ")

@@ -41,6 +41,7 @@ class SearchFragment : BaseFragment() {
     private lateinit var progress: ProgressBar
     private lateinit var message: TextView
     private lateinit var downloads: DiscourseDownloadStore
+    private lateinit var likesUi: DiscourseLikesUi
 
     override fun getTitle() = getString(R.string.search)
 
@@ -58,6 +59,7 @@ class SearchFragment : BaseFragment() {
         progress = view.findViewById(R.id.search_progress)
         message = view.findViewById(R.id.search_message)
         downloads = DiscourseDownloadStore(requireContext())
+        likesUi = DiscourseLikesUi(requireContext(), viewLifecycleOwner)
         results.layoutManager = LinearLayoutManager(requireContext())
         results.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -131,8 +133,8 @@ class SearchFragment : BaseFragment() {
                     }
                 }
             }
-            holder.language.text = item.cardLanguage()
-            holder.counts.text = item.cardMetadata(getString(R.string.discourse_track_count, item.totalTracks))
+            holder.itemView.bindDiscourseCardMetadata(item, getString(R.string.discourse_track_count, item.totalTracks))
+            likesUi.bind(holder.itemView, item.id, false, item.title, item.totalLikes, discourse = item)
             bindDownloadSummary(holder, item)
             holder.itemView.setOnClickListener { click(item) }
             loadImage(holder.image, item.thumbnailUrl)
@@ -144,10 +146,11 @@ class SearchFragment : BaseFragment() {
             holder.downloadedCount.isVisible = completed > 0
             holder.downloadedCount.text = completed.toString()
             val active = downloads.activeDownloadCount(item.id)
-            holder.downloadIcon.isVisible = completed > 0 || active > 0
+            holder.downloadIcon.isVisible = true
             holder.downloaded.isVisible = active > 0 && item.totalTracks > 0
             holder.downloaded.progress = (completed * 100 / item.totalTracks.coerceAtLeast(1)).coerceAtMost(100)
             holder.itemView.contentDescription = listOf(item.title, holder.language.text, holder.counts.text,
+                discourseCardLocation(item.location), discourseCardDate(item.date),
                 completed.takeIf { it > 0 }?.let { getString(R.string.discourse_download_count, it, item.totalTracks) }
             ).filterNotNull().filter(CharSequence::isNotBlank).joinToString(". ")
         }

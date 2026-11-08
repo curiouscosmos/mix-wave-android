@@ -63,6 +63,11 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         if (count == null) card.findViewById<View>(R.id.discourse_track_played).isVisible = playbackStore.isPlayed(id)
         val accessibleCard = if (count == null) card else card.findViewById<View>(R.id.discourse_catalogue_card)
         accessibleCard.contentDescription = "${card.findViewById<TextView>(titleId).text}. ${getString(R.string.discourse_listening_percentage, percent)}"
+        if (count != null) {
+            val metadata = listOf(R.id.discourse_language, R.id.discourse_location, R.id.discourse_counts, R.id.discourse_date)
+                .map { card.findViewById<TextView>(it).text }.filter(CharSequence::isNotBlank).joinToString(". ")
+            accessibleCard.contentDescription = "${accessibleCard.contentDescription}. $metadata"
+        }
     }
     private fun unbind(card: View) {
         imageJobs.remove(card)?.cancel()
@@ -151,12 +156,11 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         fun heading(key: String, label: Int) {
             result += HomeRow(key, 0, getString(label), if (result.isEmpty()) "first" else "")
         }
-        fun discourse(item: Discourse, weekly: Boolean) = HomeRow(item.id, 1, discourse = item,
-            metadata = getString(if (weekly) R.string.weekly_plays else R.string.discourse_track_count,
-                if (weekly) item.plays else item.totalTracks))
+        fun discourse(item: Discourse) = HomeRow(item.id, 1, discourse = item,
+            metadata = getString(R.string.discourse_track_count, item.totalTracks))
         model.recentDiscourses.value.orEmpty().takeIf { it.isNotEmpty() }?.let { items ->
             heading("recent_discourses", R.string.recently_played)
-            result += items.map { discourse(it, false) }
+            result += items.map { discourse(it) }
         }
         model.recentTracks.value.orEmpty().takeIf { it.isNotEmpty() }?.let { items ->
             heading("recent_tracks", R.string.recently_played_tracks)
@@ -164,7 +168,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         }
         model.weeklyDiscourses.value.orEmpty().takeIf { it.isNotEmpty() }?.let { items ->
             heading("weekly_discourses", R.string.top_discourses_week)
-            result += HomeRow("weekly_discourses_list", 3, children = items.map { discourse(it, true) })
+            result += HomeRow("weekly_discourses_list", 3, children = items.map { discourse(it) })
         }
         model.weeklyTracks.value.orEmpty().takeIf { it.isNotEmpty() }?.let { items ->
             heading("weekly_tracks", R.string.top_tracks_week)
@@ -298,8 +302,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun bindDiscourseCard(card: View, discourse: Discourse, metadata: String) {
         card.findViewById<View>(R.id.discourse_letter_heading).isVisible = false
         card.findViewById<TextView>(R.id.discourse_title).text = discourse.title
-        card.findViewById<TextView>(R.id.discourse_language).text = discourse.cardLanguage()
-        card.findViewById<TextView>(R.id.discourse_counts).text = discourse.cardMetadata(metadata)
+        card.bindDiscourseCardMetadata(discourse, metadata)
         likesUi.bind(card, discourse.id, false, discourse.title, discourse.totalLikes, discourse = discourse)
         bindDownloadSummary(card, discourse.id, discourse.totalTracks)
         loadStatsImage(card, card.findViewById(R.id.discourse_image), discourse.thumbnailUrl)

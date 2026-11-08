@@ -5,12 +5,6 @@ import org.videolan.vlc.discourse.Discourse
 
 internal data class CatalogueRow(val discourse: Discourse, val heading: String?)
 
-internal fun Discourse.cardLanguage() =
-    listOfNotNull(language.replaceFirstChar(Char::uppercase), location?.trim()?.takeIf { it.isNotEmpty() }).joinToString(" | ")
-
-internal fun Discourse.cardMetadata(tracks: String) =
-    listOfNotNull(tracks, date?.trim()?.takeIf { it.isNotEmpty() }).joinToString(" | ")
-
 internal fun catalogueRows(items: List<Discourse>, alphabetical: Boolean) = items.mapIndexed { index, item ->
     CatalogueRow(item, discourseCatalogueHeading(item.title, items.getOrNull(index - 1)?.title, alphabetical))
 }

@@ -96,8 +96,6 @@ class FavouriteDiscoursesActivity : AppCompatActivity() {
             val heading: View = view.findViewById(R.id.discourse_letter_heading)
             val image: ImageView = view.findViewById(R.id.discourse_image)
             val title: TextView = view.findViewById(R.id.discourse_title)
-            val language: TextView = view.findViewById(R.id.discourse_language)
-            val counts: TextView = view.findViewById(R.id.discourse_counts)
             val downloadIcon: View = view.findViewById(R.id.discourse_download_icon)
             val downloadedCount: View = view.findViewById(R.id.discourse_downloaded_count)
             val downloadProgress: ProgressBar = view.findViewById(R.id.discourse_download_progress)
@@ -112,9 +110,8 @@ class FavouriteDiscoursesActivity : AppCompatActivity() {
             val item = items[position]
             holder.heading.isVisible = false
             holder.title.text = item.title
-            holder.language.text = item.cardLanguage()
-            holder.counts.text = item.cardMetadata(getString(R.string.discourse_track_count, item.totalTracks))
-            holder.downloadIcon.isVisible = false
+            holder.itemView.bindDiscourseCardMetadata(item, getString(R.string.discourse_track_count, item.totalTracks))
+            holder.downloadIcon.isVisible = true
             holder.downloadedCount.isVisible = false
             holder.downloadProgress.isVisible = false
             holder.card.setOnClickListener { DiscourseDetailActivity.open(this@FavouriteDiscoursesActivity, item) }
