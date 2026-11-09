@@ -269,6 +269,17 @@ class DiscourseFragment : BaseFragment() {
                 }
                 val image = header.findViewById<ImageView>(R.id.discourse_detail_image)
                 header.findViewById<TextView>(R.id.discourse_detail_title).text = value.discourse.title
+                val location = discourseCardLocation(value.discourse.location)
+                val date = discourseCardDate(value.discourse.date)
+                header.findViewById<TextView>(R.id.discourse_detail_location).apply {
+                    text = location
+                    isVisible = location != null
+                }
+                header.findViewById<TextView>(R.id.discourse_detail_date).apply {
+                    text = date
+                    isVisible = date != null
+                }
+                header.findViewById<View>(R.id.discourse_detail_chips).isVisible = location != null || date != null
                 likesUi.bind(header, value.discourse.id, false, value.discourse.title, value.discourse.totalLikes, discourse = value.discourse)
                 header.findViewById<TextView>(R.id.discourse_download_count).isVisible = false
                 header.findViewById<Button>(R.id.discourse_cancel_downloads).isVisible = false
