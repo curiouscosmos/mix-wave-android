@@ -151,14 +151,15 @@
                         android:minWidth="0dp"
                         android:paddingHorizontal="8dp"
                         android:checked="true"
+                        app:checkable="true"
                         android:textAllCaps="false"
                         android:text="@string/audio_mixer_loop"
-                        android:textColor="@color/audio_mixer_accent"
-                        app:iconTint="@color/audio_mixer_accent"
+                        android:textColor="@color/audio_mixer_toggle_foreground"
+                        app:iconTint="@color/audio_mixer_toggle_foreground"
                         app:strokeColor="@color/audio_mixer_accent"
                         app:strokeWidth="1dp"
                         app:cornerRadius="5dp"
-                        app:backgroundTint="@color/audio_mixer_toggle_background_default"
+                        app:backgroundTint="@color/audio_mixer_toggle_background"
                         app:iconSize="20dp" />
 
                 <androidx.appcompat.widget.AppCompatImageButton

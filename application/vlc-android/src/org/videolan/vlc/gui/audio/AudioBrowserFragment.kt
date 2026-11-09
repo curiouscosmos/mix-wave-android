@@ -91,6 +91,7 @@ import org.videolan.vlc.gui.view.EmptyLoadingState
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.media.PlaylistManager
 import org.videolan.vlc.providers.medialibrary.AudioMixerProvider
+import org.videolan.vlc.providers.medialibrary.KEY_AUDIO_MIXER_LOOP
 import org.videolan.vlc.providers.medialibrary.MedialibraryProvider
 import org.videolan.vlc.providers.medialibrary.isFavouriteDiscoursesPlaylist
 import org.videolan.vlc.util.ContextOption
@@ -368,7 +369,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
             toggle.isSelected = mixerEnabled
             toggle.setIconResource(if (mixerEnabled) R.drawable.ic_pause_player else R.drawable.ic_play)
             toggle.isEnabled = media != null
-            loop.isChecked = service?.mixerLoop ?: true
+            loop.isChecked = service?.mixerLoop ?: settings.getBoolean(KEY_AUDIO_MIXER_LOOP, true)
             loop.isSelected = loop.isChecked
             loop.setIconResource(if (loop.isChecked) R.drawable.ic_repeat_all else R.drawable.ic_repeat)
             more.isEnabled = AudioMixerProvider.count(requireContext()) > 0
@@ -385,7 +386,7 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
             update()
         }
         loop.addOnCheckedChangeListener { _, checked ->
-            PlaybackService.instance?.setAudioMixerLoop(checked)
+            PlaybackService.instance?.setAudioMixerLoop(checked) ?: settings.putSingle(KEY_AUDIO_MIXER_LOOP, checked)
             update()
         }
         fun clearMixer() {
