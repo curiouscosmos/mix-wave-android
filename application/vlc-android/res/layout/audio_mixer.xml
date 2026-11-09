@@ -151,7 +151,6 @@
                         android:minWidth="0dp"
                         android:paddingHorizontal="8dp"
                         android:checked="true"
-                        app:checkable="true"
                         android:textAllCaps="false"
                         android:text="@string/audio_mixer_loop"
                         android:textColor="@color/audio_mixer_toggle_foreground"
