@@ -464,11 +464,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 mediaEndReached = true
                 playQueueFinished = !playlistManager.hasNext() || playlistManager.stopAfter == currentMediaPosition
                 cancelPlaybackHistoryTimer(reset = true)
-                stopAudioMixer()
             }
             MediaPlayer.Event.Stopped -> {
                 cancelPlaybackHistoryTimer(reset = true)
-                stopAudioMixer()
+                // Input stops also occur between tracks; onPlaybackStopped handles queue stops.
             }
         }
         refreshNoiseCancellation()
@@ -2047,6 +2046,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             return
         }
         val player = mixerPlayer ?: mediaWrapper?.let { loadAudioMixerMedia(it) } ?: return
+        if (player.isPlaying && mixerStopJob?.isActive != true) return
         mixerFadeJob?.cancel()
         mixerStopJob?.cancel()
         player.setVolume(0)
