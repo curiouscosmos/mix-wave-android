@@ -103,6 +103,7 @@ internal fun MediaWrapper.updateCaptionSnapshot(audio: DiscourseAudio) {
  */
 fun MediaWrapper.restoreDiscourseMetadata() {
     val audio = discourseAudioSnapshot() ?: return
+    type = MediaWrapper.TYPE_AUDIO
     setTitle(audio.title)
     setDisplayTitle(audio.title)
     setArtist("Osho")

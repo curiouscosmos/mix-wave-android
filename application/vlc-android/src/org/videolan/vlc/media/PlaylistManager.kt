@@ -393,6 +393,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                 }.getOrDefault(JSONObject())
                 locations.asSequence().mapTo(ArrayList(locations.size)) {
                     MLServiceLocator.getAbstractMediaWrapper(it.toUri()).apply {
+                        if (audio) addFlags(MediaWrapper.MEDIA_FORCE_AUDIO)
                         tag = tags.optString(it, null)
                         restoreDiscourseMetadata()
                     }
@@ -406,7 +407,6 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                 playList[position].addFlags(MediaWrapper.MEDIA_PAUSED)
             }
             if (audio && position < playList.size) {
-                playList[position].addFlags(MediaWrapper.MEDIA_FORCE_AUDIO)
                 if (startPaused) playList[position].addFlags(MediaWrapper.MEDIA_PAUSED)
             }
             load(playList, position, mlUpdate = true, avoidErasingStop = true)
