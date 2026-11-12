@@ -48,7 +48,6 @@ class OnboardingPermissionFragment : OnboardingFragment(), View.OnClickListener 
     private lateinit var permAll: FrameLayout
     private lateinit var permNoneImage: ImageView
     private lateinit var permMediaImage: ImageView
-    private lateinit var permAllImage: ImageView
 
     private lateinit var oldSelected: ImageView
     private lateinit var currentlySelected: ImageView
@@ -67,12 +66,11 @@ class OnboardingPermissionFragment : OnboardingFragment(), View.OnClickListener 
         permAll = view.findViewById(R.id.permAll)
         permNoneImage = view.findViewById(R.id.permNoneImage)
         permMediaImage = view.findViewById(R.id.permMediaImage)
-        permAllImage = view.findViewById(R.id.permAllImage)
         permDescription = view.findViewById(R.id.permDescription)
         permNone.setOnClickListener(this)
         permMedia.setOnClickListener(this)
-        permAll.setOnClickListener(this)
-        currentlySelected = permAllImage
+        permAll.visibility = View.GONE
+        currentlySelected = permMediaImage
 
         currentlySelected.setColorFilter(ContextCompat.getColor(requireActivity(), R.color.orange500))
     }
@@ -81,7 +79,6 @@ class OnboardingPermissionFragment : OnboardingFragment(), View.OnClickListener 
         super.onResume()
         when(viewModel.permissionType) {
             PermissionType.NONE -> permNone
-            PermissionType.ALL -> permAll
             PermissionType.MEDIA -> permMedia
         }.performClick()
 
@@ -109,15 +106,6 @@ class OnboardingPermissionFragment : OnboardingFragment(), View.OnClickListener 
                 permAll.animate().scaleX(0.8F).scaleY(0.8F)
                 currentlySelected = permMediaImage
                 viewModel.permissionType = PermissionType.MEDIA
-            }
-            permAll -> {
-                permDescription.setText(R.string.permission_onboarding_perm_all)
-                permNone.background = null
-                permMedia.background = null
-                permNone.animate().scaleX(0.8F).scaleY(0.8F)
-                permMedia.animate().scaleX(0.8F).scaleY(0.8F)
-                currentlySelected = permAllImage
-                viewModel.permissionType = PermissionType.ALL
             }
         }
         animateColor()

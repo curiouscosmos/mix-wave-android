@@ -130,6 +130,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingFragmentListener {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == Permissions.FINE_STORAGE_PERMISSION_REQUEST_CODE) {
+            Permissions.emptyCache()
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 viewModel.permissionAlreadyAsked = true
                 onNext()
@@ -148,7 +149,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingFragmentListener {
                     ), Permissions.FINE_STORAGE_PERMISSION_REQUEST_CODE
                 )
                 return@launch
-            } else getStoragePermission(withDialog = false, onlyMedia = onlyMedia)
+            } else getStoragePermission()
             onNext()
         }
     }

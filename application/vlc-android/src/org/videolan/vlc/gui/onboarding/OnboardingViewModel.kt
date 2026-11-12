@@ -7,12 +7,12 @@ class OnboardingViewModel : ViewModel() {
     var permissionAlreadyAsked: Boolean = false
     var notificationPermissionAlreadyAsked: Boolean = false
     var scanStorages = true
-    var permissionType: PermissionType = PermissionType.ALL
+    var permissionType: PermissionType = PermissionType.MEDIA
 
     var theme = AppCompatDelegate.MODE_NIGHT_YES
     var currentFragment = FragmentName.WELCOME
 }
 
 enum class PermissionType {
-    NONE, MEDIA, ALL
+    NONE, MEDIA
 }
