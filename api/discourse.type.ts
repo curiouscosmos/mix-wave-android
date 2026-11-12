@@ -18,6 +18,8 @@ export type Discourse = {
 	updated_at: string;
 	has_cc: boolean;
 	cc_path: string;
+	date: string;
+	location: string;
 };
 
 export type DiscourseAudio = {
@@ -37,6 +39,7 @@ export type DiscourseAudio = {
 	updated_at: string;
 	has_cc: boolean;
 	cc_path: string;
+	tags: string; // comma separated
 };
 
 export type GetDiscoursesRequest = {
