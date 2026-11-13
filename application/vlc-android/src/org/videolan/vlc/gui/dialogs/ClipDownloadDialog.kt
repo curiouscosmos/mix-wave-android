@@ -393,6 +393,10 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
                 dialog.dismiss()
                 visualPicker.launch(arrayOf("image/*", "video/*"))
             }
+            .setPositiveButton(R.string.clip_ratio_continue) { _, _ ->
+                output = ClipOutput.VIDEO
+                visualPicker.launch(arrayOf("image/*", "video/*"))
+            }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
