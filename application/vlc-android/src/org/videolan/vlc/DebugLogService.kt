@@ -83,6 +83,11 @@ class DebugLogService : Service(), Logcat.Callback, Runnable {
         return binder
     }
 
+    override fun onDestroy() {
+        stop()
+        super.onDestroy()
+    }
+
     internal class DebugLogServiceStub(private val service: DebugLogService) : IDebugLogService.Stub() {
         override fun start() {
             service.start()
@@ -141,6 +146,7 @@ class DebugLogService : Service(), Logcat.Callback, Runnable {
 
     @TargetApi(Build.VERSION_CODES.O)
     private fun forceForeground() {
+        if (!BuildConfig.DEBUG) return
         if (AndroidUtil.isOOrLater)
             NotificationHelper.createDebugServcieChannel(applicationContext)
         val debugLogIntent = Intent(this, DebugLogActivity::class.java)
@@ -175,7 +181,8 @@ class DebugLogService : Service(), Logcat.Callback, Runnable {
         logcat = Logcat()
         logcat!!.start(this)
 
-        launchForeground(Intent(this, DebugLogService::class.java))
+        // Production logging is bound to its UI; only debug builds record in the background.
+        if (BuildConfig.DEBUG) launchForeground(Intent(this, DebugLogService::class.java))
         sendMessage(MSG_STARTED, null)
     }
 
