@@ -311,8 +311,10 @@ internal object ClipVideoExporter {
     private fun checkSdr(format: MediaFormat) {
         val transfer = if (format.containsKey(MediaFormat.KEY_COLOR_TRANSFER)) format.getInteger(MediaFormat.KEY_COLOR_TRANSFER) else 0
         val standard = if (format.containsKey(MediaFormat.KEY_COLOR_STANDARD)) format.getInteger(MediaFormat.KEY_COLOR_STANDARD) else 0
+        val hdrInfo = format.getByteBuffer(MediaFormat.KEY_HDR_STATIC_INFO)?.duplicate()
+        val hasHdrInfo = hdrInfo != null && (hdrInfo.position() until hdrInfo.limit()).any { hdrInfo.get(it) != 0.toByte() }
         require(transfer != MediaFormat.COLOR_TRANSFER_ST2084 && transfer != MediaFormat.COLOR_TRANSFER_HLG &&
-            standard != MediaFormat.COLOR_STANDARD_BT2020 && !format.containsKey(MediaFormat.KEY_HDR_STATIC_INFO) &&
+            standard != MediaFormat.COLOR_STANDARD_BT2020 && !hasHdrInfo &&
             format.getString(MediaFormat.KEY_MIME) != "video/dolby-vision") { "HDR video is unsupported" }
     }
 }

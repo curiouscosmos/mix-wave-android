@@ -51,7 +51,8 @@ internal class ClipAudioDecoder(context: Context, uri: Uri, private val startMs:
                 codec!!.configure(format, null, null, 0)
                 codec!!.start()
             }
-            extractor.seekTo(startMs * 1_000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+            // Prime compressed decoders before the selection; MP3 decoders can discard samples after a seek.
+            extractor.seekTo((startMs - 1_000).coerceAtLeast(0) * 1_000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
             nextBuffer()
             check(framesLeft > 0) { "No decoded audio" }
         } catch (error: Throwable) {

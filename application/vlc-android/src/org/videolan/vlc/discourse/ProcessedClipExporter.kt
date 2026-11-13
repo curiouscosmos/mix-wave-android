@@ -25,8 +25,8 @@ internal object ProcessedClipExporter {
         val inputFrames = warmFrames + clipFrames
         ClipAudioDecoder(context, Uri.fromFile(source), warmStart, range.endMs, coroutine).use { decoder ->
             val speech = ClipResampler(decoder.sampleRate, read = decoder::next)
-            // MP3 priming can remove 1152 input samples; at 24 kHz that exceeds 2048 output frames.
-            val paddingFrames = maxOf(2048, 1152 * 48_000 / decoder.sampleRate)
+            // Low-rate MP3 decoders can lose more than one frame to priming; allow at most two.
+            val paddingFrames = maxOf(2048, 2 * 1152 * 48_000 / decoder.sampleRate)
             Background(context, options.mixer, coroutine).use { background ->
                 val filter = if (denoise) createNoiseFilter(context, options.noiseLevel) else null
                 try {
