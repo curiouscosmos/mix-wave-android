@@ -23,7 +23,6 @@
 
 package org.videolan.vlc
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -277,8 +276,6 @@ class StartActivity : FragmentActivity() {
                         MediaUtils.playTracks(this@StartActivity, album, 0)
                     }
                 }
-            } else if(action != null && action== "vlc.remoteaccess.share") {
-                startActivity(Intent().apply { component = ComponentName(this@StartActivity, "org.videolan.vlc.remoteaccessserver.gui.remoteaccess.RemoteAccessShareActivity") })
             } else {
                 val target = idFromShortcut
                 val service = PlaybackService.instance

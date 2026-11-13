@@ -101,10 +101,6 @@ const val EXTRA_PATH = "extra_path"
 const val EXTRA_UUID = "extra_uuid"
 const val ACTION_RESUME_SCAN = "action_resume_scan"
 const val ACTION_PAUSE_SCAN = "action_pause_scan"
-const val ACTION_STOP_SERVER = "action_stop_server"
-const val ACTION_START_SERVER = "action_start_server"
-const val ACTION_DISABLE_SERVER = "action_disable_server"
-const val ACTION_RESTART_SERVER = "action_restart_server"
 const val ACTION_CONTENT_INDEXING = "action_content_indexing"
 
 // VideoPlayerActivity
@@ -148,7 +144,6 @@ const val ID_REFRESH = 13L
 const val ID_ALL_MOVIES = 14L
 const val ID_ALL_TVSHOWS = 15L
 const val ID_PIN_LOCK = 17L
-const val ID_REMOTE_ACCESS = 18L
 const val CATEGORY_NOW_PLAYING = 20L
 const val CATEGORY_NOW_PLAYING_PAUSED = 28L
 const val CATEGORY_ARTISTS = 21L
@@ -229,13 +224,11 @@ const val MOVIEPEDIA_ACTIVITY = "org.videolan.moviepedia.ui.MoviepediaActivity"
 const val TV_AUDIOPLAYER_ACTIVITY = "org.videolan.television.ui.audioplayer.AudioPlayerActivity"
 const val MEDIAPARSING_SERVICE = "org.videolan.vlc.MediaParsingService"
 const val TV_ONBOARDING_ACTIVITY = "org.videolan.television.ui.OnboardingActivity"
-const val REMOTE_ACCESS_SERVICE = "org.videolan.vlc.remoteaccessserver.RemoteAccessService"
-const val REMOTE_ACCESS_ONBOARDING = "org.videolan.vlc.remoteaccessserver.gui.remoteaccess.onboarding.RemoteAccessOnboardingActivity"
 
 const val ROOM_DATABASE = "/vlc_database.zip"
 const val EXPORT_SETTINGS_FILE = "/vlc_exported_settings.json"
 const val EXPORT_EQUALIZERS_FILE = "/vlc_exported_equalizers.json"
 
 enum class NotificationIds(val id: Int) {
-    MEDIA_PARSING(43), PLAYBACK(3), DEBUG_LOGS(46), REMOTE_ACCESS(44), REMOTE_ACCESS_OTP(45), RECOMMENDATIONS(47)
+    MEDIA_PARSING(43), PLAYBACK(3), DEBUG_LOGS(46), RECOMMENDATIONS(47)
 }
