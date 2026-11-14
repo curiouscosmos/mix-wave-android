@@ -81,6 +81,7 @@ import org.videolan.vlc.interfaces.IRefreshable
 import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.reloadLibrary
 import org.videolan.vlc.util.AutoUpdate
+import org.videolan.vlc.util.AppVersionCheck
 import org.videolan.vlc.util.Permissions
 import org.videolan.vlc.util.Util
 import org.videolan.vlc.util.WhatsNewManager
@@ -98,6 +99,7 @@ class MainActivity : ContentActivity(),
     private lateinit var mediaLibrary: Medialibrary
     private var scanNeeded = false
     private lateinit var toolbarIcon: ImageView
+    private val appVersionCheck by lazy { AppVersionCheck(this) }
 
     override fun getSnackAnchorView(overAudioPlayer:Boolean): View? {
         val view = super.getSnackAnchorView(overAudioPlayer)
@@ -233,6 +235,7 @@ class MainActivity : ContentActivity(),
 
     override fun onStart() {
         super.onStart()
+        appVersionCheck.check()
         if (mediaLibrary.isInitiated) {
             /* Load media items from database and storage */
             if (scanNeeded && Permissions.canReadStorage(this) && !mediaLibrary.isWorking) this.reloadLibrary()

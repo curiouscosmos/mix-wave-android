@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_update_title">Update available</string>
+    <string name="app_update_message">Please update Rajneesh Discourse from Google Play to continue with the supported version.</string>
+    <string name="app_update_action">Update</string>
+    <string name="app_update_skip">Skip</string>
+</resources>
