@@ -65,6 +65,10 @@
                 type="boolean" />
 
         <variable
+                name="trackStyle"
+                type="boolean" />
+
+        <variable
                 name="playlistStyle"
                 type="boolean" />
     </data>
@@ -177,7 +181,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:padding="3dp"
-                    android:visibility="@{isFavorite ? View.VISIBLE : View.GONE}"
+                    android:visibility="@{isFavorite &amp;&amp; !trackStyle ? View.VISIBLE : View.GONE}"
                     vlc:srcCompat="@drawable/ic_emoji_favorite" />
 
             <ImageView
@@ -241,8 +245,8 @@
                 android:layout_marginEnd="16dp"
                 android:ellipsize="end"
                 android:gravity="center_vertical"
-                android:maxLines="1"
-                android:singleLine="true"
+                android:maxLines="@{trackStyle ? 2 : 1}"
+                android:singleLine="@{!trackStyle}"
                 vlc:asyncText="@{item.title}"
                 vlc:layout_constraintBottom_toTopOf="@+id/subtitle"
                 vlc:layout_constraintEnd_toStartOf="@+id/linearLayout6"
@@ -261,7 +265,7 @@
                 android:maxLines="1"
                 android:singleLine="true"
                 vlc:asyncText="@{rowSubtitle}"
-                vlc:layout_constraintBottom_toBottomOf="parent"
+                vlc:layout_constraintBottom_toTopOf="@+id/track_progress"
                 vlc:layout_constraintEnd_toEndOf="@+id/title"
                 vlc:layout_constraintStart_toStartOf="@+id/title"
                 vlc:layout_constraintTop_toBottomOf="@+id/title"
@@ -281,6 +285,41 @@
                 vlc:layout_constraintEnd_toEndOf="parent"
                 vlc:layout_constraintTop_toTopOf="parent"
                 vlc:srcCompat="@drawable/ic_more" />
+
+        <include
+                android:id="@+id/discourse_like"
+                layout="@layout/discourse_like_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:visibility="@{trackStyle &amp;&amp; !inSelection ? View.VISIBLE : View.GONE}"
+                vlc:layout_constraintEnd_toEndOf="@id/title"
+                vlc:layout_constraintTop_toTopOf="@id/title" />
+
+        <ImageButton
+                android:id="@+id/track_play"
+                style="@style/TrackCardPlayButton"
+                android:layout_marginEnd="8dp"
+                android:onClick="@{holder::onClick}"
+                android:visibility="@{trackStyle &amp;&amp; !inSelection ? View.VISIBLE : View.GONE}"
+                vlc:layout_constraintEnd_toEndOf="parent"
+                vlc:layout_constraintTop_toTopOf="parent"
+                vlc:layout_constraintBottom_toBottomOf="parent" />
+
+        <ProgressBar
+                android:id="@+id/track_progress"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="0dp"
+                android:layout_height="5dp"
+                android:layout_marginTop="12dp"
+                android:indeterminate="false"
+                android:max="100"
+                android:progressDrawable="@drawable/track_listening_progress"
+                android:importantForAccessibility="no"
+                android:visibility="@{trackStyle ? View.VISIBLE : View.GONE}"
+                vlc:layout_constraintTop_toBottomOf="@id/subtitle"
+                vlc:layout_constraintStart_toStartOf="@id/title"
+                vlc:layout_constraintEnd_toEndOf="@id/title"
+                vlc:layout_constraintBottom_toBottomOf="parent" />
 
         <ImageView
                 android:id="@+id/selected_check"

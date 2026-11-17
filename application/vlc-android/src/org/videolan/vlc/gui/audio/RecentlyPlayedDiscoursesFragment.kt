@@ -206,9 +206,6 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 }
                 2 -> createTrackRow(parent).apply {
                     layoutParams.width = if (horizontal) dp(412.5f) else -1
-                    findViewById<TextView>(R.id.discourse_track_title).apply {
-                        maxLines = 1; ellipsize = TextUtils.TruncateAt.END
-                    }
                 }
                 else -> RecyclerView(parent.context).apply {
                     layoutParams = RecyclerView.LayoutParams(-1, -2)
@@ -286,7 +283,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         val thumbnail = snapshot.audio?.discourseThumbnailUrl
         if (!thumbnail.isNullOrBlank()) loadStatsImage(card, image, thumbnail)
         else imageJobs[card] = viewLifecycleOwner.lifecycleScope.launch {
-            val bitmap = ThumbnailsProvider.obtainBitmap(track, dp(48))
+            val bitmap = ThumbnailsProvider.obtainBitmap(track, dp(88))
             currentCoroutineContext().ensureActive()
             if (bitmap != null) image.setImageBitmap(bitmap)
         }
@@ -300,8 +297,12 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             likesUi.bind(card, it.audioId, true, track.title.orEmpty(), audio?.totalLikes ?: 0,
                 audioItem = audio ?: track.discourseAudioSnapshot())
         }
-        card.findViewById<ProgressBar>(R.id.listening_progress).isVisible = track.discoursePlaybackIds() != null
         if (track.discoursePlaybackIds() == null) {
+            card.findViewById<TextView>(R.id.discourse_like).apply {
+                isVisible = true
+                bindLocalTrackFavourite(track, viewLifecycleOwner)
+            }
+            card.findViewById<ProgressBar>(R.id.listening_progress).progress = trackListeningProgress(track.time, track.length)
             card.findViewById<View>(R.id.discourse_track_played).isVisible = false
             card.contentDescription = "${snapshot.title}. ${snapshot.subtitle}"
         }
@@ -309,6 +310,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
 
     private fun createTrackRow(container: ViewGroup): View {
         val row = layoutInflater.inflate(R.layout.discourse_track, container, false)
+        row.findViewById<View>(R.id.discourse_track_play).setOnClickListener { row.performClick() }
         row.clipToOutline = true
         row.findViewById<View>(R.id.discourse_track_number).isVisible = false
         row.findViewById<View>(R.id.discourse_track_download).isVisible = false

@@ -679,6 +679,7 @@ class DiscourseFragment : BaseFragment() {
             holder.played.isVisible = playbackStore.isPlayed(item.id)
             holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}"
             holder.itemView.setOnClickListener { holder.bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION }?.let(click) }
+            holder.itemView.findViewById<View>(R.id.discourse_track_play).setOnClickListener { holder.itemView.performClick() }
             val downloadState = downloads.cachedState(item)
             val downloadProgress = downloads.cachedProgress(item)
             bindDownloadAction(holder, item, downloadState, downloadProgress)

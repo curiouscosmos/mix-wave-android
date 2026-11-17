@@ -36,6 +36,12 @@ import android.widget.TextView
 import androidx.core.view.MotionEventCompat
 import androidx.databinding.ViewDataBinding
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import org.videolan.vlc.discourse.discoursePlaybackIds
+import org.videolan.vlc.discourse.discourseAudioSnapshot
+import org.videolan.vlc.discourse.DiscoursePlaybackStore
 import androidx.paging.PagedList
 import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
@@ -105,6 +111,10 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
     var areSectionsEnabled = true
     private var currentPlayingVisu: MiniVisualizer? = null
     private var model: PlaylistModel? = null
+    private val trackStyle = type == MediaLibraryItem.TYPE_MEDIA && !mixerStyle
+    private val owner get() = (eventsHandler as? Fragment)?.viewLifecycleOwner ?: eventsHandler as? LifecycleOwner
+    private val likesUi = lazy { owner?.let { DiscourseLikesUi(AppContextProvider.appContext, it) } }
+    private val playbackStore by lazy { DiscoursePlaybackStore(AppContextProvider.appContext) }
 
     var currentMedia:MediaWrapper? = null
         set(media) {
@@ -211,6 +221,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         holder.binding.setVariable(BR.inSelection,multiSelectHelper.inActionMode)
         holder.binding.invalidateAll()
         holder.binding.executePendingBindings()
+        if (trackStyle && holder is MediaItemViewHolder) holder.bindTrack(item as? MediaWrapper)
         if (position == focusNext) {
             holder.binding.root.requestFocus()
             focusNext = -1
@@ -329,6 +340,40 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             }
             binding.imageWidth = listImageWidth
             binding.playlistStyle = playlistStyle
+            binding.trackStyle = trackStyle
+            if (trackStyle) {
+                binding.root.setBackgroundResource(R.drawable.discourse_track_card)
+                binding.root.clipToOutline = true
+                (binding.root.layoutParams as RecyclerView.LayoutParams).apply {
+                    marginStart = 10.dp; marginEnd = 10.dp
+                    topMargin = 4.dp; bottomMargin = 4.dp
+                }
+                binding.root.minimumHeight = 112.dp
+                binding.imageWidth = 88.dp
+                binding.mediaCover.layoutParams.height = 88.dp
+                binding.selectorImage.layoutParams.height = 88.dp
+                binding.mediaCover.setBackgroundResource(R.drawable.track_artwork_background)
+                binding.mediaCover.clipToOutline = true
+                binding.title.setTextColor(android.graphics.Color.WHITE)
+                binding.title.setTypeface(binding.title.typeface, android.graphics.Typeface.BOLD)
+                binding.title.textSize = 18f
+                binding.title.setPaddingRelative(0, 0, 40.dp, 0)
+                binding.subtitle.setTextColor(android.graphics.Color.rgb(201, 189, 189))
+                binding.subtitle.textSize = 14f
+                binding.itemMore.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+                (binding.title.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).endToStart = R.id.track_play
+                (binding.linearLayout6.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                    endToStart = -1; endToEnd = R.id.media_cover
+                    topToTop = R.id.media_cover; bottomToBottom = R.id.media_cover
+                    verticalBias = 0f
+                }
+                (binding.itemMore.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                    width = 48.dp; height = 48.dp
+                    endToStart = -1; endToEnd = R.id.media_cover
+                    topToTop = R.id.media_cover; bottomToBottom = R.id.media_cover
+                    verticalBias = 1f
+                }
+            }
             if (mixerStyle) {
                 binding.root.setBackgroundResource(R.drawable.audio_mixer_row_background)
                 (binding.root.layoutParams as RecyclerView.LayoutParams).apply {
@@ -373,7 +418,29 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             binding.item = item
         }
 
+        fun bindTrack(item: MediaWrapper?) {
+            if (likesUi.isInitialized()) likesUi.value?.unbind(binding.root)
+            val heart = binding.root.findViewById<TextView>(R.id.discourse_like)
+            heart.visibility = if (item == null || multiSelectHelper.inActionMode) View.GONE else View.VISIBLE
+            if (item == null) return
+            val ids = item.discoursePlaybackIds()
+            if (ids != null) {
+                val audio = item.discourseAudioSnapshot()
+                likesUi.value?.bind(binding.root, ids.audioId, true, item.title.orEmpty(), audio?.totalLikes ?: 0, audioItem = audio)
+            } else {
+                owner?.let { heart.bindLocalTrackFavourite(item, it) }
+            }
+            heart.visibility = if (multiSelectHelper.inActionMode) View.GONE else View.VISIBLE
+            binding.trackProgress.progress = trackListeningProgress(item.time, item.length)
+            if (ids != null) owner?.lifecycleScope?.launch {
+                playbackStore.initialize()
+                if (binding.item === item) binding.trackProgress.progress = playbackStore.audioProgress(ids.audioId)
+            }
+        }
+
         override fun recycle() {
+            if (trackStyle && likesUi.isInitialized()) likesUi.value?.unbind(binding.root)
+            if (trackStyle) binding.root.findViewById<TextView>(R.id.discourse_like).tag = null
             binding.cover = if (cardSize == SHOW_IN_LIST && defaultCover != null) defaultCover else null
             binding.mediaCover.resetFade()
             binding.title.isSelected = false
@@ -383,7 +450,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
 
         override fun changePlayingVisibility(isCurrent: Boolean) {
             binding.root.isActivated = mixerStyle && isCurrent
-            binding.mediaCover.visibility = if (isCurrent) View.INVISIBLE else View.VISIBLE
+            binding.mediaCover.visibility = if (isCurrent && !trackStyle) View.INVISIBLE else View.VISIBLE
         }
 
     }

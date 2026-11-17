@@ -50,6 +50,8 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
     fun bind(root: View, id: String, audio: Boolean, title: String, count: Int = 0,
              discourse: Discourse? = null, audioItem: DiscourseAudio? = null) {
         val view = root.findViewById<TextView>(R.id.discourse_like)
+        view.tag = null
+        view.compoundDrawableTintList = null
         val binding = Binding(DiscourseLikesStore.Target(id, audio), title, count,
             root.findViewById<View>(R.id.discourse_catalogue_card) != null)
         bindings[view] = binding
@@ -71,6 +73,7 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
 
     fun unbind(root: View) {
         root.findViewById<TextView>(R.id.discourse_like)?.let {
+            it.tag = null
             bindings.remove(it)
             it.setOnClickListener(null)
             it.isVisible = false
@@ -89,7 +92,7 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         val size = ((if (binding.card) 22 else 24) * context.resources.displayMetrics.density).toInt()
         drawable.setBounds(0, 0, size, size)
         view.setCompoundDrawablesRelative(drawable, null, null, null)
-        view.text = formatDiscourseLikes(count)
+        view.text = if (binding.target.audio && !binding.card) "" else formatDiscourseLikes(count)
         view.setTextColor(color)
         view.isSelected = liked
         view.isEnabled = binding.target !in state.pending

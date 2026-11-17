@@ -1,105 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginHorizontal="10dp"
+    android:layout_marginVertical="4dp"
     android:background="@drawable/discourse_track_card"
-    android:layout_marginHorizontal="12dp" android:layout_marginVertical="4dp"
+    android:foreground="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
-    android:gravity="center_vertical"
-    android:minHeight="64dp"
-    android:orientation="vertical">
+    android:minHeight="112dp"
+    android:padding="8dp">
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/discourse_track_image"
+        android:layout_width="88dp"
+        android:layout_height="88dp"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        app:shapeAppearanceOverlay="@style/TrackCardArtwork"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <TextView
+        android:id="@+id/discourse_track_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="4dp"
+        android:background="#B3000000"
+        android:textColor="#FFFFFF"
+        app:layout_constraintStart_toStartOf="@id/discourse_track_image"
+        app:layout_constraintTop_toTopOf="@id/discourse_track_image" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/discourse_track_text"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="8dp"
-        android:paddingVertical="8dp">
+        android:layout_marginHorizontal="12dp"
+        android:orientation="vertical"
+        app:layout_constraintStart_toEndOf="@id/discourse_track_image"
+        app:layout_constraintEnd_toStartOf="@id/discourse_track_play"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
         <TextView
-            android:id="@+id/discourse_track_number"
-            android:layout_width="wrap_content"
+            android:id="@+id/discourse_track_title"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minWidth="24dp"
-            android:layout_marginEnd="4dp"
-            android:singleLine="true"
-            android:gravity="center" />
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:paddingEnd="36dp"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/discourse_track_image"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="12dp"
-            android:contentDescription="@null"
-            android:scaleType="centerCrop"
-            app:shapeAppearanceOverlay="@style/OshoThumbnailShapeAppearanceOverlay" />
-
-        <LinearLayout
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/discourse_track_meta"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#C9BDBD"
+            android:textSize="14sp" />
 
-            <TextView
-                android:textColor="@color/discourse_track_text"
-                android:id="@+id/discourse_track_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textAppearance="?attr/textAppearanceSubtitle1" />
-
-            <TextView
-                android:textColor="@color/discourse_track_secondary"
-                android:id="@+id/discourse_track_meta"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textAppearance="?attr/textAppearanceCaption" />
-
-            <TextView
-                android:visibility="gone" android:textColor="@color/discourse_track_secondary"
-                android:id="@+id/discourse_track_likes"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textAppearance="?attr/textAppearanceCaption" />
-        </LinearLayout>
-
-        <include layout="@layout/discourse_like_button" />
-
-        <ImageView
-            android:id="@+id/discourse_track_played"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:contentDescription="@string/talkback_already_played"
-            android:padding="3dp"
-            android:src="@drawable/ic_mark_as_played"
-            android:tint="@color/red"
+        <TextView
+            android:id="@+id/discourse_track_likes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#C9BDBD"
+            android:textSize="12sp"
             android:visibility="gone" />
 
-        <ImageView android:id="@+id/discourse_track_downloaded" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_download" android:tint="@color/green500" android:contentDescription="@string/discourse_downloaded" android:visibility="gone" />
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/discourse_track_spinner"
-            android:layout_width="24dp" android:layout_height="24dp"
-            android:indeterminate="false" android:visibility="gone"
-            app:indicatorSize="24dp" app:indicatorInset="0dp"
-            app:trackThickness="2dp" app:indicatorColor="#FF5269" app:trackColor="#4D2A33" />
-        <ImageButton
-            android:id="@+id/discourse_track_download"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="0dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/more_actions"
-            android:src="@drawable/ic_player_more"
-            android:tint="@color/grey500" />
+        <ProgressBar
+            android:id="@+id/listening_progress"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="5dp"
+            android:layout_marginTop="12dp"
+            android:indeterminate="false"
+            android:max="100"
+            android:progressDrawable="@drawable/track_listening_progress"
+            android:importantForAccessibility="no" />
 
+        <include layout="@layout/discourse_download_progress" />
     </LinearLayout>
-    <include layout="@layout/discourse_download_progress" />
-    <include layout="@layout/discourse_listening_progress" />
-</LinearLayout>
+
+    <include
+        layout="@layout/discourse_like_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        app:layout_constraintEnd_toEndOf="@id/discourse_track_text"
+        app:layout_constraintTop_toTopOf="@id/discourse_track_text" />
+
+    <ImageButton
+        android:id="@+id/discourse_track_play"
+        style="@style/TrackCardPlayButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <ImageView
+        android:id="@+id/discourse_track_played"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:contentDescription="@string/talkback_already_played"
+        android:src="@drawable/ic_mark_as_played"
+        android:tint="#FF4D52"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/discourse_track_image"
+        app:layout_constraintTop_toTopOf="@id/discourse_track_image" />
+
+    <ImageView
+        android:id="@+id/discourse_track_downloaded"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_download"
+        android:tint="@color/green500"
+        android:contentDescription="@string/discourse_downloaded"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/discourse_track_image"
+        app:layout_constraintBottom_toBottomOf="@id/discourse_track_image" />
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/discourse_track_spinner"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:indeterminate="false"
+        android:visibility="gone"
+        app:indicatorSize="24dp"
+        app:indicatorInset="0dp"
+        app:trackThickness="2dp"
+        app:indicatorColor="#FF4D52"
+        app:trackColor="#665B5C"
+        app:layout_constraintEnd_toEndOf="@id/discourse_track_image"
+        app:layout_constraintBottom_toBottomOf="@id/discourse_track_image" />
+
+    <ImageButton
+        android:id="@+id/discourse_track_download"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/more_actions"
+        android:src="@drawable/ic_player_more"
+        android:tint="#FFFFFF"
+        app:layout_constraintStart_toStartOf="@id/discourse_track_image"
+        app:layout_constraintBottom_toBottomOf="@id/discourse_track_image" />
+</androidx.constraintlayout.widget.ConstraintLayout>
