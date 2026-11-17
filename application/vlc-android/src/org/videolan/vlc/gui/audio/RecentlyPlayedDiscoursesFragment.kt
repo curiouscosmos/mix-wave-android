@@ -169,7 +169,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun renderRows() {
         val result = ArrayList<HomeRow>()
         result += HomeRow("hero", 4)
-        model.recentTracks.value.orEmpty().firstOrNull()?.let {
+        val recentTracks = model.recentTracks.value.orEmpty()
+        recentTracks.firstOrNull()?.let {
             result += HomeRow("continue_listening", 5, track = it)
         }
         fun heading(key: String, label: Int) {
@@ -178,10 +179,10 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         fun discourse(item: Discourse) = HomeRow(item.id, 1, discourse = item,
             metadata = getString(R.string.discourse_track_count, item.totalTracks))
         model.recentDiscourses.value.orEmpty().takeIf { it.isNotEmpty() }?.let { items ->
-            heading("recent_discourses", R.string.recently_played)
+            heading("recent_discourses", R.string.recently_played_discourses)
             result += items.map { discourse(it) }
         }
-        model.recentTracks.value.orEmpty().takeIf { it.isNotEmpty() }?.let { items ->
+        recentTracks.drop(1).takeIf { it.isNotEmpty() }?.let { items ->
             heading("recent_tracks", R.string.recently_played_tracks)
             result += HomeRow("recent_tracks_list", 3, children = items.map { HomeRow(it.key, 2, track = it) })
         }
