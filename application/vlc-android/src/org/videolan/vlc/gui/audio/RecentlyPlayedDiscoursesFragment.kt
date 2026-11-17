@@ -96,6 +96,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             adapter = rows
             itemAnimator = null
         }
+        renderRows()
         val swipe = view.findViewById<SwipeRefreshLayout>(R.id.all_stats_swipe)
         swipe.setOnRefreshListener { model.refreshHistory(); model.loadWeekly(true) }
         model.refreshing.observe(viewLifecycleOwner) { swipe.isRefreshing = it }
@@ -153,6 +154,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
 
     private fun renderRows() {
         val result = ArrayList<HomeRow>()
+        result += HomeRow("hero", 4)
         fun heading(key: String, label: Int) {
             result += HomeRow(key, 0, getString(label), if (result.isEmpty()) "first" else "")
         }
@@ -186,6 +188,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         override fun getItemViewType(position: Int) = getItem(position).kind
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HomeHolder {
             val card = when (viewType) {
+                4 -> layoutInflater.inflate(R.layout.home_hero, parent, false)
                 0 -> TextView(parent.context).apply {
                     val appearance = android.util.TypedValue()
                     context.theme.resolveAttribute(R.attr.textAppearanceHeadline6, appearance, true)
@@ -219,6 +222,19 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         override fun onBindViewHolder(holder: HomeHolder, position: Int) {
             val row = getItem(position)
             val card = holder.itemView
+            if (row.kind == 4) {
+                val image = card.findViewById<ImageView>(R.id.home_hero_image)
+                imageJobs.remove(card)?.cancel()
+                if (image.drawable == null) imageJobs[card] = viewLifecycleOwner.lifecycleScope.launch {
+                    val bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        image.context.assets.open("images/images/osho.jpg").use {
+                            android.graphics.BitmapFactory.decodeStream(it)
+                        }
+                    }
+                    image.setImageBitmap(bitmap)
+                }
+                return
+            }
             if (row.kind == 3) {
                 val list = card as RecyclerView
                 holder.key?.let { horizontalStates[it] = list.layoutManager?.onSaveInstanceState() }
