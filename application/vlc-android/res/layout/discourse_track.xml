@@ -50,7 +50,6 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
-            android:paddingEnd="36dp"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -63,7 +62,7 @@
             android:ellipsize="end"
             android:maxLines="2"
             android:textColor="#C9BDBD"
-            android:textSize="14sp" />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/discourse_track_likes"
@@ -91,15 +90,16 @@
         layout="@layout/discourse_like_button"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        app:layout_constraintEnd_toEndOf="@id/discourse_track_text"
-        app:layout_constraintTop_toTopOf="@id/discourse_track_text" />
+        app:layout_constraintEnd_toEndOf="@id/discourse_track_play"
+        app:layout_constraintTop_toBottomOf="@id/discourse_track_play"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="1" />
 
     <ImageButton
         android:id="@+id/discourse_track_play"
         style="@style/TrackCardPlayButton"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
         android:id="@+id/discourse_track_played"
