@@ -51,6 +51,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -184,6 +185,30 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     lateinit var scheduler: LifecycleAwareScheduler
 
     private var topInset: Int = 0
+    private var homeHeroBehindToolbar = false
+    private var normalAppBarBackground: android.graphics.drawable.Drawable? = null
+    private var normalContentBehavior: CoordinatorLayout.Behavior<*>? = null
+
+    internal fun setHomeHeroBehindToolbar(enabled: Boolean) {
+        if (homeHeroBehindToolbar == enabled) return
+        homeHeroBehindToolbar = enabled
+        fragmentContainer.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+            if (enabled) normalContentBehavior = behavior
+            behavior = if (enabled) null else normalContentBehavior
+        }
+        if (enabled) normalAppBarBackground = appBarLayout.background
+        appBarLayout.background = if (enabled) null else normalAppBarBackground
+        appBarLayout.translationZ = if (enabled) 1f else 0f
+        appBarLayout.setExpanded(true, false)
+        applyMainTopInset()
+    }
+
+    private fun applyMainTopInset() {
+        findViewById<View>(android.R.id.content).updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            topMargin = if (homeHeroBehindToolbar) 0 else topInset
+        }
+        appBarLayout.updatePadding(top = if (homeHeroBehindToolbar) topInset else 0)
+    }
 
     val isAudioPlayerReady: Boolean
         get() = ::audioPlayer.isInitialized
@@ -233,8 +258,9 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
                     leftMargin = insets.left
                     rightMargin = insets.right
                     if (isTablet()) bottomMargin = insets.bottom
-                    topMargin = insets.top
+                    topMargin = if (homeHeroBehindToolbar) 0 else insets.top
                     topInset = insets.top
+                    if (homeHeroBehindToolbar) appBarLayout.updatePadding(top = topInset)
                     bottomInset = insets.bottom
                     if (::audioPlayer.isInitialized) audioPlayer.setBottomMargin()
                     updateMiniPlayerLayout()

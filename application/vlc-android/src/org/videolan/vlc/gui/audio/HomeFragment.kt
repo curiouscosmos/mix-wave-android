@@ -12,9 +12,20 @@ import androidx.viewpager2.widget.ViewPager2
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.Discourse
 import org.videolan.vlc.gui.BaseFragment
+import org.videolan.vlc.gui.MainActivity
 
 class HomeFragment : BaseFragment() {
     override fun getTitle() = getString(R.string.home)
+
+    override fun onStart() {
+        super.onStart()
+        (activity as? MainActivity)?.setHomeHeroBehindToolbar(true)
+    }
+
+    override fun onStop() {
+        (activity as? MainActivity)?.setHomeHeroBehindToolbar(false)
+        super.onStop()
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?) =
         inflater.inflate(R.layout.source_browser, container, false)

@@ -207,6 +207,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             val card = when (viewType) {
                 4 -> layoutInflater.inflate(R.layout.home_hero, parent, false)
                 5 -> createTrackRow(parent).apply {
+                    (layoutParams as RecyclerView.LayoutParams).topMargin = -dp(24)
                     minimumHeight = dp(128)
                     val text = findViewById<LinearLayout>(R.id.discourse_track_text)
                     text.addView(TextView(context).apply {

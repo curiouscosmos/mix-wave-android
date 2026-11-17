@@ -2,8 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginBottom="16dp">
+    android:layout_height="wrap_content">
 
     <ImageView
         android:id="@+id/home_hero_image"
@@ -11,7 +10,7 @@
         android:layout_height="0dp"
         android:importantForAccessibility="no"
         android:scaleType="centerCrop"
-        app:layout_constraintDimensionRatio="16:9"
+        app:layout_constraintDimensionRatio="H,3:2"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -22,7 +21,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:layout_marginEnd="8dp"
-        android:fontFamily="sans-serif-light"
+        android:fontFamily="sans-serif"
         android:shadowColor="#CC000000"
         android:shadowRadius="4"
         android:text="@string/home_hero_title"
