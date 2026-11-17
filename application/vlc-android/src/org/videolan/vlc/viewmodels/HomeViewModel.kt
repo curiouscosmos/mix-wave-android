@@ -15,7 +15,7 @@ import org.videolan.vlc.media.MediaSessionBrowser
 import org.videolan.vlc.media.MediaUtils
 
 /** Display snapshots keep mutable medialibrary objects out of diff comparisons. */
-data class HomeTrack(val key: String, val title: String?, val subtitle: String?, val artwork: String?, val audio: DiscourseAudio? = null) {
+data class HomeTrack(val key: String, val title: String?, val subtitle: String?, val artwork: String?, val audio: DiscourseAudio? = null, val playbackTime: Long = 0L) {
     lateinit var media: MediaWrapper
 }
 
@@ -64,7 +64,7 @@ class HomeViewModel @JvmOverloads constructor(
                     .map { media ->
                         HomeTrack(media.discourseAudioSnapshot()?.id ?: media.uri.toString(), media.title,
                             MediaUtils.getDisplaySubtitle(getApplication(), media) ?: media.albumName ?: media.artistName.orEmpty(),
-                            media.artworkMrl, media.discourseAudioSnapshot()).apply { this.media = media }
+                            media.artworkMrl, media.discourseAudioSnapshot(), media.time).apply { this.media = media }
                     }
                 repository.recentlyPlayedDiscourses to tracks
             }

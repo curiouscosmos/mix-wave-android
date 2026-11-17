@@ -1,0 +1,5 @@
+<resources>
+    <item name="continue_listening_label" type="id" />
+    <string name="continue_listening">CONTINUE LISTENING</string>
+    <string name="continue_listening_time">%1$s / %2$s</string>
+</resources>

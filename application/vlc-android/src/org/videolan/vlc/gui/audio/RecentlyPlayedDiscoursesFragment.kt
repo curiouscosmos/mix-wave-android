@@ -6,6 +6,9 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.ProgressBar
+import android.widget.LinearLayout
+import org.videolan.medialibrary.Tools
+import org.videolan.medialibrary.interfaces.media.MediaWrapper
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -68,10 +71,12 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 .map { card.findViewById<TextView>(it).text }.filter(CharSequence::isNotBlank).joinToString(". ")
             accessibleCard.contentDescription = "${accessibleCard.contentDescription}. $metadata"
         }
+        (card.getTag(R.id.continue_listening_label) as? MediaWrapper)?.let { updateContinueListening(card, it) }
     }
     private fun unbind(card: View) {
         imageJobs.remove(card)?.cancel()
         likesUi.unbind(card)
+        card.setTag(R.id.continue_listening_label, null)
         progressCards.remove(card)?.let { (id, count) ->
             val index = if (count == null) audioCards else discourseCards
             index[id]?.let { cards -> if (cards.remove(card) && cards.isEmpty()) index.remove(id) }
@@ -142,7 +147,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             if (audio != null && (other.audio == null || audio.title != other.audio.title ||
                     audio.discourseThumbnailUrl != other.audio.discourseThumbnailUrl ||
                     audio.totalLikes != other.audio.totalLikes || audio.plays != other.audio.plays)) return false
-            if (track != null && (other.track == null || track.key != other.track.key || track.title != other.track.title ||
+            if (track != null && (other.track == null || track.key != other.track.key || track.playbackTime != other.track.playbackTime || track.title != other.track.title ||
                     track.subtitle != other.track.subtitle || track.artwork != other.track.artwork ||
                     track.audio?.discourseThumbnailUrl != other.track.audio?.discourseThumbnailUrl ||
                     track.audio?.totalLikes != other.track.audio?.totalLikes)) return false
@@ -155,6 +160,9 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private fun renderRows() {
         val result = ArrayList<HomeRow>()
         result += HomeRow("hero", 4)
+        model.recentTracks.value.orEmpty().firstOrNull()?.let {
+            result += HomeRow("continue_listening", 5, track = it)
+        }
         fun heading(key: String, label: Int) {
             result += HomeRow(key, 0, getString(label), if (result.isEmpty()) "first" else "")
         }
@@ -189,6 +197,25 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HomeHolder {
             val card = when (viewType) {
                 4 -> layoutInflater.inflate(R.layout.home_hero, parent, false)
+                5 -> createTrackRow(parent).apply {
+                    minimumHeight = dp(128)
+                    val text = findViewById<LinearLayout>(R.id.discourse_track_text)
+                    text.addView(TextView(context).apply {
+                        id = R.id.continue_listening_label
+                        setText(R.string.continue_listening)
+                        setTextColor(android.graphics.Color.rgb(245, 217, 179))
+                        textSize = 11f
+                        letterSpacing = 0.12f
+                        setPadding(0, 0, 0, dp(8))
+                    }, 0)
+                    val time = findViewById<TextView>(R.id.discourse_track_meta)
+                    text.removeView(time)
+                    text.addView(time)
+                    findViewById<TextView>(R.id.discourse_track_title).apply {
+                        setPaddingRelative(0, 0, 0, 0)
+                        textSize = 20f
+                    }
+                }
                 0 -> TextView(parent.context).apply {
                     val appearance = android.util.TypedValue()
                     context.theme.resolveAttribute(R.attr.textAppearanceHeadline6, appearance, true)
@@ -251,6 +278,18 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                     setPadding(dp(16), if (row.metadata == "first") 0 else dp(24), dp(16), dp(8))
                 }
                 1 -> bindDiscourseCard(card, row.discourse!!, row.metadata)
+                5 -> {
+                    val snapshot = row.track!!
+                    bindTrackCard(card, snapshot)
+                    likesUi.unbind(card)
+                    card.setTag(R.id.continue_listening_label, snapshot.media)
+                    updateContinueListening(card, snapshot.media)
+                    card.setOnClickListener {
+                        val audio = snapshot.audio
+                        if (audio != null) requireContext().playDiscourseAudio(audio)
+                        else MediaUtils.openMedia(requireContext(), snapshot.media)
+                    }
+                }
                 2 -> if (row.track != null) bindTrackCard(card, row.track) else {
                     val audio = row.audio!!
                     loadStatsImage(card, card.findViewById(R.id.discourse_track_image), audio.discourseThumbnailUrl)
@@ -275,6 +314,16 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private class HomeHolder(view: View) : RecyclerView.ViewHolder(view) { var key: String? = null }
     private fun dp(value: Int) = dp(value.toFloat())
     private fun dp(value: Float) = (value * resources.displayMetrics.density).toInt()
+
+    private fun updateContinueListening(card: View, track: MediaWrapper) {
+        val position = track.discoursePlaybackIds()?.let { playbackStore.position(it.audioId) } ?: track.time
+        card.findViewById<ProgressBar>(R.id.listening_progress).progress = trackListeningProgress(position, track.length)
+        val time = getString(R.string.continue_listening_time,
+            Tools.millisToString(position.coerceAtLeast(0)), Tools.millisToString(track.length.coerceAtLeast(0)))
+        card.findViewById<TextView>(R.id.discourse_track_meta).text = time
+        card.findViewById<View>(R.id.discourse_track_played).isVisible = false
+        card.contentDescription = "${getString(R.string.continue_listening)}. ${track.title}. $time"
+    }
 
     private fun bindTrackCard(card: View, snapshot: HomeTrack) {
         val track = snapshot.media
