@@ -62,7 +62,7 @@ class DiscourseDownloadStore(context: Context) {
     private val reportedFailures = mutableSetOf<Long>()
     private val cache = HashMap<String, Snapshot>()
     private data class Snapshot(val state: DiscourseDownloadState, val progress: DiscourseDownloadProgress)
-    private data class Summary(val downloaded: Int = 0, val active: Int = 0)
+    private data class Summary(val downloaded: Int = 0, val active: Int = 0, val audioIds: Set<String> = emptySet())
     @Volatile private var summaries = emptyMap<String, Summary>()
 
     /** Cheap values for row binding. Call [refresh] first; missing entries report as not downloaded. */
@@ -131,6 +131,8 @@ class DiscourseDownloadStore(context: Context) {
     /** Cached card counts. Populate with [refreshSummaries] before displaying download indicators. */
     fun downloadedCount(discourseId: String): Int = summaries[discourseId]?.downloaded ?: 0
 
+    fun isAudioDownloaded(audioId: String): Boolean = summaries.values.any { audioId in it.audioIds }
+
     fun activeDownloadCount(discourseId: String): Int = summaries[discourseId]?.active ?: 0
 
     /** Refresh on entry and download changes; poll only while downloads are active. */
@@ -176,7 +178,8 @@ class DiscourseDownloadStore(context: Context) {
                     }
                 val previous = next[discourseId] ?: Summary()
                 next[discourseId] = Summary(previous.downloaded + if (downloaded) 1 else 0,
-                    previous.active + if (active) 1 else 0)
+                    previous.active + if (active) 1 else 0,
+                    if (downloaded) previous.audioIds + audioId else previous.audioIds)
             }
         }
         return next

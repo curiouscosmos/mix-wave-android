@@ -93,6 +93,11 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         drawable.setBounds(0, 0, size, size)
         view.setCompoundDrawablesRelative(drawable, null, null, null)
         view.text = if (binding.target.audio && !binding.card) "" else formatDiscourseLikes(count)
+        if (binding.target.audio) {
+            val root = view.parent as? View
+            val meta = root?.findViewById<TextView>(R.id.discourse_track_meta) ?: root?.findViewById<TextView>(R.id.subtitle)
+            (meta?.tag as? TrackCardStats)?.let { meta.bindTrackStats(it.copy(likes = count)) }
+        }
         view.setTextColor(color)
         view.isSelected = liked
         view.isEnabled = binding.target !in state.pending

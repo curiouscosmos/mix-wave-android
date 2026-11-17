@@ -205,7 +205,8 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             holder.binding.setVariable(BR.isPresent, true)
             holder.binding.setVariable(BR.played, false)
         }
-        holder.binding.setVariable(BR.rowSubtitle, getSubtitle(holder.binding.root.context, item))
+        holder.binding.setVariable(BR.rowSubtitle,
+            if (trackStyle && holder is MediaItemViewHolder) null else getSubtitle(holder.binding.root.context, item))
         val miniVisualizer: MiniVisualizer = holder.getMiniVisu()
         if (currentMedia == item) {
             if (model?.playing != false) miniVisualizer.start() else miniVisualizer.stop()
@@ -361,7 +362,13 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 binding.subtitle.setTextColor(android.graphics.Color.rgb(201, 189, 189))
                 binding.subtitle.textSize = 14f
                 binding.itemMore.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
-                (binding.title.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).endToStart = R.id.track_play
+                (binding.title.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                    endToStart = R.id.track_play
+                    verticalBias = 0f
+                    topMargin = 12.dp
+                }
+                binding.subtitle.isSingleLine = false
+                binding.subtitle.maxLines = 2
                 (binding.linearLayout6.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
                     endToStart = -1; endToEnd = R.id.media_cover
                     topToTop = R.id.media_cover; bottomToBottom = R.id.media_cover
@@ -424,8 +431,10 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             heart.visibility = if (item == null || multiSelectHelper.inActionMode) View.GONE else View.VISIBLE
             if (item == null) return
             val ids = item.discoursePlaybackIds()
+            val audio = item.discourseAudioSnapshot()
+            binding.subtitle.bindTrackStats(TrackCardStats(audio?.plays?.toLong() ?: item.playCount,
+                audio?.totalLikes ?: 0, item.uri.scheme in listOf("file", "content")))
             if (ids != null) {
-                val audio = item.discourseAudioSnapshot()
                 likesUi.value?.bind(binding.root, ids.audioId, true, item.title.orEmpty(), audio?.totalLikes ?: 0, audioItem = audio)
             } else {
                 owner?.let { heart.bindLocalTrackFavourite(item, it) }

@@ -670,14 +670,12 @@ class DiscourseFragment : BaseFragment() {
             holder.number.text = (item.trackNumber ?: position + 1).toString()
             bindTrackImage(holder, item)
             holder.title.text = item.title
-            holder.meta.text = listOfNotNull(
-                item.durationSeconds?.takeIf { it.isFinite() && it > 0 }?.let { Tools.millisToString((it * 1000).toLong()) },
-                item.fileSize?.takeIf { it > 0 }?.let { Formatter.formatFileSize(requireContext(), it) }
-            ).joinToString(" · ")
             holder.likes.isVisible = false
+            holder.meta.bindTrackStats(TrackCardStats(item.plays.toLong(), item.totalLikes,
+                downloads.cachedState(item) == DiscourseDownloadState.DOWNLOADED))
             likesUi.bind(holder.itemView, item.id, true, item.title, item.totalLikes, audioItem = item)
             holder.played.isVisible = playbackStore.isPlayed(item.id)
-            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}"
+            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.contentDescription}"
             holder.itemView.setOnClickListener { holder.bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION }?.let(click) }
             holder.itemView.findViewById<View>(R.id.discourse_track_play).setOnClickListener { holder.itemView.performClick() }
             val downloadState = downloads.cachedState(item)
@@ -750,7 +748,7 @@ class DiscourseFragment : BaseFragment() {
             val percent = playbackStore.audioProgress(item.id)
             holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
             val stateText = if (downloadState == DiscourseDownloadState.DOWNLOADED) R.string.discourse_downloaded else R.string.not_downloaded
-            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.text}. ${getString(stateText)}. ${getString(R.string.discourse_listening_percentage, percent)}"
+            holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.contentDescription}. ${getString(stateText)}. ${getString(R.string.discourse_listening_percentage, percent)}"
         }
         private fun bindDownloadAction(
             holder: DiscourseTrackHolder,
@@ -761,7 +759,10 @@ class DiscourseFragment : BaseFragment() {
             holder.download.isEnabled = bulkDownloadJob?.isActive != true
             holder.download.contentDescription = getString(R.string.more_actions)
             holder.itemView.setBackgroundResource(if (state == DiscourseDownloadState.DOWNLOADED) R.drawable.discourse_track_card_downloaded else R.drawable.discourse_track_card)
-            holder.itemView.findViewById<ImageView>(R.id.discourse_track_downloaded).isVisible = state == DiscourseDownloadState.DOWNLOADED
+            holder.itemView.findViewById<ImageView>(R.id.discourse_track_downloaded).isVisible = false
+            (holder.meta.tag as? TrackCardStats)?.let {
+                holder.meta.bindTrackStats(it.copy(downloaded = state == DiscourseDownloadState.DOWNLOADED))
+            }
             holder.itemView.findViewById<ProgressBar>(R.id.discourse_track_spinner).apply {
                 val indeterminate = value.percent == null
                 if (isIndeterminate != indeterminate) {
