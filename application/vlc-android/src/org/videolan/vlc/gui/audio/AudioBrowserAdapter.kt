@@ -358,6 +358,8 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 binding.title.setTextColor(android.graphics.Color.WHITE)
                 binding.title.setTypeface(binding.title.typeface, android.graphics.Typeface.BOLD)
                 binding.title.textSize = 18f
+                binding.title.isSingleLine = false
+                binding.title.maxLines = 2
                 binding.title.setPaddingRelative(0, 0, 40.dp, 0)
                 binding.subtitle.setTextColor(android.graphics.Color.rgb(201, 189, 189))
                 binding.subtitle.textSize = 14f

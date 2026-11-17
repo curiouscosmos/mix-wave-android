@@ -89,7 +89,16 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
             if (liked) R.drawable.ic_header_media_favorite
             else if (binding.card) R.drawable.ic_discourse_heart else R.drawable.ic_header_media_favorite_outline)!!.mutate()
         DrawableCompat.setTint(drawable, color)
-        val size = ((if (binding.card) 22 else 24) * context.resources.displayMetrics.density).toInt()
+        val sizeDp = when {
+            binding.card -> 22
+            binding.target.audio -> 32
+            else -> 24
+        }
+        val size = (sizeDp * context.resources.displayMetrics.density).toInt()
+        if (binding.target.audio && !binding.card) {
+            val padding = (8 * context.resources.displayMetrics.density).toInt()
+            view.setPaddingRelative(padding, 0, padding, 0)
+        }
         drawable.setBounds(0, 0, size, size)
         view.setCompoundDrawablesRelative(drawable, null, null, null)
         view.text = if (binding.target.audio && !binding.card) "" else formatDiscourseLikes(count)

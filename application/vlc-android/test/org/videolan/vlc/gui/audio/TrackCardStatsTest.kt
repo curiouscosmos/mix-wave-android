@@ -19,17 +19,17 @@ class TrackCardStatsTest {
     @Test fun statsIncludeLikesAndAccessibleDownloadStatus() {
         val view = TextView(RuntimeEnvironment.application)
         view.bindTrackStats(TrackCardStats(5, 40, true))
-        assertEquals("5 plays | 40 likes | \uFFFC", view.text.toString())
-        assertEquals(1, (view.text as Spanned).getSpans(0, view.text.length, ImageSpan::class.java).size)
+        assertEquals("\uFFFC\u00A05 | \uFFFC\u00A040 | \uFFFC", view.text.toString())
+        assertEquals(3, (view.text as Spanned).getSpans(0, view.text.length, ImageSpan::class.java).size)
         assertTrue(view.contentDescription.contains(view.context.getString(R.string.discourse_downloaded)))
     }
 
-    @Test fun zeroAndOneLikeStayHiddenAndSingularPlayIsFormatted() {
+    @Test fun zeroCountsAreHiddenAndOneLikeIsShown() {
         val view = TextView(RuntimeEnvironment.application)
-        listOf(0, 1).forEach { likes ->
-            view.bindTrackStats(TrackCardStats(1, likes, false))
-            assertEquals("1 play | \uFFFC", view.text.toString())
-        }
+        view.bindTrackStats(TrackCardStats(0, 0, false))
+        assertEquals("\uFFFC", view.text.toString())
+        view.bindTrackStats(TrackCardStats(0, 1, false))
+        assertEquals("\uFFFC\u00A01 | \uFFFC", view.text.toString())
         assertTrue(view.contentDescription.contains(view.context.getString(R.string.not_downloaded)))
     }
 }

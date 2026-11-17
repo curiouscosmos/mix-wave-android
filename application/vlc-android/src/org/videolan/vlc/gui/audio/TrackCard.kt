@@ -23,18 +23,33 @@ internal data class TrackCardStats(val plays: Long, val likes: Int, val download
 internal fun TextView.bindTrackStats(stats: TrackCardStats) {
     visibility = android.view.View.VISIBLE
     tag = stats
-    val parts = mutableListOf(resources.getQuantityString(R.plurals.track_card_plays,
-        stats.plays.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), stats.plays.coerceAtLeast(0)))
-    if (stats.likes > 1) parts += resources.getQuantityString(R.plurals.track_card_likes, stats.likes, stats.likes)
-    val label = parts.joinToString(" | ")
-    val icon = AppCompatResources.getDrawable(context, R.drawable.ic_download)!!.mutate()
-    val size = (18 * resources.displayMetrics.density).toInt()
-    icon.setBounds(0, 0, size, size)
-    icon.setTint(if (stats.downloaded) context.getColor(R.color.green500) else Color.rgb(166, 157, 159))
-    text = SpannableStringBuilder("$label | \uFFFC").apply {
-        setSpan(ImageSpan(icon, ImageSpan.ALIGN_BASELINE), length - 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    val label = SpannableStringBuilder()
+    val descriptions = mutableListOf<String>()
+    val neutral = Color.rgb(166, 157, 159)
+    fun appendIcon(resource: Int, tint: Int = neutral) {
+        if (label.isNotEmpty()) label.append(" | ")
+        val icon = AppCompatResources.getDrawable(context, resource)!!.mutate()
+        val size = (16 * resources.displayMetrics.density).toInt()
+        icon.setBounds(0, 0, size, size)
+        icon.setTint(tint)
+        label.append('\uFFFC')
+        label.setSpan(ImageSpan(icon, ImageSpan.ALIGN_CENTER), label.length - 1, label.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
-    contentDescription = "$label. ${context.getString(if (stats.downloaded) R.string.discourse_downloaded else R.string.not_downloaded)}"
+    if (stats.plays > 0) {
+        appendIcon(R.drawable.ic_player_play_solid)
+        label.append("\u00A0${stats.plays}")
+        descriptions += resources.getQuantityString(R.plurals.track_card_plays,
+            stats.plays.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), stats.plays)
+    }
+    if (stats.likes > 0) {
+        appendIcon(R.drawable.ic_header_media_favorite_outline)
+        label.append("\u00A0${stats.likes}")
+        descriptions += resources.getQuantityString(R.plurals.track_card_likes, stats.likes, stats.likes)
+    }
+    appendIcon(R.drawable.ic_download, if (stats.downloaded) context.getColor(R.color.green500) else neutral)
+    descriptions += context.getString(if (stats.downloaded) R.string.discourse_downloaded else R.string.not_downloaded)
+    text = label
+    contentDescription = descriptions.joinToString(". ")
 }
 
 internal fun TextView.bindLocalTrackFavourite(item: MediaWrapper, owner: LifecycleOwner) {
@@ -42,7 +57,9 @@ internal fun TextView.bindLocalTrackFavourite(item: MediaWrapper, owner: Lifecyc
     text = ""
     val icon = AppCompatResources.getDrawable(context,
         if (item.isFavorite) R.drawable.ic_header_media_favorite else R.drawable.ic_header_media_favorite_outline)!!.mutate()
-    val size = (24 * resources.displayMetrics.density).toInt()
+    val size = (32 * resources.displayMetrics.density).toInt()
+    val padding = (8 * resources.displayMetrics.density).toInt()
+    setPaddingRelative(padding, 0, padding, 0)
     icon.setBounds(0, 0, size, size)
     setCompoundDrawablesRelative(icon, null, null, null)
     compoundDrawableTintList = ColorStateList.valueOf(Color.parseColor(if (item.isFavorite) "#FF4D52" else "#C9BDBD"))
