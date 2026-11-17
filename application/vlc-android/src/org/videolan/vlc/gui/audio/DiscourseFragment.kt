@@ -746,7 +746,7 @@ class DiscourseFragment : BaseFragment() {
         private fun bindProgress(holder: DiscourseTrackHolder, item: DiscourseAudio, downloadState: DiscourseDownloadState) {
             holder.played.isVisible = playbackStore.isPlayed(item.id)
             val percent = playbackStore.audioProgress(item.id)
-            holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
+            holder.itemView.findViewById<ProgressBar>(R.id.listening_progress).bindTrackProgress(percent)
             val stateText = if (downloadState == DiscourseDownloadState.DOWNLOADED) R.string.discourse_downloaded else R.string.not_downloaded
             holder.itemView.contentDescription = "${holder.number.text}. ${item.title}. ${holder.meta.contentDescription}. ${getString(stateText)}. ${getString(R.string.discourse_listening_percentage, percent)}"
         }

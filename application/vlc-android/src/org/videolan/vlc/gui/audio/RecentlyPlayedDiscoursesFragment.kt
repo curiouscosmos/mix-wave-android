@@ -61,7 +61,9 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     }
     private fun updateProgress(card: View, id: String, count: Int?) {
         val percent = if (count == null) playbackStore.audioProgress(id) else playbackStore.discourseProgress(id, count)
-        card.findViewById<ProgressBar>(R.id.listening_progress).progress = percent
+        card.findViewById<ProgressBar>(R.id.listening_progress).apply {
+            if (count == null) bindTrackProgress(percent) else progress = percent
+        }
         val titleId = if (count == null) R.id.discourse_track_title else R.id.discourse_title
         if (count == null) card.findViewById<View>(R.id.discourse_track_played).isVisible = playbackStore.isPlayed(id)
         val accessibleCard = if (count == null) card else card.findViewById<View>(R.id.discourse_catalogue_card)
@@ -310,7 +312,6 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                         TrackCardStats(audio.plays.toLong(), audio.totalLikes, downloads.isAudioDownloaded(audio.id)))
                     card.setOnClickListener { requireContext().playDiscourseAudio(audio) }
                     likesUi.bind(card, audio.id, true, audio.title, audio.totalLikes, audioItem = audio)
-                    card.findViewById<ProgressBar>(R.id.listening_progress).isVisible = true
                     bindProgress(card, audio.id, null)
                 }
             }
@@ -330,7 +331,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
 
     private fun updateContinueListening(card: View, track: MediaWrapper) {
         val position = track.discoursePlaybackIds()?.let { playbackStore.position(it.audioId) } ?: track.time
-        card.findViewById<ProgressBar>(R.id.listening_progress).progress = trackListeningProgress(position, track.length)
+        card.findViewById<ProgressBar>(R.id.listening_progress).bindTrackProgress(trackListeningProgress(position, track.length))
         val time = getString(R.string.continue_listening_time,
             Tools.millisToString(position.coerceAtLeast(0)), Tools.millisToString(track.length.coerceAtLeast(0)))
         card.findViewById<TextView>(R.id.discourse_track_meta).text = time
@@ -365,7 +366,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 isVisible = true
                 bindLocalTrackFavourite(track, viewLifecycleOwner)
             }
-            card.findViewById<ProgressBar>(R.id.listening_progress).progress = trackListeningProgress(track.time, track.length)
+            card.findViewById<ProgressBar>(R.id.listening_progress).bindTrackProgress(trackListeningProgress(track.time, track.length))
             card.findViewById<View>(R.id.discourse_track_played).isVisible = false
             card.contentDescription = "${snapshot.title}. ${snapshot.subtitle}"
         }

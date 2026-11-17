@@ -42,7 +42,9 @@
         android:orientation="vertical"
         app:layout_constraintStart_toEndOf="@id/discourse_track_image"
         app:layout_constraintEnd_toStartOf="@id/discourse_track_play"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/listening_progress"
+        app:layout_constraintVertical_bias="0">
 
         <TextView
             android:id="@+id/discourse_track_title"
@@ -72,19 +74,22 @@
             android:textSize="12sp"
             android:visibility="gone" />
 
-        <ProgressBar
-            android:id="@+id/listening_progress"
-            style="@android:style/Widget.ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="5dp"
-            android:layout_marginTop="12dp"
-            android:indeterminate="false"
-            android:max="100"
-            android:progressDrawable="@drawable/track_listening_progress"
-            android:importantForAccessibility="no" />
-
         <include layout="@layout/discourse_download_progress" />
     </LinearLayout>
+
+    <ProgressBar
+        android:id="@id/listening_progress"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="0dp"
+        android:layout_height="5dp"
+        android:indeterminate="false"
+        android:max="100"
+        android:progressDrawable="@drawable/track_listening_progress"
+        android:importantForAccessibility="no"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@id/discourse_track_text"
+        app:layout_constraintEnd_toEndOf="@id/discourse_track_text"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <include
         layout="@layout/discourse_like_button"

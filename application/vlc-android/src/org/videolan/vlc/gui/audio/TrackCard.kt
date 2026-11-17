@@ -3,6 +3,8 @@ package org.videolan.vlc.gui.audio
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.widget.TextView
+import android.widget.ProgressBar
+import androidx.core.view.isVisible
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ReplacementSpan
@@ -22,6 +24,11 @@ internal fun trackListeningProgress(time: Long, length: Long): Int =
     if (length > 0) (time.toDouble() / length * 100).toInt().coerceIn(0, 100) else 0
 
 internal data class TrackCardStats(val plays: Long, val likes: Int, val downloaded: Boolean)
+
+internal fun ProgressBar.bindTrackProgress(percent: Int) {
+    progress = percent
+    isVisible = percent >= 1
+}
 
 internal fun TextView.bindTrackStats(stats: TrackCardStats) {
     visibility = android.view.View.VISIBLE

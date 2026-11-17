@@ -441,10 +441,10 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 owner?.let { heart.bindLocalTrackFavourite(item, it) }
             }
             heart.visibility = if (multiSelectHelper.inActionMode) View.GONE else View.VISIBLE
-            binding.trackProgress.progress = trackListeningProgress(item.time, item.length)
+            binding.trackProgress.bindTrackProgress(trackListeningProgress(item.time, item.length))
             if (ids != null) owner?.lifecycleScope?.launch {
                 playbackStore.initialize()
-                if (binding.item === item) binding.trackProgress.progress = playbackStore.audioProgress(ids.audioId)
+                if (binding.item === item) binding.trackProgress.bindTrackProgress(playbackStore.audioProgress(ids.audioId))
             }
         }
 
