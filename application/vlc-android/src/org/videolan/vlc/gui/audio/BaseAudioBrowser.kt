@@ -465,6 +465,7 @@ abstract class BaseAudioBrowser<T : MedialibraryViewModel> : MediaBrowserFragmen
         val flags: FlagSet<ContextOption> = when (item.itemType) {
             MediaLibraryItem.TYPE_MEDIA -> {
                 createCtxTrackFlags().apply {
+                    if (this@BaseAudioBrowser is AudioBrowserFragment && parentFragment is DiscoursesFragment) remove(CTX_DELETE)
                     if ((item as? MediaWrapper)?.isFavorite == true) add(CTX_FAV_REMOVE) else add(CTX_FAV_ADD)
                     if ((item as? MediaWrapper)?.artistId != (item as? MediaWrapper)?.albumArtistId) add(CTX_GO_TO_ALBUM_ARTIST)
                 }
