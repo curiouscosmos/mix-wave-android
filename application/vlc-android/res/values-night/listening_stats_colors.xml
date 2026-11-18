@@ -1,0 +1,12 @@
+<resources>
+    <color name="stats_background">#171213</color>
+    <color name="stats_surface">#241A1C</color>
+    <color name="stats_surface_end">#301E22</color>
+    <color name="stats_tile">#352329</color>
+    <color name="stats_border">#583B42</color>
+    <color name="stats_text">#FFF2EE</color>
+    <color name="stats_secondary">#D7BAB9</color>
+    <color name="stats_accent">#EDA0A9</color>
+    <color name="stats_accent_muted">#B16E77</color>
+    <color name="stats_on_accent">#35171D</color>
+</resources>

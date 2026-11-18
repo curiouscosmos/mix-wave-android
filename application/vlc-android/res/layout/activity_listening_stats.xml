@@ -4,7 +4,7 @@
     android:id="@+id/listening_stats_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/background_default"
+    android:background="@color/stats_background"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -12,10 +12,13 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         app:navigationIcon="?attr/homeAsUpIndicator"
-        app:title="@string/listening_stats"
-        app:titleTextColor="?attr/font_default" />
+        app:title="@string/listening_stats_heading"
+        app:titleTextAppearance="@style/ListeningStatsToolbarTitle"
+        app:navigationIconTint="@color/stats_text"
+        app:titleTextColor="@color/stats_text" />
 
     <ScrollView
+        android:id="@+id/listening_stats_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -24,7 +27,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="12dp"
             android:paddingBottom="20dp" />
     </ScrollView>
 </LinearLayout>

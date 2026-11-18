@@ -2,11 +2,8 @@ package org.videolan.vlc.gui.audio
 
 import android.os.Bundle
 import android.util.Log
-import android.view.View
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -33,12 +30,12 @@ import org.videolan.vlc.discourse.DiscourseDownloadStore
 import org.videolan.vlc.discourse.DiscourseFavouritesStore
 import org.videolan.vlc.discourse.DiscourseRepository
 import org.videolan.vlc.media.ListeningStatsStore
-import org.videolan.vlc.media.listeningTime
 import org.videolan.vlc.mediadb.models.ClipTrackCount
 
 class ListeningStatsActivity : AppCompatActivity() {
     private val locale get() = resources.configuration.locales[0]
     private val numbers by lazy { NumberFormat.getIntegerInstance(locale) }
+    private lateinit var dashboard: ListeningStatsDashboard
     private data class ClipStats(
         val total: Int, val track: ClipTrackCount?, val discourse: Pair<String?, Int>?, val hasUnknownDiscourse: Boolean
     )
@@ -57,20 +54,7 @@ class ListeningStatsActivity : AppCompatActivity() {
             setNavigationOnClickListener { finish() }
         }
         val content = findViewById<LinearLayout>(R.id.listening_stats_sections)
-        val time = section(content, R.string.listening_stats_time, R.string.listening_stats_today,
-            R.string.listening_stats_week, R.string.listening_stats_month, R.string.listening_stats_year,
-            R.string.listening_stats_overall, R.string.listening_stats_busiest_day)
-        val library = section(content, R.string.listening_stats_library, R.string.listening_stats_tracks,
-            R.string.listening_stats_discourses, R.string.listening_stats_repeat_tracks, R.string.listening_stats_repeat_discourses)
-        val clips = section(content, R.string.listening_stats_clips, R.string.listening_stats_clip_count,
-            R.string.listening_stats_clip_track, R.string.listening_stats_clip_discourse)
-        val clipNote = TextView(this).apply {
-            setText(R.string.listening_stats_clip_legacy)
-            setTextColor(getColor(R.color.discourse_track_secondary))
-            visibility = View.GONE
-        }
-        clips.last().let { (it.parent as LinearLayout).addView(clipNote) }
-        val downloads = section(content, R.string.listening_stats_download_section, R.string.listening_stats_downloads)
+        dashboard = ListeningStatsDashboard(content, ::duration, savedInstanceState?.getInt("period") ?: 0)
         val store = ListeningStatsStore.getInstance(this)
         val listening = store.database.listeningStatsDao()
         val downloadStore = DiscourseDownloadStore(this)
@@ -85,47 +69,52 @@ class ListeningStatsActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     listening.days().combine(dates) { days, today ->
-                        withContext(Dispatchers.Default) { listeningTime(days, today) }
-                    }.catch { showError(time, it) }
-                        .collect { totals ->
-                            val busiest = totals.busiestDay?.let {
+                        withContext(Dispatchers.Default) { listeningStatsTrend(days, today) }
+                    }.catch { dashboard.timeError(errorMessage(it)) }
+                        .collect { trend ->
+                            val busiest = trend.time.busiestDay?.let {
                                 val date = LocalDate.ofEpochDay(it.day).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
                                 getString(R.string.listening_stats_value_detail, date, duration(it.durationMs))
                             } ?: getString(R.string.listening_stats_empty)
-                            render(time, listOf(totals.today, totals.week, totals.month, totals.year, totals.overall)
-                                .map(::duration) + busiest)
+                            dashboard.bindTime(trend, busiest, duration(trend.dailyAverage),
+                                resources.getQuantityString(R.plurals.stats_streak_days, trend.streak, trend.streak))
                         }
                 }
                 launch {
-                    listening.counts().catch { showError(library, it) }.collect { counts ->
-                        render(library, listOf(counts.tracks, counts.discourses, counts.repeatedTracks, counts.repeatedDiscourses)
+                    listening.counts().catch { dashboard.libraryError(errorMessage(it)) }.collect { counts ->
+                        dashboard.bindLibrary(listOf(counts.tracks, counts.discourses, counts.repeatedTracks, counts.repeatedDiscourses)
                             .map(numbers::format))
                     }
                 }
                 launch {
                     store.database.clipHistoryDao().countsByTrack()
                         .map { rows -> withContext(Dispatchers.IO) { summarizeClips(resolveLegacyClips(rows)) } }
-                        .catch { showError(clips, it) }
+                        .catch { dashboard.clipsError(errorMessage(it)) }
                         .collect { stats ->
-                            render(clips, listOf(
+                            dashboard.bindClips(
                                 numbers.format(stats.total),
-                                stats.track?.let { getString(R.string.listening_stats_value_detail,
-                                    it.trackTitle ?: getString(R.string.listening_stats_clip_unknown), numbers.format(it.count)) }
+                                stats.track?.let { it.trackTitle ?: getString(R.string.listening_stats_clip_unknown) }
                                     ?: getString(R.string.listening_stats_no_clips),
-                                stats.discourse?.let { (title, count) -> getString(R.string.listening_stats_value_detail,
-                                    title ?: getString(R.string.discourse), numbers.format(count)) }
-                                    ?: getString(R.string.listening_stats_no_discourse_clips)
-                            ))
-                            clipNote.visibility = if (stats.hasUnknownDiscourse) View.VISIBLE else View.GONE
+                                stats.track?.count?.let(numbers::format),
+                                stats.discourse?.let { it.first ?: getString(R.string.discourse) }
+                                    ?: getString(R.string.listening_stats_no_discourse_clips),
+                                stats.discourse?.second?.let(numbers::format),
+                                stats.hasUnknownDiscourse
+                            )
                         }
                 }
                 launch {
                     downloadStore.summaryChanges().map { downloadStore.totalDownloadedCount() }
-                        .distinctUntilChanged().catch { showError(downloads, it) }
-                        .collect { downloads.single().text = numbers.format(it) }
+                        .distinctUntilChanged().catch { dashboard.bindDownloads(errorMessage(it)) }
+                        .collect { dashboard.bindDownloads(numbers.format(it)) }
                 }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt("period", dashboard.period)
+        super.onSaveInstanceState(outState)
     }
 
     private fun summarizeClips(rows: List<ClipTrackCount>): ClipStats {
@@ -160,36 +149,6 @@ class ListeningStatsActivity : AppCompatActivity() {
         }
     }
 
-    private fun section(parent: LinearLayout, @StringRes title: Int, @StringRes vararg labels: Int): List<TextView> {
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.discourse_track_card)
-            val padding = (16 * resources.displayMetrics.density).toInt()
-            setPadding(padding, padding, padding, padding)
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = padding }
-        }
-        parent.addView(panel)
-        panel.addView(TextView(this).apply {
-            setText(title)
-            setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Title)
-            setTextColor(getColor(R.color.discourse_track_text))
-            ViewCompat.setAccessibilityHeading(this, true)
-        })
-        return labels.map { label ->
-            panel.addView(TextView(this).apply {
-                setText(label)
-                setTextColor(getColor(R.color.discourse_track_secondary))
-                setPadding(0, (12 * resources.displayMetrics.density).toInt(), 0, 0)
-            })
-            TextView(this).apply {
-                setText(R.string.loading)
-                textSize = 18f
-                setTextColor(getColor(R.color.discourse_track_text))
-                panel.addView(this)
-            }
-        }
-    }
-
     private fun duration(ms: Long): String {
         val minutes = ms / 60_000
         return when {
@@ -199,12 +158,8 @@ class ListeningStatsActivity : AppCompatActivity() {
         }
     }
 
-    private fun render(views: List<TextView>, values: List<String>) {
-        views.zip(values).forEach { (view, value) -> view.text = value }
-    }
-
-    private fun showError(views: List<TextView>, error: Throwable) {
+    private fun errorMessage(error: Throwable): String {
         Log.e("ListeningStats", "Unable to read stats", error)
-        views.forEach { it.setText(R.string.listening_stats_unavailable) }
+        return getString(R.string.listening_stats_unavailable)
     }
 }
