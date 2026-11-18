@@ -70,6 +70,11 @@ class DiscourseRepository(
             sort.cleanQuery(), cacheControl(forceRefresh))
     }
 
+    suspend fun getDiscourseCategories() = fetch { api.discourseCategories() }
+
+    suspend fun getDiscoursesByCategory(categoryId: String, page: Int, forceRefresh: Boolean = false) =
+        fetch { api.discoursesByCategory(categoryId, page, cacheControl(forceRefresh)) }
+
     val catalogueLanguage: String?
         get() = settings.getString(KEY_CATALOGUE_LANGUAGE, null)
 

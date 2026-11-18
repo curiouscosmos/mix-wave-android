@@ -3,5 +3,8 @@
     <string name="search_discourses">Search discourses</string>
     <string name="discourses">Discourses</string>
     <string name="categories">Categories</string>
+    <string name="categories_empty">No categories found</string>
+    <string name="categories_load_failed">Could not load categories</string>
+    <string name="load_error_retry">%1$s. %2$s</string>
     <item type="id" name="nav_search" />
 </resources>

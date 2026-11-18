@@ -36,6 +36,17 @@ class DiscourseRepositoryTest : BaseTest() {
     }
 
     @Test
+    fun fetchesAllCategoriesAndKeepsCategoryPageMetadata() = runBlocking {
+        val categories = DiscourseCategoriesResponse(listOf(DiscourseCategory("category-id", "Buddhism", null)))
+        val page = PageResponse(listOf(discourse("discourse-id")), PaginationMeta(2, 24, 25, 2))
+        coEvery { api.discourseCategories() } returns categories
+        coEvery { api.discoursesByCategory("category-id", 2, null) } returns page
+
+        assertEquals(categories, repository.getDiscourseCategories())
+        assertEquals(page, repository.getDiscoursesByCategory("category-id", 2))
+    }
+
+    @Test
     fun catalogueFailureShowsToastAndPreservesRetryError() = runBlocking {
         val failure = retrofit2.HttpException(retrofit2.Response.error<Any>(500,
             okhttp3.ResponseBody.create(okhttp3.MediaType.parse("application/json"), "{\"error\":\"Internal server error\"}")))

@@ -958,6 +958,8 @@
             android:exported="false" android:theme="@style/Theme.VLC" />
         <activity android:name=".gui.audio.FavouriteDiscoursesActivity"
             android:exported="false" android:theme="@style/Theme.VLC" />
+        <activity android:name=".gui.audio.CategoryDiscoursesActivity"
+            android:exported="false" android:theme="@style/Theme.VLC" />
         <activity
             android:name=".gui.SecondaryActivity"
             android:theme="@style/Theme.VLC"

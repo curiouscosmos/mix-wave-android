@@ -50,6 +50,14 @@ data class DiscourseAudio(
 
 data class PageResponse<T>(val data: List<T>, val meta: PaginationMeta)
 
+data class DiscourseCategory(
+    val id: String,
+    val label: String,
+    @Json(name = "thumbnail") val thumbnailUrl: String?
+)
+
+data class DiscourseCategoriesResponse(val data: List<DiscourseCategory>)
+
 data class DiscourseAudiosResponse(
     val data: List<DiscourseAudio>,
     val meta: TotalRecordsMeta

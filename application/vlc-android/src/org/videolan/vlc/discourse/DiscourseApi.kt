@@ -52,6 +52,16 @@ interface DiscourseApi {
         @Header("Cache-Control") cacheControl: String? = null
     ): PageResponse<Discourse>
 
+    @GET("discourse-categories")
+    suspend fun discourseCategories(): DiscourseCategoriesResponse
+
+    @GET("discourses/category/{category_id}")
+    suspend fun discoursesByCategory(
+        @Path("category_id") categoryId: String,
+        @Query("page") page: Int,
+        @Header("Cache-Control") cacheControl: String? = null
+    ): PageResponse<Discourse>
+
     @GET("discourse-audios")
     suspend fun discourseAudios(
         @Query("page") page: Int = 1,

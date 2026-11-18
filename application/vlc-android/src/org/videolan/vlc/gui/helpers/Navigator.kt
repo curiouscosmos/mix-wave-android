@@ -51,6 +51,7 @@ import org.videolan.vlc.gui.BaseFragment
 import org.videolan.vlc.gui.MainActivity
 import org.videolan.vlc.gui.PlaylistFragment
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
+import org.videolan.vlc.gui.audio.CategoriesFragment
 import org.videolan.vlc.gui.audio.HomeFragment
 import org.videolan.vlc.gui.audio.DiscoursesFragment
 import org.videolan.vlc.gui.audio.SearchFragment
@@ -221,5 +222,3 @@ interface INavigator {
     fun openSearch()
     fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse)
 }
-
-class CategoriesFragment : Fragment(R.layout.categories_fragment)
