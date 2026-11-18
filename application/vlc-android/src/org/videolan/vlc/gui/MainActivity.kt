@@ -279,7 +279,7 @@ class MainActivity : ContentActivity(),
         // Handle item selection
         return when (item.itemId) {
             R.id.ml_menu_discourse_search -> {
-                navigationView.first().selectedItemId = R.id.nav_search
+                openSearch()
                 true
             }
             // Refresh

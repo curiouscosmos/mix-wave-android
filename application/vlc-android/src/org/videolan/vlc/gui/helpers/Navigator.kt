@@ -100,6 +100,7 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
         return when (id) {
             R.id.nav_audio -> HomeFragment()
             R.id.nav_discourses -> DiscoursesFragment()
+            R.id.nav_categories -> CategoriesFragment()
             R.id.nav_audio_mixer -> AudioBrowserFragment().apply {
                 arguments = bundleOf(AudioBrowserFragment.EXTRA_OPEN_AUDIO_MIXER to true)
             }
@@ -151,6 +152,7 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
     private fun getTag(id: Int) = when (id) {
         R.id.nav_audio -> ID_AUDIO
         R.id.nav_discourses -> "discourses"
+        R.id.nav_categories -> "categories"
         R.id.nav_audio_mixer -> ID_AUDIO_MIXER
         R.id.nav_directories -> ID_DIRECTORIES
         R.id.nav_playlists -> ID_PLAYLISTS
@@ -182,6 +184,12 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
         return true
     }
 
+    override fun openSearch() {
+        appbarLayout.setExpanded(true, true)
+        activity.slideDownAudioPlayer()
+        showFragment(R.id.nav_search)
+    }
+
     override fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse) {
         org.videolan.vlc.gui.audio.DiscourseDetailActivity.open(activity, discourse)
     }
@@ -210,5 +218,8 @@ interface INavigator {
     fun currentIdIsExtension(): Boolean
     fun configurationChanged(size: Int)
     fun getFragmentWidth(activity: Activity): Int
+    fun openSearch()
     fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse)
 }
+
+class CategoriesFragment : Fragment(R.layout.categories_fragment)
