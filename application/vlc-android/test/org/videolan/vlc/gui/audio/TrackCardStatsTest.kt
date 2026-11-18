@@ -40,7 +40,8 @@ class TrackCardStatsTest {
     @Test fun statsIncludeLikesAndAccessibleDownloadStatus() {
         val view = TextView(RuntimeEnvironment.application)
         view.bindTrackStats(TrackCardStats(5, 40, true))
-        assertEquals("5 plays  40 likes  \uFFFC", view.text.toString())
+        assertEquals("5  40  \uFFFC", view.text.toString())
+        assertTrue(view.contentDescription.contains("5 plays. 40 likes"))
         assertEquals(3, (view.text as Spanned).getSpans(0, view.text.length, TrackBadgeSpan::class.java).size)
         assertTrue(view.contentDescription.contains(view.context.getString(R.string.discourse_downloaded)))
     }
@@ -50,7 +51,7 @@ class TrackCardStatsTest {
         view.bindTrackStats(TrackCardStats(0, 0, false))
         assertEquals("\uFFFC", view.text.toString())
         view.bindTrackStats(TrackCardStats(0, 1, false))
-        assertEquals("1 like  \uFFFC", view.text.toString())
+        assertEquals("1  \uFFFC", view.text.toString())
         assertTrue(view.contentDescription.contains(view.context.getString(R.string.not_downloaded)))
     }
 }

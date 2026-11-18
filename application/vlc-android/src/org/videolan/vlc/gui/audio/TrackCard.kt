@@ -57,12 +57,12 @@ internal fun TextView.bindTrackStats(stats: TrackCardStats) {
     if (stats.plays > 0) {
         val caption = resources.getQuantityString(R.plurals.track_card_plays,
             stats.plays.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), stats.plays)
-        appendBadge(R.drawable.ic_player_play_solid, caption)
+        appendBadge(R.drawable.ic_player_play_solid, stats.plays.toString())
         descriptions += caption
     }
     if (stats.likes > 0) {
         val caption = resources.getQuantityString(R.plurals.track_card_likes, stats.likes, stats.likes)
-        appendBadge(R.drawable.ic_header_media_favorite_outline, caption)
+        appendBadge(R.drawable.ic_header_media_favorite_outline, stats.likes.toString())
         descriptions += caption
     }
     appendBadge(R.drawable.ic_download, tint = if (stats.downloaded) context.getColor(R.color.green500) else neutral,
