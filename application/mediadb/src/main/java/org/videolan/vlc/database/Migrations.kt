@@ -276,6 +276,16 @@ val migration_37_38 = object : Migration(37, 38) {
     }
 }
 
+val migration_38_39 = object : Migration(38, 39) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE clip_history ADD COLUMN trackTitle TEXT")
+        db.execSQL("ALTER TABLE clip_history ADD COLUMN discourseId TEXT")
+        db.execSQL("ALTER TABLE clip_history ADD COLUMN discourseTitle TEXT")
+        db.execSQL("CREATE TABLE listening_day (day INTEGER NOT NULL PRIMARY KEY, durationMs INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE listened_track (trackId TEXT NOT NULL PRIMARY KEY, discourseId TEXT, sessions INTEGER NOT NULL)")
+    }
+}
+
 @OptIn(DelicateCoroutinesApi::class)
 fun populateDB(context: Context) = GlobalScope.launch(Dispatchers.IO) {
     val uris = listOf(AndroidDevices.MediaFolders.EXTERNAL_PUBLIC_MOVIES_DIRECTORY_URI,

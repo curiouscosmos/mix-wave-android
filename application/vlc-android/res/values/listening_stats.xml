@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="listening_stats">Listening stats</string>
+    <string name="listening_stats_time">Listening time</string>
+    <string name="listening_stats_today">Today</string>
+    <string name="listening_stats_week">This week</string>
+    <string name="listening_stats_month">This month</string>
+    <string name="listening_stats_year">This year</string>
+    <string name="listening_stats_overall">All time</string>
+    <string name="listening_stats_busiest_day">Most listened day</string>
+    <string name="listening_stats_library">Tracks and discourses</string>
+    <string name="listening_stats_tracks">Tracks listened</string>
+    <string name="listening_stats_discourses">Discourses listened</string>
+    <string name="listening_stats_repeat_tracks">Repeated tracks</string>
+    <string name="listening_stats_repeat_discourses">Repeated discourses</string>
+    <string name="listening_stats_clips">Clips</string>
+    <string name="listening_stats_clip_count">Clips in history</string>
+    <string name="listening_stats_clip_track">Track with most clips</string>
+    <string name="listening_stats_clip_discourse">Discourse with most clips</string>
+    <string name="listening_stats_clip_unknown">Unknown track</string>
+    <string name="listening_stats_clip_legacy">Discourse rankings include clips with a known discourse.</string>
+    <string name="listening_stats_download_section">Downloads</string>
+    <string name="listening_stats_downloads">Downloaded tracks</string>
+    <string name="listening_stats_empty">No listening recorded yet</string>
+    <string name="listening_stats_no_clips">No clips yet</string>
+    <string name="listening_stats_no_discourse_clips">No clips with a known discourse</string>
+    <string name="listening_stats_minutes">%1$s min</string>
+    <string name="listening_stats_hours_minutes">%1$s h %2$s min</string>
+    <string name="listening_stats_under_minute">Less than 1 min</string>
+    <string name="listening_stats_value_detail">%1$s · %2$s</string>
+    <string name="listening_stats_unavailable">Unavailable</string>
+</resources>

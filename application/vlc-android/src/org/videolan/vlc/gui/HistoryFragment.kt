@@ -197,6 +197,7 @@ class HistoryFragment : MediaBrowserFragment<HistoryModel>(), IRefreshable, IHis
 
     override fun clearHistory() {
         mediaLibrary.clearHistory(Medialibrary.HISTORY_TYPE_GLOBAL)
+        org.videolan.vlc.media.ListeningStatsStore.getInstance(requireContext()).clear()
         viewModel.clearHistory()
         Settings.getInstance(requireActivity()).edit().remove(KEY_AUDIO_LAST_PLAYLIST).remove(KEY_MEDIA_LAST_PLAYLIST).apply()
     }

@@ -1314,6 +1314,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
         override suspend fun onEvent(event: MediaPlayer.Event) {
             when (event.type) {
                 MediaPlayer.Event.Playing -> {
+                    service.startListening()
                     val mw = withContext(Dispatchers.IO) {
                         getCurrentMedia()?.let {
                             medialibrary.findMedia(it).apply {
@@ -1340,6 +1341,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                     playingState.value = true
                 }
                 MediaPlayer.Event.EndReached -> {
+                    service.endListening()
                     discourseContinuationJob?.cancel()
                     clearABRepeat()
                     getCurrentMedia()?.let { media ->
@@ -1372,6 +1374,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
                     }
                 }
                 MediaPlayer.Event.EncounteredError -> {
+                    service.interruptListening()
                     val failedMedia = getCurrentMedia() ?: return
                     val location = try {
                         failedMedia.location

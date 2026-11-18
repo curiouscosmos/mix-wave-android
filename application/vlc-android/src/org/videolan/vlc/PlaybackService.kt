@@ -158,6 +158,9 @@ import org.videolan.tools.KEY_ENABLE_HEADSET_DETECTION
 import org.videolan.tools.KEY_ENABLE_PLAY_ON_HEADSET_INSERTION
 import org.videolan.tools.KEY_METERED_CONNECTION
 import org.videolan.tools.KEY_INCOGNITO
+import org.videolan.tools.PLAYBACK_HISTORY
+import org.videolan.vlc.media.PlaybackListeningStats
+import org.videolan.vlc.mediadb.models.ListenedTrack
 import org.videolan.tools.KEY_PLAYBACK_SPEED_AUDIO_GLOBAL
 import org.videolan.tools.KEY_VIDEO_APP_SWITCH
 import org.videolan.tools.LOCKSCREEN_COVER
@@ -296,6 +299,18 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         private set
     private lateinit var carConnection: CarConnection
     private var offlineHandoffJob: Job? = null
+    private val listeningStats by lazy { PlaybackListeningStats(this) }
+    private var listeningJob: Job? = null
+    private var listeningPlaybackActive = false
+    private val listeningPrivacyListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == PLAYBACK_HISTORY || key == KEY_INCOGNITO) {
+            if (!canRecordListening()) {
+                listeningJob?.cancel()
+                listeningJob = null
+                listeningStats.discard()
+            } else if (listeningPlaybackActive) startListening()
+        }
+    }
     private var offlineHandoffSession = Any()
     private var offlineHandoffAttempt: String? = null
     private val downloadReceiver = object : BroadcastReceiver() {
@@ -328,8 +343,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 try {
                     offlineHandoffAttempt = attempt
                     val replaced = playlistManager.player.replaceAudioSource(media) {
-                        session === offlineHandoffSession && currentMediaWrapper === current && native === mediaplayer &&
-                            generation == playlistManager.player.inputGeneration
+                        (session === offlineHandoffSession && currentMediaWrapper === current && native === mediaplayer &&
+                            generation == playlistManager.player.inputGeneration).also {
+                            if (it) pauseListening()
+                        }
                     }
                     if (!replaced && session === offlineHandoffSession) offlineHandoffAttempt = null
                 } finally { media.release() }
@@ -424,6 +441,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 showNotification()
                 if (wakeLock.isHeld) wakeLock.release()
                 cancelPlaybackHistoryTimer()
+                pauseListening()
                 pauseAudioMixer()
             }
             MediaPlayer.Event.EncounteredError -> {
@@ -431,8 +449,13 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 executeUpdate()
             }
             MediaPlayer.Event.Buffering -> {
-                if (event.buffering < 100f) cancelPlaybackHistoryTimer()
-                else if (isPlaying) startPlaybackHistoryTimer()
+                if (event.buffering < 100f) {
+                    cancelPlaybackHistoryTimer()
+                    pauseListening()
+                } else if (isPlaying) {
+                    startPlaybackHistoryTimer()
+                    startListening()
+                }
             }
             MediaPlayer.Event.LengthChanged -> {
                 lastChaptersCount = getChapters(-1)?.size ?: 0
@@ -458,6 +481,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             }
             MediaPlayer.Event.MediaChanged -> {
                 cancelPlaybackHistoryTimer(reset = true)
+                pauseListening()
                 if (BuildConfig.DEBUG) Log.d(TAG, "onEvent: MediaChanged")
             }
             MediaPlayer.Event.EndReached -> {
@@ -467,6 +491,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             }
             MediaPlayer.Event.Stopped -> {
                 cancelPlaybackHistoryTimer(reset = true)
+                pauseListening()
                 // Input stops also occur between tracks; onPlaybackStopped handles queue stops.
             }
         }
@@ -838,6 +863,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         super.onCreate()
         NotificationHelper.createNotificationChannels(applicationContext)
         settings = Settings.getInstance(this)
+        settings.registerOnSharedPreferenceChangeListener(listeningPrivacyListener)
         playlistManager = PlaylistManager(this)
         playlistManager.player.onNoiseReset = { resetNoiseCancellationState() }
         Util.checkCpuCompatibility(this)
@@ -1013,6 +1039,8 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     override fun onDestroy() {
+        settings.unregisterOnSharedPreferenceChangeListener(listeningPrivacyListener)
+        pauseListening(finish = true)
         resetNoiseCancellationState()
         playlistManager.player.resetNoiseCancellation()
         cancelPlaybackHistoryTimer(reset = true)
@@ -1030,6 +1058,51 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         unregisterReceiver(receiver)
         unregisterReceiver(downloadReceiver)
         playlistManager.onServiceDestroyed()
+    }
+
+    private fun canRecordListening() =
+        settings.getBoolean(PLAYBACK_HISTORY, true) && !settings.getBoolean(KEY_INCOGNITO, false)
+
+    internal fun startListening() {
+        listeningPlaybackActive = true
+        if (listeningJob?.isActive == true || !canRecordListening() || isVideoPlaying) return
+        val media = currentMediaWrapper ?: return
+        if (media.type == MediaWrapper.TYPE_VIDEO) return
+        val ids = media.discoursePlaybackIds()
+        val track = ListenedTrack(ids?.let { "discourse:${it.audioId}" } ?: "local:${media.uri}", ids?.discourseId)
+        listeningStats.start(track, android.os.SystemClock.elapsedRealtime())
+        listeningJob = lifecycleScope.launch {
+            while (true) {
+                delay(15_000)
+                if (!canRecordListening()) {
+                    listeningStats.discard()
+                    break
+                }
+                if (!isPlaying || isVideoPlaying || currentMediaWrapper !== media) {
+                    pauseListening()
+                    break
+                }
+                val now = android.os.SystemClock.elapsedRealtime()
+                listeningStats.pause(now)
+                listeningStats.start(track, now)
+            }
+        }
+    }
+
+    internal fun endListening() = pauseListening(finish = true, completed = length in 1L..60_000L)
+
+    internal fun interruptListening() = pauseListening()
+
+    private fun pauseListening(finish: Boolean = false, completed: Boolean = false) {
+        listeningPlaybackActive = false
+        listeningJob?.cancel()
+        listeningJob = null
+        val now = android.os.SystemClock.elapsedRealtime()
+        when {
+            !canRecordListening() -> listeningStats.discard()
+            finish -> listeningStats.finish(now, completed)
+            else -> listeningStats.pause(now)
+        }
     }
 
     private fun startPlaybackHistoryTimer() {
@@ -1144,6 +1217,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     fun onMediaPlayerEvent(event: MediaPlayer.Event) = mediaPlayerListener.onEvent(event)
 
     fun onPlaybackStopped(systemExit: Boolean) {
+        pauseListening(finish = true)
         cancelPlaybackHistoryTimer(reset = true)
         stopAudioMixer()
         refreshNoiseCancellation()
@@ -1260,6 +1334,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     }
 
     fun onNewPlayback() {
+        pauseListening(finish = true)
         offlineHandoffJob?.cancel()
         offlineHandoffSession = Any()
         offlineHandoffAttempt = null

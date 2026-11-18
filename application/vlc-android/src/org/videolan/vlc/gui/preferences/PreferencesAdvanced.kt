@@ -146,6 +146,7 @@ class PreferencesAdvanced : BasePreferenceFragment(), SharedPreferences.OnShared
             when (reason) {
                 RESULT_VALUE_CLEAR_HISTORY -> {
                     Medialibrary.getInstance().clearHistory(Medialibrary.HISTORY_TYPE_GLOBAL)
+                    org.videolan.vlc.media.ListeningStatsStore.getInstance(requireContext()).clear()
                     Settings.getInstance(requireActivity()).edit()
                         .remove(KEY_AUDIO_LAST_PLAYLIST)
                         .remove(KEY_MEDIA_LAST_PLAYLIST)

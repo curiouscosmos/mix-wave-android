@@ -132,6 +132,8 @@ class DiscourseDownloadStore(context: Context) {
     /** Cached card counts. Populate with [refreshSummaries] before displaying download indicators. */
     fun downloadedCount(discourseId: String): Int = summaries[discourseId]?.downloaded ?: 0
 
+    internal fun totalDownloadedCount(): Int = summaries.values.sumOf { it.downloaded }
+
     fun isAudioDownloaded(audioId: String): Boolean = summaries.values.any { audioId in it.audioIds }
 
     fun activeDownloadCount(discourseId: String): Int = summaries[discourseId]?.activeProgress?.size ?: 0
@@ -172,7 +174,7 @@ class DiscourseDownloadStore(context: Context) {
             val directory = context.getExternalFilesDir("discourses") ?: context.filesDir
             while (cursor.moveToNext()) {
                 val audioId = audioIds[cursor.long(DownloadManager.COLUMN_ID)] ?: continue
-                val discourseId = discourses[audioId] ?: continue
+                val discourseId = discourses[audioId].orEmpty()
                 val status = cursor.int(DownloadManager.COLUMN_STATUS)
                 val active = status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_RUNNING ||
                     status == DownloadManager.STATUS_PAUSED

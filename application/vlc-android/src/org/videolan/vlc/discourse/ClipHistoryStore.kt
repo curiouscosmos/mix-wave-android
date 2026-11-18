@@ -11,7 +11,11 @@ class ClipHistoryStore(context: Context) {
 
     suspend fun save(entry: ClipHistory) = withContext(Dispatchers.IO) {
         require(entry.audioId.isNotBlank() && entry.startMs >= 0 && entry.endMs - entry.startMs >= 1_000)
-        dao.save(entry)
+        if (dao.save(entry) != -1L) return@withContext
+        val title = entry.trackTitle ?: return@withContext
+        val discourse = entry.discourseId ?: return@withContext
+        val discourseTitle = entry.discourseTitle ?: return@withContext
+        dao.fillMetadata(entry.audioId, title, discourse, discourseTitle)
     }
 
     suspend fun getForAudio(audioId: String) = withContext(Dispatchers.IO) { dao.getForAudio(audioId) }

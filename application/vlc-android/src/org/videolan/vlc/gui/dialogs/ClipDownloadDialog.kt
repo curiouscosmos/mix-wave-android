@@ -246,7 +246,10 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
     private fun saveHistoryThen(action: () -> Unit) {
         if (savingHistory) return
         val args = requireArguments()
-        val entry = org.videolan.vlc.mediadb.models.ClipHistory(audio.id, args.getLong("start"), args.getLong("end"), System.currentTimeMillis())
+        val entry = org.videolan.vlc.mediadb.models.ClipHistory(
+            audio.id, args.getLong("start"), args.getLong("end"), System.currentTimeMillis(),
+            audio.title, audio.discourseId, audio.discourseName
+        )
         val history = org.videolan.vlc.discourse.ClipHistoryStore(requireContext())
         savingHistory = true
         viewLifecycleOwner.lifecycleScope.launch {

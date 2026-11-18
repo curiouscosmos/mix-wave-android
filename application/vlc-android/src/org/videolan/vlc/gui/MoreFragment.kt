@@ -155,6 +155,7 @@ class MoreFragment : BaseFragment(), IRefreshable, IHistory {
     override fun clearHistory() {
         viewModel.clearHistory()
         Medialibrary.getInstance().clearHistory(Medialibrary.HISTORY_TYPE_GLOBAL)
+        org.videolan.vlc.media.ListeningStatsStore.getInstance(requireContext()).clear()
     }
 
     override fun onCreateActionMode(mode: ActionMode?, menu: Menu?): Boolean {

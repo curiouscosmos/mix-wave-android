@@ -67,6 +67,7 @@ import org.videolan.vlc.R
 import org.videolan.vlc.StartActivity
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.gui.audio.DiscoursesFragment
+import org.videolan.vlc.gui.audio.ListeningStatsActivity
 import org.videolan.vlc.gui.dialogs.UPDATE_DATE
 import org.videolan.vlc.gui.dialogs.UPDATE_URL
 import org.videolan.vlc.gui.dialogs.UpdateDialog
@@ -264,6 +265,7 @@ class MainActivity : ContentActivity(),
     }
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        menu?.findItem(R.id.ml_menu_listening_stats)?.isVisible = true
         menu?.findItem(R.id.ml_menu_refresh)?.isVisible = Permissions.canReadStorage(this)
         menu?.findItem(R.id.ml_menu_discourse_search)?.isVisible =
             currentFragmentId == R.id.nav_audio || (currentFragment as? DiscoursesFragment)?.isDiscourseTabSelected == true
@@ -278,6 +280,10 @@ class MainActivity : ContentActivity(),
 
         // Handle item selection
         return when (item.itemId) {
+            R.id.ml_menu_listening_stats -> {
+                startActivity(Intent(this, ListeningStatsActivity::class.java))
+                true
+            }
             R.id.ml_menu_discourse_search -> {
                 openSearch()
                 true
