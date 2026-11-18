@@ -277,8 +277,10 @@ class MainActivity : ContentActivity(),
 
         // Handle item selection
         return when (item.itemId) {
-            R.id.ml_menu_discourse_search ->
-                navigationView.firstOrNull()?.menu?.findItem(R.id.nav_search)?.let(::onNavigationItemSelected) == true
+            R.id.ml_menu_discourse_search -> {
+                navigationView.first().selectedItemId = R.id.nav_search
+                true
+            }
             // Refresh
             R.id.ml_menu_refresh -> {
                 if (Permissions.canReadStorage(this)) forceRefresh()
