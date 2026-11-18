@@ -3,19 +3,21 @@
     <item>
         <shape>
             <corners android:radius="20dp" />
-            <gradient android:angle="0" android:startColor="@color/discourse_catalogue_surface_start" android:endColor="@color/discourse_catalogue_surface_end" />
+            <gradient android:angle="0" android:startColor="@color/discourse_card_background_start" android:endColor="@color/discourse_card_background_end" />
         </shape>
     </item>
     <item>
         <shape>
             <corners android:radius="20dp" />
-            <gradient android:type="radial" android:centerX="0.3" android:centerY="0.15" android:gradientRadius="280dp" android:startColor="@color/discourse_card_glow" android:endColor="@color/discourse_card_glow_clear" />
+            <gradient android:type="radial" android:centerX="0.95" android:centerY="0.05" android:gradientRadius="240dp" android:startColor="@color/discourse_card_glow" android:endColor="@color/discourse_card_glow_clear" />
         </shape>
     </item>
+    <item android:left="8dp" android:right="8dp" android:top="6dp" android:bottom="6dp"
+        android:drawable="@drawable/discourse_card_wave" />
     <item>
         <shape>
             <corners android:radius="20dp" />
-            <stroke android:width="1dp" android:color="@color/discourse_catalogue_border" />
+            <stroke android:width="1dp" android:color="@color/discourse_card_background_border" />
         </shape>
     </item>
 </layer-list>

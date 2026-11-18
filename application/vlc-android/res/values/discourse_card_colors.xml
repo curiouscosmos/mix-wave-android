@@ -1,4 +1,7 @@
 <resources>
+    <color name="discourse_card_background_start">#FFF8FA</color>
+    <color name="discourse_card_background_end">#EDE1EE</color>
+    <color name="discourse_card_background_border">#D8B6CB</color>
     <color name="discourse_card_secondary">#685D5B</color>
     <color name="discourse_card_glow">#22B96C57</color>
     <color name="discourse_card_glow_clear">#00B96C57</color>

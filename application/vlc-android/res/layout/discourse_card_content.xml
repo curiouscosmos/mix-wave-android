@@ -18,8 +18,8 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/discourse_image"
+            <FrameLayout
+                android:id="@+id/discourse_artwork_stack"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 app:layout_constraintWidth_percent="0.22"
@@ -28,13 +28,47 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:contentDescription="@null"
-                android:scaleType="centerCrop"
-                app:shapeAppearanceOverlay="@style/DiscourseCatalogueArtwork" />
+                android:clipChildren="false">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginBottom="4dp"
+                    android:alpha="0.72"
+                    android:background="@drawable/discourse_artwork_layer"
+                    android:rotation="-14" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginTop="5dp"
+                    android:layout_marginEnd="5dp"
+                    android:layout_marginBottom="7dp"
+                    android:background="@drawable/discourse_artwork_layer"
+                    android:rotation="-9" />
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/discourse_image"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="9dp"
+                    android:layout_marginTop="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:layout_marginBottom="10dp"
+                    android:contentDescription="@null"
+                    android:rotation="-5"
+                    android:scaleType="centerCrop"
+                    app:strokeColor="#D9BEA1"
+                    app:strokeWidth="1dp"
+                    app:shapeAppearanceOverlay="@style/DiscourseCatalogueArtwork" />
+            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                app:layout_constraintStart_toEndOf="@id/discourse_image"
+                app:layout_constraintStart_toEndOf="@id/discourse_artwork_stack"
                 app:layout_constraintVertical_bias="0"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
