@@ -54,7 +54,7 @@ class ListeningStatsActivity : AppCompatActivity() {
             setNavigationOnClickListener { finish() }
         }
         val content = findViewById<LinearLayout>(R.id.listening_stats_sections)
-        dashboard = ListeningStatsDashboard(content, ::duration, savedInstanceState?.getInt("period") ?: 0)
+        dashboard = ListeningStatsDashboard(content, ::duration, ::chartDuration, savedInstanceState?.getInt("period") ?: 0)
         val store = ListeningStatsStore.getInstance(this)
         val listening = store.database.listeningStatsDao()
         val downloadStore = DiscourseDownloadStore(this)
@@ -156,6 +156,12 @@ class ListeningStatsActivity : AppCompatActivity() {
             minutes == 0L && ms > 0 -> getString(R.string.listening_stats_under_minute)
             else -> getString(R.string.listening_stats_minutes, numbers.format(minutes))
         }
+    }
+
+    private fun chartDuration(ms: Long): String = when {
+        ms in 1 until 60_000 -> getString(R.string.stats_compact_under_minute)
+        ms >= 3_600_000 && ms % 3_600_000 == 0L -> getString(R.string.stats_whole_hours, numbers.format(ms / 3_600_000))
+        else -> duration(ms)
     }
 
     private fun errorMessage(error: Throwable): String {

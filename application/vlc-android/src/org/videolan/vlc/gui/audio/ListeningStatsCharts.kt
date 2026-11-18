@@ -35,8 +35,10 @@ internal class ListeningStatsRing(context: Context) : View(context) {
         paint.color = tile
         canvas.drawOval(bounds, paint)
         if (fraction > 0f) {
-            paint.color = accent
+            paint.color = ColorUtils.blendARGB(tile, accent, .54f)
             canvas.drawArc(bounds, -90f, fraction * 360f, false, paint)
+            paint.color = accent
+            canvas.drawArc(bounds, -90f, fraction * 270f, false, paint)
         }
     }
 }
@@ -55,6 +57,18 @@ internal class ListeningStatsChart(
     private val onAccent = context.getColor(R.color.stats_on_accent)
     private val locale get() = resources.configuration.locales[0]
     private var trend: ListeningStatsTrend? = null
+    private val weekdays get() = DayOfWeek.values().map { it.getDisplayName(TextStyle.SHORT, locale) }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        if (!heatmap) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+            return
+        }
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        paint.textSize = sp(11f)
+        val column = (width - weekdays.maxOf(paint::measureText) - dp(5f)) / 14
+        setMeasuredDimension(width, resolveSize((column * 7 + dp(27f)).toInt(), heightMeasureSpec))
+    }
 
     fun bind(trend: ListeningStatsTrend) {
         this.trend = trend
@@ -73,12 +87,13 @@ internal class ListeningStatsChart(
     }
 
     private fun drawBars(canvas: Canvas, data: ListeningStatsTrend) {
-        paint.textSize = sp(10f)
+        paint.textSize = sp(11f)
         val peak = data.lastWeek.maxOrNull() ?: 0
         val interval = if (peak <= 7_200_000) 1_800_000L else 3_600_000L
         val step = (ceil(peak / (4.0 * interval)).toLong().coerceAtLeast(1) * interval)
         val scale = 4 * step
-        val left = paint.measureText(formatDuration(scale)) + dp(9f)
+        val yLabels = (0..4).map { formatDuration(it * step) }
+        val left = yLabels.maxOf(paint::measureText) + dp(9f)
         val top = dp(24f)
         val bottom = height - dp(21f)
         val column = (width - left) / 7f
@@ -89,7 +104,7 @@ internal class ListeningStatsChart(
             canvas.drawLine(left, y, width.toFloat(), y, paint)
             paint.color = text
             paint.textAlign = Paint.Align.RIGHT
-            canvas.drawText(formatDuration(index * step), left - dp(5f), y + dp(3f), paint)
+            canvas.drawText(yLabels[index], left - dp(5f), y + dp(3f), paint)
         }
         data.lastWeek.forEachIndexed { index, millis ->
             val x = left + column * (index + 0.5f)
@@ -115,9 +130,9 @@ internal class ListeningStatsChart(
     }
 
     private fun drawActivity(canvas: Canvas, data: ListeningStatsTrend) {
-        paint.textSize = sp(10f)
+        paint.textSize = sp(11f)
         paint.textAlign = Paint.Align.LEFT
-        val days = DayOfWeek.values().map { it.getDisplayName(TextStyle.SHORT, locale) }
+        val days = weekdays
         val left = days.maxOf(paint::measureText) + dp(8f)
         val gap = dp(3f)
         val column = (width - left + gap) / 14

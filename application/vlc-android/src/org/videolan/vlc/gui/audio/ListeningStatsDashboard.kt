@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import org.videolan.vlc.R
@@ -19,6 +20,7 @@ import org.videolan.vlc.R
 internal class ListeningStatsDashboard(
     private val root: LinearLayout,
     private val duration: (Long) -> String,
+    private val chartDuration: (Long) -> String,
     initialPeriod: Int
 ) {
     private val context = root.context
@@ -37,15 +39,17 @@ internal class ListeningStatsDashboard(
 
     private val tabs: List<TextView>
     private val ring = ListeningStatsRing(context)
-    private val heroDuration = value(27f).apply {
+    private val heroDuration = value(32f).apply {
         gravity = Gravity.CENTER
         setText(R.string.loading)
+        maxLines = 1
+        setAutoSizeTextTypeUniformWithConfiguration(14, 32, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
     }
     private val heroPeriod = label(14f).apply { gravity = Gravity.CENTER }
     private val heroTracks: TextView
     private val heroDiscourses: TextView
-    private val bars = ListeningStatsChart(context, heatmap = false, duration)
-    private val heatmap = ListeningStatsChart(context, heatmap = true, duration)
+    private val bars = ListeningStatsChart(context, heatmap = false, chartDuration)
+    private val heatmap = ListeningStatsChart(context, heatmap = true, chartDuration)
     private val tiles: List<TextView>
     private val library: List<TextView>
     private val clips: List<TextView>
@@ -59,7 +63,7 @@ internal class ListeningStatsDashboard(
             background = rounded(tile, 28, border)
             setPadding(dp(2), dp(2), dp(2), dp(2))
         }
-        root.withTopMargin(segmented, 8)
+        root.withTopMargin(segmented, 12)
         tabs = periods.mapIndexed { index, title ->
             label(13f).apply {
                 setText(title)
@@ -71,32 +75,37 @@ internal class ListeningStatsDashboard(
             }
         }
 
-        val overview = panel().apply {
+        val overview = panel(top = 22).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
         val dial = FrameLayout(context).apply {
             addView(ring, FrameLayout.LayoutParams(-1, -1))
-            addView(column().apply {
+            val center = column().apply {
                 gravity = Gravity.CENTER
                 addView(icon(R.drawable.ic_search_headphones, 28))
-                addView(heroDuration)
+                addView(heroDuration, LinearLayout.LayoutParams(-1, dp(52)))
                 addView(heroPeriod)
-                setPadding(dp(18), 0, dp(18), 0)
-            }, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER))
+            }
+            addView(center, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER))
+            addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
+                val diameter = minOf(right - left, bottom - top)
+                val inset = (right - left - diameter) / 2 + dp(21)
+                if (center.paddingLeft != inset) center.setPadding(inset, 0, inset, 0)
+            }
         }
-        overview.addView(dial, LinearLayout.LayoutParams(0, dp(158), 1.6f))
+        overview.addView(dial, LinearLayout.LayoutParams(0, dp(190), 1.65f))
         overview.addView(View(context).apply { setBackgroundColor(border) },
-            LinearLayout.LayoutParams(dp(1), dp(126)).apply { marginStart = dp(14); marginEnd = dp(14) })
+            LinearLayout.LayoutParams(dp(1), dp(148)).apply { marginStart = dp(12); marginEnd = dp(16) })
         val heroMetrics = column()
         overview.addView(heroMetrics, LinearLayout.LayoutParams(0, -2, 1f))
         heroMetrics.addView(label(11f).apply { setText(R.string.listening_stats_overall) })
-        heroTracks = metric(heroMetrics, R.string.tracks, 26f)
-        heroDiscourses = metric(heroMetrics, R.string.discourses, 26f, top = 12)
+        heroTracks = metric(heroMetrics, R.string.tracks, 30f)
+        heroDiscourses = metric(heroMetrics, R.string.discourses, 30f, top = 16)
 
-        panel(R.string.listening_stats_time).apply {
-            withTopMargin(label(12f).apply { setText(R.string.stats_last_seven_days) }, 2)
-            withTopMargin(bars, 4, 155)
+        panel(R.string.listening_stats_time, info = R.string.stats_chart_info,
+            infoIcon = R.drawable.ic_information).apply {
+            withTopMargin(bars, 6, 177)
         }
 
         tiles = listOf(0, 1, 2, 4).chunked(2).flatMap { indices ->
@@ -106,16 +115,24 @@ internal class ListeningStatsDashboard(
                 val box = column().apply {
                     setPadding(dp(13), dp(10), dp(13), dp(10))
                     background = rounded(tile, 16)
-                    addView(icon(R.drawable.ic_discourse_calendar, 23))
+                    if (window == 4) addView(value(22f).apply {
+                        text = "∞"
+                        includeFontPadding = false
+                        gravity = Gravity.CENTER_VERTICAL
+                        setTextColor(accent)
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    }, LinearLayout.LayoutParams(dp(26), dp(23))) else addView(icon(R.drawable.ic_discourse_calendar, 23))
                 }
                 pair.addView(box, weighted(index))
                 metric(box, windows[window], 20f, top = 3)
             }
         }
 
-        panel(R.string.stats_listening_activity).apply { withTopMargin(heatmap, 14, 147) }
+        panel(R.string.stats_listening_activity, info = R.string.stats_heatmap_description)
+            .apply { withTopMargin(heatmap, 14) }
 
-        val libraryPanel = panel(R.string.listening_stats_library, R.drawable.ic_discourse_tracks, wave = true)
+        val libraryPanel = panel(R.string.listening_stats_library, R.drawable.ic_discourse_tracks, wave = true,
+            info = R.string.stats_library_info)
         library = listOf(R.string.listening_stats_tracks, R.string.listening_stats_discourses,
             R.string.listening_stats_repeat_tracks, R.string.listening_stats_repeat_discourses).chunked(2).flatMap { labels ->
             val line = row()
@@ -129,7 +146,7 @@ internal class ListeningStatsDashboard(
             }
         }
 
-        val clipPanel = panel(R.string.listening_stats_clips, R.drawable.ic_player_clip)
+        val clipPanel = panel(R.string.listening_stats_clips, R.drawable.ic_player_clip, info = R.string.stats_clips_info)
         val total = metric(clipPanel, R.string.listening_stats_clip_count, 34f, top = 12)
         val topTrack = detail(clipPanel, R.drawable.ic_player_play_solid, R.string.listening_stats_clip_track, rank = true)
         val topDiscourse = detail(clipPanel, R.drawable.ic_discourse_tracks, R.string.listening_stats_clip_discourse, rank = true)
@@ -141,14 +158,15 @@ internal class ListeningStatsDashboard(
             clipPanel.withTopMargin(this, 6)
         }
 
-        downloaded = metric(panel(R.string.listening_stats_download_section, R.drawable.ic_discourse_download, wave = true),
+        downloaded = metric(panel(R.string.listening_stats_download_section, R.drawable.ic_discourse_download,
+            wave = true, info = R.string.stats_downloads_info),
             R.string.listening_stats_downloads, 34f, top = 12)
 
         val insightsPanel = panel(R.string.stats_insights, R.drawable.ic_information)
         insights = listOf(
-            detail(insightsPanel, R.drawable.ic_history, R.string.listening_stats_busiest_day).first,
-            detail(insightsPanel, R.drawable.ic_player_timer, R.string.stats_average_day).first,
-            detail(insightsPanel, R.drawable.ic_discourse_calendar, R.string.stats_streak).first
+            detail(insightsPanel, R.drawable.ic_history, R.string.listening_stats_busiest_day, info = R.string.stats_busiest_info).first,
+            detail(insightsPanel, R.drawable.ic_player_timer, R.string.stats_average_day, info = R.string.stats_average_info).first,
+            detail(insightsPanel, R.drawable.ic_discourse_calendar, R.string.stats_streak, info = R.string.stats_streak_info).first
         )
         updateOverview()
     }
@@ -195,12 +213,16 @@ internal class ListeningStatsDashboard(
         val data = trend ?: return
         val totals = data.time
         val selected = listOf(totals.today, totals.week, totals.month, totals.year, totals.overall)[period]
-        heroDuration.text = duration(selected)
+        heroDuration.text = chartDuration(selected)
+        heroDuration.contentDescription = duration(selected)
         val peak = data.periodPeaks[period]
         ring.fraction = if (peak > 0) (selected.toDouble() / peak).toFloat().coerceIn(0f, 1f) else 0f
     }
 
-    private fun panel(@StringRes title: Int? = null, @DrawableRes image: Int? = null, wave: Boolean = false): LinearLayout {
+    private fun panel(
+        @StringRes title: Int? = null, @DrawableRes image: Int? = null, wave: Boolean = false,
+        @StringRes info: Int? = null, @DrawableRes infoIcon: Int = R.drawable.ic_chevron_right, top: Int = 14
+    ): LinearLayout {
         val shape = rounded(context.getColor(R.color.stats_surface), 19, border).apply {
             orientation = GradientDrawable.Orientation.TL_BR
             colors = intArrayOf(context.getColor(R.color.stats_surface), context.getColor(R.color.stats_surface_end))
@@ -214,15 +236,18 @@ internal class ListeningStatsDashboard(
                 setLayerGravity(1, Gravity.BOTTOM or Gravity.FILL_HORIZONTAL)
             } else shape
             setPadding(dp(15), dp(13), dp(15), dp(13))
-            elevation = dp(1).toFloat()
             clipToOutline = true
-            root.withTopMargin(this, 14)
+            root.withTopMargin(this, top)
             if (title != null) addView(row().apply {
-                if (image != null) addView(icon(image, 26), LinearLayout.LayoutParams(dp(26), dp(26)).apply { marginEnd = dp(9) })
-                addView(value(20f).apply {
+                if (image != null) addView(icon(image, 34).apply {
+                    background = rounded(tile, 18)
+                    setPadding(dp(6), dp(6), dp(6), dp(6))
+                }, LinearLayout.LayoutParams(dp(34), dp(34)).apply { marginEnd = dp(9) })
+                addView(value(22f).apply {
                     setText(title)
                     ViewCompat.setAccessibilityHeading(this, true)
-                })
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+                if (info != null) addView(infoButton(title, info, infoIcon))
             })
         }
     }
@@ -233,11 +258,16 @@ internal class ListeningStatsDashboard(
             parent.addView(label(13f).apply { setText(title) })
         }
 
-    private fun detail(parent: LinearLayout, @DrawableRes icon: Int, @StringRes title: Int, rank: Boolean = false): Pair<TextView, TextView> {
+    private fun detail(
+        parent: LinearLayout, @DrawableRes icon: Int, @StringRes title: Int, rank: Boolean = false, @StringRes info: Int? = null
+    ): Pair<TextView, TextView> {
         val line = row().apply {
-            background = rounded(tile, 13)
-            setPadding(dp(11), dp(8), dp(11), dp(8))
-            addView(icon(icon, 23))
+            background = if (rank) rounded(tile, 13) else rounded(context.getColor(R.color.stats_surface), 13, border)
+            setPadding(dp(8), dp(7), dp(8), dp(7))
+            addView(icon(icon, 40).apply {
+                background = rounded(if (rank) context.getColor(R.color.stats_surface) else tile, if (rank) 22 else 12)
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+            })
         }
         val content = column()
         line.addView(content, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(10) })
@@ -252,9 +282,25 @@ internal class ListeningStatsDashboard(
             isVisible = false
         }
         if (rank) line.addView(badge)
+        if (info != null) line.addView(infoButton(title, info, R.drawable.ic_chevron_right))
         parent.withTopMargin(line, 8)
         return detail to badge
     }
+
+    private fun infoButton(@StringRes title: Int, @StringRes info: Int, @DrawableRes image: Int) =
+        FrameLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
+            addView(icon(image, 28).apply {
+                background = rounded(tile, 15)
+                setPadding(dp(6), dp(6), dp(6), dp(6))
+            }, FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER))
+            contentDescription = context.getString(R.string.stats_about_metric, context.getString(title))
+            isFocusable = true
+            setOnClickListener {
+                AlertDialog.Builder(context).setTitle(title).setMessage(info)
+                    .setPositiveButton(android.R.string.ok, null).show()
+            }
+        }
 
     private fun icon(@DrawableRes id: Int, size: Int) = ImageView(context).apply {
         setImageResource(id)
