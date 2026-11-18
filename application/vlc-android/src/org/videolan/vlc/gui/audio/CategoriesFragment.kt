@@ -16,9 +16,15 @@ import org.videolan.tools.HttpImageLoader
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.DiscourseRepository
 import org.videolan.vlc.discourse.resolveDiscourseUrl
+import org.videolan.vlc.gui.ContentActivity
 import org.videolan.vlc.gui.helpers.UiTools
 
 class CategoriesFragment : Fragment(R.layout.categories_fragment) {
+    override fun onStart() {
+        super.onStart()
+        (activity as? ContentActivity)?.setTabLayoutVisibility(false)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val list = view.findViewById<LinearLayout>(R.id.categories_list)
         val status = view.findViewById<TextView>(R.id.categories_status)
