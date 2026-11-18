@@ -94,7 +94,8 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         protected val reorderable: Boolean = false,
         internal var cardSize: Int = SHOW_IN_LIST,
         val playlistStyle: Boolean = false,
-        internal val mixerStyle: Boolean = false
+        internal val mixerStyle: Boolean = false,
+        useTrackCards: Boolean = true
 ) : PagedListAdapter<MediaLibraryItem,
         AudioBrowserAdapter.AbstractMediaItemViewHolder<ViewDataBinding>>(DIFF_CALLBACK),
         FastScroller.SeparatedAdapter, MultiSelectAdapter<MediaLibraryItem>, SwipeDragHelperAdapter
@@ -111,7 +112,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
     var areSectionsEnabled = true
     private var currentPlayingVisu: MiniVisualizer? = null
     private var model: PlaylistModel? = null
-    private val trackStyle = type == MediaLibraryItem.TYPE_MEDIA && !mixerStyle
+    private val trackStyle = useTrackCards && type == MediaLibraryItem.TYPE_MEDIA && !mixerStyle
     private val owner get() = (eventsHandler as? Fragment)?.viewLifecycleOwner ?: eventsHandler as? LifecycleOwner
     private val likesUi = lazy { owner?.let { DiscourseLikesUi(AppContextProvider.appContext, it) } }
     private val playbackStore by lazy { DiscoursePlaybackStore(AppContextProvider.appContext) }
@@ -370,6 +371,10 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 }
                 binding.subtitle.isSingleLine = false
                 binding.subtitle.maxLines = 2
+                (binding.subtitle.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                    bottomToBottom = -1
+                    bottomToTop = R.id.track_progress
+                }
                 (binding.linearLayout6.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
                     endToStart = -1; endToEnd = R.id.media_cover
                     topToTop = R.id.media_cover; bottomToBottom = R.id.media_cover

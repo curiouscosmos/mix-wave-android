@@ -289,7 +289,9 @@ class AudioBrowserFragment : BaseAudioBrowser<AudioBrowserViewModel>(), IListEve
         viewModel.currentTab = if (arguments?.getBoolean(EXTRA_OPEN_AUDIO_MIXER) == true) MIXER_TAB else TRACKS_TAB
         currentTab = viewModel.currentTab
 
-        songsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this).apply { stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY }
+        songsAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, this, useTrackCards = false).apply {
+            stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        }
         playlistModel = PlaylistModel.get(this)
         songsAdapter.setModel(playlistModel)
         playlistModel.dataset.asFlow().conflate().onEach {
