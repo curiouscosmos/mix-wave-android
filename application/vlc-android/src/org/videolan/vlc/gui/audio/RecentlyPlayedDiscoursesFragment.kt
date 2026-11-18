@@ -207,7 +207,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         rows.submitList(result)
     }
 
-    private inner class HomeAdapter(private val horizontal: Boolean = false) :
+    private inner class HomeAdapter(val horizontalCardWidthDp: Int? = null) :
         ListAdapter<HomeRow, HomeHolder>(object : DiffUtil.ItemCallback<HomeRow>() {
             override fun areItemsTheSame(old: HomeRow, new: HomeRow) = old.key == new.key && old.kind == new.kind
             override fun areContentsTheSame(old: HomeRow, new: HomeRow) = old.sameContent(new)
@@ -244,7 +244,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                     layoutParams = RecyclerView.LayoutParams(-1, -2)
                 }
                 1 -> layoutInflater.inflate(R.layout.discourse_catalogue_card, parent, false).apply {
-                    layoutParams = RecyclerView.LayoutParams(if (horizontal) dp(420) else -1, -2).apply {
+                    val horizontal = horizontalCardWidthDp != null
+                    layoutParams = RecyclerView.LayoutParams(horizontalCardWidthDp?.let { dp(it) } ?: -1, -2).apply {
                         marginStart = dp(if (horizontal) 0 else 10)
                         marginEnd = dp(if (horizontal) 8 else 10)
                     }
@@ -256,7 +257,6 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 else -> RecyclerView(parent.context).apply {
                     layoutParams = RecyclerView.LayoutParams(-1, -2)
                     layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
-                    adapter = HomeAdapter(true)
                     itemAnimator = null
                 }
             }
@@ -284,7 +284,10 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 holder.key = row.key
                 val padding = if (row.children.firstOrNull()?.kind == 1) dp(10) else 0
                 list.setPadding(padding, 0, padding, 0)
-                if (list.adapter == null) list.adapter = HomeAdapter(true)
+                val width = if (row.key == "weekly_discourses_list") 460 else 420
+                if ((list.adapter as? HomeAdapter)?.horizontalCardWidthDp != width) {
+                    list.adapter = HomeAdapter(width)
+                }
                 (list.adapter as HomeAdapter).submitList(row.children) {
                     list.layoutManager?.onRestoreInstanceState(horizontalStates[row.key])
                 }
