@@ -104,7 +104,10 @@ internal class ListeningStatsDashboard(
                     gravity = Gravity.CENTER
                 }, 8)
                 addView(heroDuration, LinearLayout.LayoutParams(-1, dp(58)))
-                addView(label(16f).apply { setText(R.string.listening_stats_today) })
+                addView(label(16f).apply {
+                    gravity = Gravity.CENTER
+                    setText(R.string.listening_stats_today)
+                })
             }, FrameLayout.LayoutParams(dp(218), -1, Gravity.CENTER))
         }
         todayBody.withTopMargin(dial, 24, (context.resources.configuration.screenWidthDp * .65f).toInt().coerceIn(220, 310))
@@ -311,7 +314,11 @@ internal class ListeningStatsDashboard(
         tileView.addView(metric, LinearLayout.LayoutParams(0, -2, 1f).apply {
             if (!trailingIcon) marginStart = dp(9)
         })
-        if (trailingIcon) tileView.addView(imageView)
+        if (trailingIcon) {
+            tileView.addView(imageView)
+            metric.addView(value(15f).apply { setText(title) })
+            return value(32f).apply { metric.withTopMargin(this, 6) }
+        }
         return metric(metric, title, 30f)
     }
 
