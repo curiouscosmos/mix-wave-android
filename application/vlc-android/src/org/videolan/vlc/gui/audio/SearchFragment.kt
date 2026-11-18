@@ -16,6 +16,8 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -35,6 +37,10 @@ import org.videolan.vlc.gui.helpers.UiTools
 import org.videolan.vlc.viewmodels.SearchViewModel
 
 class SearchFragment : BaseFragment() {
+    companion object {
+        internal const val ARG_FOCUS_INPUT = "focus_input"
+    }
+
     private val model: SearchViewModel by viewModels { SearchViewModel.Factory(requireContext()) }
     private lateinit var input: EditText
     private lateinit var results: RecyclerView
@@ -80,6 +86,15 @@ class SearchFragment : BaseFragment() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (arguments?.getBoolean(ARG_FOCUS_INPUT) != true) return
+        arguments?.remove(ARG_FOCUS_INPUT)
+        input.requestFocus()
+        WindowCompat.getInsetsController(requireActivity().window, input)
+            .show(WindowInsetsCompat.Type.ime())
     }
 
     private fun render(state: SearchViewModel.State) {

@@ -185,10 +185,13 @@ class Navigator : NavigationBarView.OnItemSelectedListener, DefaultLifecycleObse
         return true
     }
 
-    override fun openSearch() {
+    override fun openSearch(focusInput: Boolean) {
         appbarLayout.setExpanded(true, true)
         activity.slideDownAudioPlayer()
-        showFragment(R.id.nav_search)
+        val fragment = SearchFragment().apply {
+            arguments = bundleOf(SearchFragment.ARG_FOCUS_INPUT to focusInput)
+        }
+        showFragment(fragment, R.id.nav_search)
     }
 
     override fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse) {
@@ -219,6 +222,6 @@ interface INavigator {
     fun currentIdIsExtension(): Boolean
     fun configurationChanged(size: Int)
     fun getFragmentWidth(activity: Activity): Int
-    fun openSearch()
+    fun openSearch(focusInput: Boolean = false)
     fun openDiscourse(discourse: org.videolan.vlc.discourse.Discourse)
 }

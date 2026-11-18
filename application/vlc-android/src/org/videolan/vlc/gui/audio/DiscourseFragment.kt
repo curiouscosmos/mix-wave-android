@@ -63,6 +63,7 @@ import org.videolan.vlc.discourse.shouldEnqueue
 import org.videolan.vlc.discourse.toMediaWrapper
 import org.videolan.vlc.discourse.discourseAudioSnapshot
 import org.videolan.vlc.gui.BaseFragment
+import org.videolan.vlc.gui.MainActivity
 import org.videolan.vlc.gui.helpers.UiTools
 import org.videolan.vlc.gui.helpers.UiTools.addToPlaylist
 import org.videolan.vlc.gui.view.SwipeRefreshLayout
@@ -126,6 +127,9 @@ class DiscourseFragment : BaseFragment() {
         grid = view.findViewById(R.id.discourse_grid)
         gridSwipe = view.findViewById(R.id.discourse_grid_swipe)
         catalogue = view.findViewById(R.id.discourse_catalogue)
+        view.findViewById<View>(R.id.discourse_search_bar).setOnClickListener {
+            (activity as? MainActivity)?.openSearch(focusInput = true)
+        }
         catalogueEmpty = view.findViewById(R.id.discourse_catalogue_empty)
         languageFilter = view.findViewById(R.id.discourse_language_filter)
         sortFilter = view.findViewById(R.id.discourse_sort_filter)
