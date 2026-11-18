@@ -93,8 +93,9 @@
 
     <include
         layout="@layout/discourse_like_button"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        app:layout_constraintStart_toStartOf="@id/discourse_track_play"
         app:layout_constraintEnd_toEndOf="@id/discourse_track_play"
         app:layout_constraintTop_toBottomOf="@id/discourse_track_play"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -106,42 +107,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ImageView
-        android:id="@+id/discourse_track_played"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:contentDescription="@string/talkback_already_played"
-        android:src="@drawable/ic_mark_as_played"
-        android:tint="#FF4D52"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="@id/discourse_track_image"
-        app:layout_constraintTop_toTopOf="@id/discourse_track_image" />
-
-    <ImageView
-        android:id="@+id/discourse_track_downloaded"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:src="@drawable/ic_download"
-        android:tint="@color/green500"
-        android:contentDescription="@string/discourse_downloaded"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="@id/discourse_track_image"
-        app:layout_constraintBottom_toBottomOf="@id/discourse_track_image" />
-
-    <com.google.android.material.progressindicator.CircularProgressIndicator
-        android:id="@+id/discourse_track_spinner"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:indeterminate="false"
-        android:visibility="gone"
-        app:indicatorSize="24dp"
-        app:indicatorInset="0dp"
-        app:trackThickness="2dp"
-        app:indicatorColor="#FF4D52"
-        app:trackColor="#665B5C"
-        app:layout_constraintEnd_toEndOf="@id/discourse_track_image"
-        app:layout_constraintBottom_toBottomOf="@id/discourse_track_image" />
-
     <ImageButton
         android:id="@+id/discourse_track_download"
         android:layout_width="48dp"
@@ -150,6 +115,6 @@
         android:contentDescription="@string/more_actions"
         android:src="@drawable/ic_player_more"
         android:tint="#FFFFFF"
-        app:layout_constraintStart_toStartOf="@id/discourse_track_image"
-        app:layout_constraintBottom_toBottomOf="@id/discourse_track_image" />
+        app:layout_constraintEnd_toEndOf="@id/discourse_track_play"
+        app:layout_constraintTop_toTopOf="@id/discourse_track_play" />
 </androidx.constraintlayout.widget.ConstraintLayout>

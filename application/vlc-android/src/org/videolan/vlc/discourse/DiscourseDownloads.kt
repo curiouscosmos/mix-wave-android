@@ -62,7 +62,8 @@ class DiscourseDownloadStore(context: Context) {
     private val reportedFailures = mutableSetOf<Long>()
     private val cache = HashMap<String, Snapshot>()
     private data class Snapshot(val state: DiscourseDownloadState, val progress: DiscourseDownloadProgress)
-    private data class Summary(val downloaded: Int = 0, val active: Int = 0, val audioIds: Set<String> = emptySet())
+    private data class Summary(val downloaded: Int = 0, val audioIds: Set<String> = emptySet(),
+                               val activeProgress: Map<String, Int> = emptyMap())
     @Volatile private var summaries = emptyMap<String, Summary>()
 
     /** Cheap values for row binding. Call [refresh] first; missing entries report as not downloaded. */
@@ -133,7 +134,10 @@ class DiscourseDownloadStore(context: Context) {
 
     fun isAudioDownloaded(audioId: String): Boolean = summaries.values.any { audioId in it.audioIds }
 
-    fun activeDownloadCount(discourseId: String): Int = summaries[discourseId]?.active ?: 0
+    fun activeDownloadCount(discourseId: String): Int = summaries[discourseId]?.activeProgress?.size ?: 0
+
+    fun audioDownloadPercent(discourseId: String, audioId: String): Int? =
+        summaries[discourseId]?.activeProgress?.get(audioId)
 
     /** Refresh on entry and download changes; poll only while downloads are active. */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -147,7 +151,7 @@ class DiscourseDownloadStore(context: Context) {
     }.conflate().transform {
         do {
             emit(refreshSummaries())
-            if (summaries.values.none { it.active > 0 }) break
+            if (summaries.values.none { it.activeProgress.isNotEmpty() }) break
             delay(1000)
         } while (true)
     }
@@ -177,9 +181,11 @@ class DiscourseDownloadStore(context: Context) {
                         file.isFile && isCompletedDownload(file.length(), true, cursor.long(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
                     }
                 val previous = next[discourseId] ?: Summary()
+                val percent = if (active) downloadPercent(cursor.long(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR),
+                    cursor.long(DownloadManager.COLUMN_TOTAL_SIZE_BYTES), null) ?: 0 else null
                 next[discourseId] = Summary(previous.downloaded + if (downloaded) 1 else 0,
-                    previous.active + if (active) 1 else 0,
-                    if (downloaded) previous.audioIds + audioId else previous.audioIds)
+                    if (downloaded) previous.audioIds + audioId else previous.audioIds,
+                    if (percent != null) previous.activeProgress + (audioId to percent) else previous.activeProgress)
             }
         }
         return next

@@ -91,6 +91,7 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         DrawableCompat.setTint(drawable, color)
         val sizeDp = when {
             binding.card -> 22
+            binding.target.audio && (view.parent as? View)?.findViewById<View>(R.id.discourse_track_image) != null -> 40
             binding.target.audio -> 32
             else -> 24
         }

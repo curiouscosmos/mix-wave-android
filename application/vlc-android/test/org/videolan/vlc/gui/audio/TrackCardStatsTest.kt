@@ -17,6 +17,15 @@ import org.videolan.vlc.R
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, manifest = Config.NONE, sdk = [28], qualifiers = "en")
 class TrackCardStatsTest {
+    @Test fun downloadingAndPlayedStatusUseAdjacentBadges() {
+        val view = TextView(RuntimeEnvironment.application)
+        view.bindTrackStats(TrackCardStats(0, 0, false, played = true, downloadPercent = 44))
+        assertEquals("\uFFFC  \uFFFC", view.text.toString())
+        assertEquals(2, (view.text as Spanned).getSpans(0, view.text.length, TrackBadgeSpan::class.java).size)
+        assertTrue(view.contentDescription.contains(view.context.getString(R.string.discourse_downloading_percent, 44)))
+        assertTrue(view.contentDescription.contains(view.context.getString(R.string.talkback_already_played)))
+    }
+
     @Test fun progressAppearsAtOnePercentAndHidesWhenReboundToZero() {
         val bar = ProgressBar(RuntimeEnvironment.application, null, android.R.attr.progressBarStyleHorizontal)
         bar.bindTrackProgress(trackListeningProgress(9, 1000))

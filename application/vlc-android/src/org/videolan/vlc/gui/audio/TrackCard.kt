@@ -23,7 +23,16 @@ import org.videolan.vlc.R
 internal fun trackListeningProgress(time: Long, length: Long): Int =
     if (length > 0) (time.toDouble() / length * 100).toInt().coerceIn(0, 100) else 0
 
-internal data class TrackCardStats(val plays: Long, val likes: Int, val downloaded: Boolean)
+internal data class TrackCardStats(
+    val plays: Long, val likes: Int, val downloaded: Boolean,
+    val played: Boolean = false, val downloadPercent: Int? = null
+)
+
+internal fun TextView.updateTrackStats(update: (TrackCardStats) -> TrackCardStats) {
+    val stats = tag as? TrackCardStats ?: return
+    val updated = update(stats)
+    if (updated != stats) bindTrackStats(updated)
+}
 
 internal fun ProgressBar.bindTrackProgress(percent: Int) {
     progress = percent
@@ -36,13 +45,13 @@ internal fun TextView.bindTrackStats(stats: TrackCardStats) {
     val label = SpannableStringBuilder()
     val descriptions = mutableListOf<String>()
     val neutral = Color.rgb(166, 157, 159)
-    fun appendBadge(resource: Int, caption: String = "", tint: Int = Color.WHITE) {
+    fun appendBadge(resource: Int, caption: String = "", tint: Int = Color.WHITE, percent: Int? = null) {
         if (label.isNotEmpty()) label.append("  ")
         val icon = AppCompatResources.getDrawable(context, resource)!!.mutate()
         icon.setTint(tint)
         val start = label.length
         label.append(caption.ifEmpty { "\uFFFC" })
-        label.setSpan(TrackBadgeSpan(icon, caption, resources.displayMetrics.density),
+        label.setSpan(TrackBadgeSpan(icon, caption, resources.displayMetrics.density, percent),
             start, label.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
     if (stats.plays > 0) {
@@ -56,13 +65,20 @@ internal fun TextView.bindTrackStats(stats: TrackCardStats) {
         appendBadge(R.drawable.ic_header_media_favorite_outline, caption)
         descriptions += caption
     }
-    appendBadge(R.drawable.ic_download, tint = if (stats.downloaded) context.getColor(R.color.green500) else neutral)
-    descriptions += context.getString(if (stats.downloaded) R.string.discourse_downloaded else R.string.not_downloaded)
+    appendBadge(R.drawable.ic_download, tint = if (stats.downloaded) context.getColor(R.color.green500) else neutral,
+        percent = stats.downloadPercent)
+    descriptions += stats.downloadPercent?.let { context.getString(R.string.discourse_downloading_percent, it) }
+        ?: context.getString(if (stats.downloaded) R.string.discourse_downloaded else R.string.not_downloaded)
+    if (stats.played) {
+        appendBadge(R.drawable.ic_mark_as_played, tint = Color.rgb(255, 77, 82))
+        descriptions += context.getString(R.string.talkback_already_played)
+    }
     text = label
     contentDescription = descriptions.joinToString(". ")
 }
 
-internal class TrackBadgeSpan(private val icon: Drawable, private val caption: String, density: Float) : ReplacementSpan() {
+internal class TrackBadgeSpan(private val icon: Drawable, private val caption: String, density: Float,
+                              private val percent: Int? = null) : ReplacementSpan() {
     private val padding = 8 * density
     private val iconSize = (16 * density).toInt()
     private val gap = 4 * density
@@ -94,7 +110,17 @@ internal class TrackBadgeSpan(private val icon: Drawable, private val caption: S
         val left = (x + padding).toInt()
         val iconTop = (center - iconSize / 2f).toInt()
         icon.setBounds(left, iconTop, left + iconSize, iconTop + iconSize)
-        icon.draw(canvas)
+        if (percent == null) {
+            icon.draw(canvas)
+        } else {
+            val ringRadius = iconSize / 2f - brush.strokeWidth
+            val centerX = left + iconSize / 2f
+            brush.color = 0xFF665B5C.toInt()
+            canvas.drawCircle(centerX, center, ringRadius, brush)
+            brush.color = 0xFFFF4D52.toInt()
+            canvas.drawArc(centerX - ringRadius, center - ringRadius, centerX + ringRadius,
+                center + ringRadius, -90f, percent * 3.6f, false, brush)
+        }
         canvas.drawText(caption, x + padding + iconSize + gap, y.toFloat(), paint)
     }
 }
