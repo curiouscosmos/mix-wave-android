@@ -29,6 +29,15 @@
             android:layout_marginBottom="22dp"
             android:background="@drawable/category_heading_accent" />
 
+        <ProgressBar
+            android:id="@+id/categories_progress"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:contentDescription="@string/loading"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/categories_status"
             android:layout_width="match_parent"

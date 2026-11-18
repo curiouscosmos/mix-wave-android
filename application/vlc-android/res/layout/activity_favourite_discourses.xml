@@ -27,6 +27,14 @@
             android:paddingHorizontal="10dp"
             android:paddingBottom="16dp" />
 
+        <ProgressBar
+            android:id="@+id/category_discourses_progress"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:contentDescription="@string/loading"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/favourite_discourses_empty"
             android:layout_width="wrap_content"

@@ -22,13 +22,15 @@ class CategoriesFragment : Fragment(R.layout.categories_fragment) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val list = view.findViewById<LinearLayout>(R.id.categories_list)
         val status = view.findViewById<TextView>(R.id.categories_status)
+        val progress = view.findViewById<View>(R.id.categories_progress)
         val repository = DiscourseRepository(requireContext())
         val scope = viewLifecycleOwner.lifecycleScope
 
         fun loadCategories() {
             status.setOnClickListener(null)
             status.isClickable = false
-            status.setText(R.string.loading)
+            status.isVisible = false
+            progress.isVisible = true
             scope.launch {
                 val categories = try {
                     repository.getDiscourseCategories().data
@@ -36,8 +38,11 @@ class CategoriesFragment : Fragment(R.layout.categories_fragment) {
                     throw error
                 } catch (_: Exception) {
                     status.text = getString(R.string.load_error_retry, getString(R.string.categories_load_failed), getString(R.string.retry))
+                    status.isVisible = true
                     status.setOnClickListener { loadCategories() }
                     return@launch
+                } finally {
+                    progress.isVisible = false
                 }
                 status.isVisible = categories.isEmpty()
                 status.setText(R.string.categories_empty)

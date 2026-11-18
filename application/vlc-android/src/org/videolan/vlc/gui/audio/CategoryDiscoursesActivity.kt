@@ -18,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -57,12 +58,15 @@ class CategoryDiscoursesActivity : AppCompatActivity() {
             setNavigationOnClickListener { finish() }
         }
         val status = findViewById<TextView>(R.id.favourite_discourses_empty)
+        val progress = findViewById<View>(R.id.category_discourses_progress)
         val list = findViewById<RecyclerView>(R.id.favourite_discourses_list)
         val layout = LinearLayoutManager(this)
         val adapter = CardAdapter()
+        val loadingFooter = DiscourseFragment.LoadingFooter()
         adapter.stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY
         list.layoutManager = layout
-        list.adapter = adapter
+        list.adapter = ConcatAdapter(adapter, loadingFooter)
+        model.loadingMore.observe(this) { loadingFooter.setLoadingMore(it) }
         list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (dy > 0 && layout.findLastVisibleItemPosition() >= adapter.itemCount - 4) model.loadMore()
@@ -71,7 +75,8 @@ class CategoryDiscoursesActivity : AppCompatActivity() {
         model.state.observe(this) { state ->
             val discourses = (state as? DiscourseViewModel.State.Catalogue)?.discourses.orEmpty()
             adapter.submitList(discourses)
-            status.isVisible = discourses.isEmpty()
+            progress.isVisible = state == DiscourseViewModel.State.Loading || state == DiscourseViewModel.State.Idle
+            status.isVisible = discourses.isEmpty() && !progress.isVisible
             status.setOnClickListener(null)
             status.isClickable = false
             when (state) {
@@ -80,7 +85,7 @@ class CategoryDiscoursesActivity : AppCompatActivity() {
                     status.setOnClickListener { model.load() }
                 }
                 is DiscourseViewModel.State.Catalogue -> status.setText(R.string.discourse_empty)
-                else -> status.setText(R.string.loading)
+                else -> Unit
             }
         }
         model.load()
