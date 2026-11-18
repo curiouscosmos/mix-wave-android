@@ -188,7 +188,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             metadata = getString(R.string.discourse_track_count, item.totalTracks))
         model.recentDiscourses.value.orEmpty().takeIf { it.isNotEmpty() }?.let { items ->
             heading("recent_discourses", R.string.recently_played_discourses)
-            result += items.map { discourse(it) }
+            result += HomeRow("recent_discourses_list", 3, children = items.map { discourse(it) })
         }
         recentTracks.drop(1).takeIf { it.isNotEmpty() }?.let { items ->
             heading("recent_tracks", R.string.recently_played_tracks)
