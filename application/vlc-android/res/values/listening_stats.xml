@@ -12,7 +12,6 @@
     <string name="stats_activity_heading">Listening Activity</string>
     <string name="stats_tracks_lifetime">Tracks · all time</string>
     <string name="stats_discourses_lifetime">Discourses · all time</string>
-    <string name="stats_week_chart_info">Listening time for each day of the current Monday-to-Sunday week.</string>
     <string name="stats_streak_heading">Listening Streak</string>
     <string name="stats_listened_day">Listening recorded</string>
     <string name="stats_empty_day">No listening recorded</string>
@@ -63,14 +62,6 @@
     <string name="stats_streak">Listening streak</string>
     <string name="stats_compact_under_minute">&lt;1 min</string>
     <string name="stats_whole_hours">%1$s h</string>
-    <string name="stats_about_metric">About %1$s</string>
-    <string name="stats_chart_info">Each bar shows listening time for one of the last seven days. The ring compares the selected period with your highest total for that period type.</string>
-    <string name="stats_library_info">Counts are all time. A track counts after one minute of active playback or when a shorter track finishes. A discourse counts when one of its tracks qualifies.</string>
-    <string name="stats_clips_info">Clip history counts each saved range once. Rankings group clips by their track and, when known, by their discourse.</string>
-    <string name="stats_downloads_info">Counts completed discourse downloads that are still saved on this device.</string>
-    <string name="stats_busiest_info">Your calendar date with the most listening time.</string>
-    <string name="stats_average_info">Total listening time divided by the number of calendar days since your first recorded listening day.</string>
-    <string name="stats_streak_info">Consecutive days with listening time. A streak can continue through today if you listened yesterday.</string>
     <plurals name="stats_streak_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>

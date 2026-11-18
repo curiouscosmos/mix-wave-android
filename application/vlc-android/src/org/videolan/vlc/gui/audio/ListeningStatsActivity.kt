@@ -59,7 +59,7 @@ class ListeningStatsActivity : AppCompatActivity() {
             setIcon(R.drawable.ic_discourse_calendar)
             icon?.setTint(getColor(R.color.stats_text))
             setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
-            setOnMenuItemClickListener { dashboard.showCalendar(); true }
+            setOnMenuItemClickListener { dashboard.toggleCalendar(); true }
         }
         val store = ListeningStatsStore.getInstance(this)
         val listening = store.database.listeningStatsDao()

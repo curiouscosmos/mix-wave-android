@@ -12,7 +12,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import org.videolan.vlc.R
@@ -51,6 +50,7 @@ internal class ListeningStatsDashboard(
     private val weekComparison = label(14f).apply { setTextColor(android.graphics.Color.WHITE) }
     private val dayBars = ListeningStatsChart(context, heatmap = false, chartDuration)
     private val weekBars = ListeningStatsChart(context, heatmap = false, chartDuration)
+    private val calendar = ListeningStatsChart(context, heatmap = true, chartDuration).apply { isVisible = false }
     private val downloaded: TextView
     private val clipTotal: TextView
     private val topTrack: Pair<TextView, TextView>
@@ -84,6 +84,7 @@ internal class ListeningStatsDashboard(
             }
         }
 
+        root.withTopMargin(calendar, 14)
         root.addView(todayBody)
         root.addView(summaryBody)
         val dial = FrameLayout(context).apply {
@@ -116,7 +117,7 @@ internal class ListeningStatsDashboard(
         todayBody.withTopMargin(totals, 21)
         heroTracks = tileMetric(totals, 0, R.string.stats_tracks_lifetime, R.drawable.ic_discourse_tracks)
         heroDiscourses = tileMetric(totals, 1, R.string.stats_discourses_lifetime, R.drawable.ic_player_discourse)
-        panel(R.string.stats_activity_heading, info = R.string.stats_chart_info).withTopMargin(dayBars, 4, 146)
+        panel(R.string.stats_activity_heading).withTopMargin(dayBars, 4, 146)
         val highlights = panel(R.string.stats_highlights, R.drawable.ic_information)
         busiest = detail(highlights, R.drawable.ic_search_headphones, R.string.listening_stats_busiest_day).first
         repeats = detail(highlights, R.drawable.ic_repeat, R.string.stats_repeat_listening).first
@@ -136,13 +137,12 @@ internal class ListeningStatsDashboard(
             }, FrameLayout.LayoutParams(-1, -1))
         }
         summaryBody.withTopMargin(banner, 19, 148)
-        panel(R.string.listening_stats_time, R.drawable.ic_sort_number,
-            info = R.string.stats_week_chart_info).withTopMargin(weekBars, 2, 160)
+        panel(R.string.listening_stats_time, R.drawable.ic_sort_number).withTopMargin(weekBars, 2, 160)
         val totalsRow = row()
         summaryBody.withTopMargin(totalsRow, 14)
         downloaded = tileMetric(totalsRow, 0, R.string.listening_stats_download_section, R.drawable.ic_discourse_download, trailingIcon = true)
         clipTotal = tileMetric(totalsRow, 1, R.string.listening_stats_clips, R.drawable.ic_player_clip, trailingIcon = true)
-        val top = panel(R.string.stats_top_content, R.drawable.ic_discourse_tracks, info = R.string.stats_clips_info)
+        val top = panel(R.string.stats_top_content, R.drawable.ic_discourse_tracks)
         topTrack = detail(top, R.drawable.ic_player_play_solid, R.string.listening_stats_clip_track, rank = true)
         topDiscourse = detail(top, R.drawable.ic_discourse_tracks, R.string.listening_stats_clip_discourse, rank = true)
         clipNote = label(12f).apply {
@@ -150,8 +150,7 @@ internal class ListeningStatsDashboard(
             isVisible = false
             top.withTopMargin(this, 6)
         }
-        val streakPanel = panel(R.string.stats_streak_heading, R.drawable.ic_discourse_calendar,
-            info = R.string.stats_streak_info, infoIcon = R.drawable.ic_information)
+        val streakPanel = panel(R.string.stats_streak_heading, R.drawable.ic_discourse_calendar)
         val days = row()
         streakPanel.withTopMargin(days, 14)
         streakDays = java.time.DayOfWeek.values().map { day ->
@@ -185,6 +184,7 @@ internal class ListeningStatsDashboard(
         updateOverview()
         dayBars.bind(trend)
         weekBars.bind(trend, calendarWeek = true)
+        calendar.bind(trend)
         this.busiest.text = busiest
         this.streak.text = streak
         val next = ((trend.streak / 7) + 1) * 7
@@ -198,14 +198,9 @@ internal class ListeningStatsDashboard(
         }
     }
 
-    fun showCalendar() {
-        val graph = ListeningStatsChart(context, heatmap = true, chartDuration).apply {
-            trend?.let { bind(it) }
-        }
-        AlertDialog.Builder(context).setTitle(R.string.stats_calendar).setView(column().apply {
-            setPadding(dp(18), dp(16), dp(18), dp(10))
-            addView(graph, LinearLayout.LayoutParams(-1, -2))
-        }).setPositiveButton(android.R.string.ok, null).show()
+    fun toggleCalendar() {
+        calendar.isVisible = !calendar.isVisible
+        if (calendar.isVisible) (root.parent as? android.widget.ScrollView)?.smoothScrollTo(0, 0)
     }
 
     fun bindLibrary(counts: List<String>, repeatedTracks: Int) {
@@ -323,8 +318,7 @@ internal class ListeningStatsDashboard(
     }
 
     private fun panel(
-        @StringRes title: Int? = null, @DrawableRes image: Int? = null, wave: Boolean = false,
-        @StringRes info: Int? = null, @DrawableRes infoIcon: Int = R.drawable.ic_chevron_right, top: Int = 14
+        @StringRes title: Int? = null, @DrawableRes image: Int? = null, wave: Boolean = false, top: Int = 14
     ): LinearLayout {
         val shape = rounded(context.getColor(R.color.stats_surface), 19, border).apply {
             orientation = GradientDrawable.Orientation.TL_BR
@@ -350,7 +344,6 @@ internal class ListeningStatsDashboard(
                     setText(title)
                     ViewCompat.setAccessibilityHeading(this, true)
                 }, LinearLayout.LayoutParams(0, -2, 1f))
-                if (info != null) addView(infoButton(title, info, infoIcon))
             })
         }
     }
@@ -362,7 +355,7 @@ internal class ListeningStatsDashboard(
         }
 
     private fun detail(
-        parent: LinearLayout, @DrawableRes icon: Int, @StringRes title: Int, rank: Boolean = false, @StringRes info: Int? = null
+        parent: LinearLayout, @DrawableRes icon: Int, @StringRes title: Int, rank: Boolean = false
     ): Pair<TextView, TextView> {
         val line = row().apply {
             background = if (rank) rounded(tile, 13) else rounded(context.getColor(R.color.stats_surface), 13, border)
@@ -385,25 +378,9 @@ internal class ListeningStatsDashboard(
             isVisible = false
         }
         if (rank) line.addView(badge)
-        if (info != null) line.addView(infoButton(title, info, R.drawable.ic_chevron_right))
         parent.withTopMargin(line, 8)
         return detail to badge
     }
-
-    private fun infoButton(@StringRes title: Int, @StringRes info: Int, @DrawableRes image: Int) =
-        FrameLayout(context).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
-            addView(icon(image, 28).apply {
-                background = rounded(tile, 15)
-                setPadding(dp(6), dp(6), dp(6), dp(6))
-            }, FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER))
-            contentDescription = context.getString(R.string.stats_about_metric, context.getString(title))
-            isFocusable = true
-            setOnClickListener {
-                AlertDialog.Builder(context).setTitle(title).setMessage(info)
-                    .setPositiveButton(android.R.string.ok, null).show()
-            }
-        }
 
     private fun icon(@DrawableRes id: Int, size: Int) = ImageView(context).apply {
         setImageResource(id)
