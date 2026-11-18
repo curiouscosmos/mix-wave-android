@@ -199,8 +199,17 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
         if (enabled) normalAppBarBackground = appBarLayout.background
         appBarLayout.background = if (enabled) null else normalAppBarBackground
         appBarLayout.translationZ = if (enabled) 1f else 0f
+        appBarLayout.translationY = 0f
+        updateToolbarScrollability(getBehavior()?.state.let { it == null || it == STATE_COLLAPSED })
         appBarLayout.setExpanded(true, false)
         applyMainTopInset()
+    }
+
+    internal fun syncHomeToolbar(heroTop: Int?) {
+        if (homeHeroBehindToolbar) {
+            appBarLayout.translationY = (heroTop ?: -appBarLayout.height)
+                .coerceIn(-appBarLayout.height, 0).toFloat()
+        }
     }
 
     private fun applyMainTopInset() {
@@ -387,7 +396,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
             val params = toolbar.layoutParams as AppBarLayout.LayoutParams
             val appBarLayoutParams = appBarLayout.layoutParams as CoordinatorLayout.LayoutParams
 
-            if (!enabled) {
+            if (!enabled || homeHeroBehindToolbar) {
                 params.scrollFlags = 0
                 appBarLayoutParams.behavior = null
                 appBarLayout.setLayoutParams(appBarLayoutParams)

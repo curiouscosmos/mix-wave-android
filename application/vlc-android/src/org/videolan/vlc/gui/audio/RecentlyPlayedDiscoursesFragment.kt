@@ -102,6 +102,12 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             layoutManager = LinearLayoutManager(context)
             adapter = rows
             itemAnimator = null
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    val hero = recyclerView.layoutManager?.findViewByPosition(0)
+                    (activity as? org.videolan.vlc.gui.MainActivity)?.syncHomeToolbar(hero?.top)
+                }
+            })
         }
         renderRows()
         val swipe = view.findViewById<SwipeRefreshLayout>(R.id.all_stats_swipe)
