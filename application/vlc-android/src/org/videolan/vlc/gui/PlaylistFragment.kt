@@ -202,6 +202,7 @@ class PlaylistFragment : BaseAudioBrowser<PlaylistsViewModel>(), SwipeRefreshLay
 
     override fun onPrepareOptionsMenu(menu: Menu) {
         super.onPrepareOptionsMenu(menu)
+        menu.findItem(R.id.ml_menu_filter).isVisible = false
         menu.findItem(R.id.ml_menu_sortby).isVisible = false
         menu.findItem(R.id.ml_menu_display_options).isVisible = true
     }
