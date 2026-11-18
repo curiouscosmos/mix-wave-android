@@ -2,7 +2,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Brand background matches the adaptive icon background. -->
     <item android:drawable="@color/ic_launcher_background" />
-    <!-- Centered app logo. The foreground carries the same dark brand background. -->
+    <!-- Centered app logo. The foreground already carries its own light background. -->
     <item
             android:width="160dp"
             android:height="160dp"
