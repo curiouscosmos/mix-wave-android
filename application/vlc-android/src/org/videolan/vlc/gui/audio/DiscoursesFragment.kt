@@ -21,6 +21,8 @@ class DiscoursesFragment : BaseFragment(), TabLayout.OnTabSelectedListener, Filt
     override val hasTabs = true
     private var tabLayout: TabLayout? = null
     private lateinit var viewPager: ViewPager2
+    internal val isDiscourseTabSelected: Boolean
+        get() = ::viewPager.isInitialized && viewPager.currentItem == DISCOURSE_TAB
     private val settings by lazy(LazyThreadSafetyMode.NONE) { Settings.getInstance(requireContext()) }
     private val pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
         override fun onPageSelected(position: Int) {
