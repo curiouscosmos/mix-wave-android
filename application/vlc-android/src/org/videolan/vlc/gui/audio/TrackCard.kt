@@ -1,7 +1,7 @@
 package org.videolan.vlc.gui.audio
 
+import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.widget.TextView
 import android.widget.ProgressBar
 import androidx.core.view.isVisible
@@ -44,14 +44,14 @@ internal fun TextView.bindTrackStats(stats: TrackCardStats) {
     tag = stats
     val label = SpannableStringBuilder()
     val descriptions = mutableListOf<String>()
-    val neutral = Color.rgb(166, 157, 159)
-    fun appendBadge(resource: Int, caption: String = "", tint: Int = Color.WHITE, percent: Int? = null) {
+    val foreground = context.getColor(R.color.discourse_track_text)
+    fun appendBadge(resource: Int, caption: String = "", tint: Int = foreground, percent: Int? = null) {
         if (label.isNotEmpty()) label.append("  ")
         val icon = AppCompatResources.getDrawable(context, resource)!!.mutate()
         icon.setTint(tint)
         val start = label.length
         label.append(caption.ifEmpty { "\uFFFC" })
-        label.setSpan(TrackBadgeSpan(icon, caption, resources.displayMetrics.density, percent),
+        label.setSpan(TrackBadgeSpan(icon, caption, context, percent),
             start, label.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
     if (stats.plays > 0) {
@@ -65,20 +65,26 @@ internal fun TextView.bindTrackStats(stats: TrackCardStats) {
         appendBadge(R.drawable.ic_header_media_favorite_outline, stats.likes.toString())
         descriptions += caption
     }
-    appendBadge(R.drawable.ic_download, tint = if (stats.downloaded) context.getColor(R.color.green500) else neutral,
+    appendBadge(R.drawable.ic_download,
+        tint = context.getColor(if (stats.downloaded) R.color.track_card_downloaded_icon else R.color.track_card_badge_muted),
         percent = stats.downloadPercent)
     descriptions += stats.downloadPercent?.let { context.getString(R.string.discourse_downloading_percent, it) }
         ?: context.getString(if (stats.downloaded) R.string.discourse_downloaded else R.string.not_downloaded)
     if (stats.played) {
-        appendBadge(R.drawable.ic_mark_as_played, tint = Color.rgb(255, 77, 82))
+        appendBadge(R.drawable.ic_mark_as_played, tint = context.getColor(R.color.track_card_accent))
         descriptions += context.getString(R.string.talkback_already_played)
     }
     text = label
     contentDescription = descriptions.joinToString(". ")
 }
 
-internal class TrackBadgeSpan(private val icon: Drawable, private val caption: String, density: Float,
+private class TrackBadgeSpan(private val icon: Drawable, private val caption: String, context: Context,
                               private val percent: Int? = null) : ReplacementSpan() {
+    private val density = context.resources.displayMetrics.density
+    private val fill = context.getColor(R.color.track_card_badge_fill)
+    private val border = context.getColor(R.color.track_card_badge_border)
+    private val progressTrack = context.getColor(R.color.track_card_progress_track)
+    private val progressAccent = context.getColor(R.color.track_card_accent)
     private val padding = 8 * density
     private val iconSize = (16 * density).toInt()
     private val gap = 4 * density
@@ -102,10 +108,10 @@ internal class TrackBadgeSpan(private val icon: Drawable, private val caption: S
         val radius = height(paint) / 2
         val right = x + getSize(paint, text, start, end, null)
         brush.style = Paint.Style.FILL
-        brush.color = 0x22B96C57
+        brush.color = fill
         canvas.drawRoundRect(x + 1, center - radius + 1, right - 1, center + radius - 1, radius, radius, brush)
         brush.style = Paint.Style.STROKE
-        brush.color = 0xFF79514B.toInt()
+        brush.color = border
         canvas.drawRoundRect(x + 1, center - radius + 1, right - 1, center + radius - 1, radius, radius, brush)
         val left = (x + padding).toInt()
         val iconTop = (center - iconSize / 2f).toInt()
@@ -115,9 +121,9 @@ internal class TrackBadgeSpan(private val icon: Drawable, private val caption: S
         } else {
             val ringRadius = iconSize / 2f - brush.strokeWidth
             val centerX = left + iconSize / 2f
-            brush.color = 0xFF665B5C.toInt()
+            brush.color = progressTrack
             canvas.drawCircle(centerX, center, ringRadius, brush)
-            brush.color = 0xFFFF4D52.toInt()
+            brush.color = progressAccent
             canvas.drawArc(centerX - ringRadius, center - ringRadius, centerX + ringRadius,
                 center + ringRadius, -90f, percent * 3.6f, false, brush)
         }
@@ -135,7 +141,9 @@ internal fun TextView.bindLocalTrackFavourite(item: MediaWrapper, owner: Lifecyc
     setPaddingRelative(padding, 0, padding, 0)
     icon.setBounds(0, 0, size, size)
     setCompoundDrawablesRelative(icon, null, null, null)
-    compoundDrawableTintList = ColorStateList.valueOf(Color.parseColor(if (item.isFavorite) "#FF4D52" else "#C9BDBD"))
+    compoundDrawableTintList = ColorStateList.valueOf(
+        context.getColor(if (item.isFavorite) R.color.track_card_accent else R.color.discourse_track_secondary)
+    )
     contentDescription = context.getString(
         if (item.isFavorite) R.string.discourse_unlike_description else R.string.discourse_like_description, item.title, 0)
     setOnClickListener {

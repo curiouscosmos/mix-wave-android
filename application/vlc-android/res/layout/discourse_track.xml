@@ -52,7 +52,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/discourse_track_text"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -63,14 +63,14 @@
             android:layout_marginTop="4dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="#C9BDBD"
+            android:textColor="@color/discourse_track_secondary"
             android:textSize="12sp" />
 
         <TextView
             android:id="@+id/discourse_track_likes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#C9BDBD"
+            android:textColor="@color/discourse_track_secondary"
             android:textSize="12sp"
             android:visibility="gone" />
 
@@ -114,7 +114,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/more_actions"
         android:src="@drawable/ic_player_more"
-        android:tint="#FFFFFF"
+        android:tint="@color/discourse_track_text"
         app:layout_constraintEnd_toEndOf="@id/discourse_track_play"
         app:layout_constraintTop_toTopOf="@id/discourse_track_play" />
 </androidx.constraintlayout.widget.ConstraintLayout>

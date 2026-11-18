@@ -30,4 +30,13 @@
     <color name="discourse_track_secondary">#685D5B</color>
     <color name="discourse_track_downloaded_surface">#F9EDEF</color>
     <color name="discourse_track_downloaded_border">#E7C6CF</color>
+    <color name="track_card_gradient_start">#F6E8E6</color>
+    <color name="track_card_gradient_center">#FBF2F1</color>
+    <color name="track_card_badge_fill">#F2DEDB</color>
+    <color name="track_card_badge_border">#C9A29B</color>
+    <color name="track_card_badge_muted">#685D5B</color>
+    <color name="track_card_downloaded_icon">#007253</color>
+    <color name="track_card_accent">#B32635</color>
+    <color name="track_card_progress_track">#D8BFBD</color>
+    <color name="track_card_continue_label">#82513C</color>
 </resources>

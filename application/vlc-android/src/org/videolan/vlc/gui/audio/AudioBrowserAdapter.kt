@@ -356,14 +356,14 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 binding.selectorImage.layoutParams.height = 88.dp
                 binding.mediaCover.setBackgroundResource(R.drawable.track_artwork_background)
                 binding.mediaCover.clipToOutline = true
-                binding.title.setTextColor(android.graphics.Color.WHITE)
+                binding.title.setTextColor(binding.root.context.getColor(R.color.discourse_track_text))
                 binding.title.setTypeface(binding.title.typeface, android.graphics.Typeface.BOLD)
                 binding.title.textSize = 18f
                 binding.title.isSingleLine = false
                 binding.title.maxLines = 2
-                binding.subtitle.setTextColor(android.graphics.Color.rgb(201, 189, 189))
+                binding.subtitle.setTextColor(binding.root.context.getColor(R.color.discourse_track_secondary))
                 binding.subtitle.textSize = 12f
-                binding.itemMore.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+                binding.itemMore.imageTintList = android.content.res.ColorStateList.valueOf(binding.title.currentTextColor)
                 (binding.title.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
                     endToStart = R.id.track_play
                     verticalBias = 0f

@@ -24,10 +24,19 @@
     <color name="playlist_cover_end">#351B1C</color>
     <color name="playlist_text">#FFFFFF</color>
     <color name="playlist_text_secondary">#B7B4B4</color>
-    <color name="discourse_track_surface">#1B171B</color>
-    <color name="discourse_track_border">#302329</color>
+    <color name="discourse_track_surface">#241F20</color>
+    <color name="discourse_track_border">#513234</color>
     <color name="discourse_track_text">#FFFFFF</color>
-    <color name="discourse_track_secondary">#BEA8AA</color>
-    <color name="discourse_track_downloaded_surface">#29171D</color>
-    <color name="discourse_track_downloaded_border">#64303D</color>
+    <color name="discourse_track_secondary">#C9BDBD</color>
+    <color name="discourse_track_downloaded_surface">@color/discourse_track_surface</color>
+    <color name="discourse_track_downloaded_border">#8A4949</color>
+    <color name="track_card_gradient_start">#452022</color>
+    <color name="track_card_gradient_center">#302122</color>
+    <color name="track_card_badge_fill">#22B96C57</color>
+    <color name="track_card_badge_border">#79514B</color>
+    <color name="track_card_badge_muted">#A69D9F</color>
+    <color name="track_card_downloaded_icon">@color/green500</color>
+    <color name="track_card_accent">#FF4D52</color>
+    <color name="track_card_progress_track">#665B5C</color>
+    <color name="track_card_continue_label">#F5D9B3</color>
 </resources>

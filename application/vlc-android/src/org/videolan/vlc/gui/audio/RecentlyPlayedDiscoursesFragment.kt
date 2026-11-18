@@ -224,7 +224,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                     text.addView(TextView(context).apply {
                         id = R.id.continue_listening_label
                         setText(R.string.continue_listening)
-                        setTextColor(android.graphics.Color.rgb(245, 217, 179))
+                        setTextColor(context.getColor(R.color.track_card_continue_label))
                         textSize = 11f
                         letterSpacing = 0.12f
                         setPadding(0, 0, 0, dp(8))

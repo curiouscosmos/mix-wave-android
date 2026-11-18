@@ -2,6 +2,7 @@ package org.videolan.vlc.gui.audio
 
 import android.content.Context
 import android.graphics.Color
+import android.content.res.ColorStateList
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -83,8 +84,13 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
     private fun render(view: TextView, binding: Binding, state: DiscourseLikesStore.State) {
         val liked = state.liked(binding.target)
         val count = (state.counts[binding.target] ?: binding.count).coerceAtLeast(0)
-        val color = if (!liked && binding.card) context.getColor(R.color.discourse_card_secondary)
-            else Color.parseColor(if (liked) "#FF5269" else "#BEA8AA")
+        val color = when {
+            binding.target.audio && !binding.card -> context.getColor(
+                if (liked) R.color.track_card_accent else R.color.discourse_track_secondary
+            )
+            !liked && binding.card -> context.getColor(R.color.discourse_card_secondary)
+            else -> Color.parseColor(if (liked) "#FF5269" else "#BEA8AA")
+        }
         val drawable = AppCompatResources.getDrawable(context,
             if (liked) R.drawable.ic_header_media_favorite
             else if (binding.card) R.drawable.ic_discourse_heart else R.drawable.ic_header_media_favorite_outline)!!.mutate()
@@ -97,6 +103,7 @@ internal class DiscourseLikesUi(private val context: Context, private val owner:
         }
         val size = (sizeDp * context.resources.displayMetrics.density).toInt()
         if (binding.target.audio && !binding.card) {
+            view.compoundDrawableTintList = ColorStateList.valueOf(color)
             val padding = (8 * context.resources.displayMetrics.density).toInt()
             view.setPaddingRelative(padding, 0, padding, 0)
         }
