@@ -264,6 +264,8 @@ class MainActivity : ContentActivity(),
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.findItem(R.id.ml_menu_refresh)?.isVisible = Permissions.canReadStorage(this)
+        menu?.findItem(R.id.ml_menu_discourse_search)?.isVisible =
+            currentFragmentId == R.id.nav_audio || currentFragmentId == R.id.nav_discourses
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -275,6 +277,8 @@ class MainActivity : ContentActivity(),
 
         // Handle item selection
         return when (item.itemId) {
+            R.id.ml_menu_discourse_search ->
+                navigationView.firstOrNull()?.menu?.findItem(R.id.nav_search)?.let(::onNavigationItemSelected) == true
             // Refresh
             R.id.ml_menu_refresh -> {
                 if (Permissions.canReadStorage(this)) forceRefresh()

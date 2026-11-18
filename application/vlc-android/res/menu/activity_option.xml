@@ -26,6 +26,13 @@
             android:visible="false"
             vlc:showAsAction="always" />
     <item
+            android:id="@+id/ml_menu_discourse_search"
+            android:icon="@drawable/ic_search"
+            android:orderInCategory="0"
+            android:title="@string/search_discourses"
+            android:visible="false"
+            vlc:showAsAction="always" />
+    <item
             android:id="@+id/ml_menu_renderers"
             android:icon="@drawable/ic_renderer"
             android:orderInCategory="1"
