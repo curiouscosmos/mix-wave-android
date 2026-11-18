@@ -32,6 +32,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.ProgressBar
@@ -187,6 +188,7 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
     private var topInset: Int = 0
     private var homeHeroBehindToolbar = false
     private var normalAppBarBackground: android.graphics.drawable.Drawable? = null
+    private var normalAppBarOutlineProvider: ViewOutlineProvider? = null
     private var normalContentBehavior: CoordinatorLayout.Behavior<*>? = null
 
     internal fun setHomeHeroBehindToolbar(enabled: Boolean) {
@@ -196,8 +198,13 @@ open class AudioPlayerContainerActivity : BaseActivity(), KeycodeListener, Sched
             if (enabled) normalContentBehavior = behavior
             behavior = if (enabled) null else normalContentBehavior
         }
-        if (enabled) normalAppBarBackground = appBarLayout.background
+        if (enabled) {
+            normalAppBarBackground = appBarLayout.background
+            normalAppBarOutlineProvider = appBarLayout.outlineProvider
+        }
         appBarLayout.background = if (enabled) null else normalAppBarBackground
+        // The raised transparent app bar still casts a shadow from its bounds.
+        appBarLayout.outlineProvider = if (enabled) null else normalAppBarOutlineProvider
         appBarLayout.translationZ = if (enabled) 1f else 0f
         appBarLayout.translationY = 0f
         updateToolbarScrollability(getBehavior()?.state.let { it == null || it == STATE_COLLAPSED })
