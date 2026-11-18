@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.Space
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -40,14 +41,26 @@ class CategoriesFragment : Fragment(R.layout.categories_fragment) {
                 }
                 status.isVisible = categories.isEmpty()
                 status.setText(R.string.categories_empty)
-                for (category in categories) {
-                    val card = layoutInflater.inflate(R.layout.discourse_category_card, list, false)
-                    card.findViewById<TextView>(R.id.category_label).text = category.label
-                    scope.loadCategoryArtwork(card.findViewById(R.id.category_image), category.thumbnailUrl)
-                    card.setOnClickListener {
-                        CategoryDiscoursesActivity.open(requireContext(), category)
+                for (categoriesInRow in categories.chunked(2)) {
+                    val row = LinearLayout(list.context)
+                    for (category in categoriesInRow) {
+                        val card = layoutInflater.inflate(R.layout.discourse_category_card, row, false)
+                        card.clipToOutline = true
+                        card.findViewById<TextView>(R.id.category_label).text = category.label
+                        scope.loadCategoryArtwork(card.findViewById(R.id.category_image), category.thumbnailUrl)
+                        card.setOnClickListener {
+                            CategoryDiscoursesActivity.open(requireContext(), category)
+                        }
+                        row.addView(card)
                     }
-                    list.addView(card)
+                    if (row.childCount == 1) {
+                        row.addView(Space(row.context), LinearLayout.LayoutParams(
+                            row.getChildAt(0).layoutParams as LinearLayout.LayoutParams
+                        ))
+                    }
+                    list.addView(row, LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                    ))
                 }
             }
         }

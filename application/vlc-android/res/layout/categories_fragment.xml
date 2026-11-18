@@ -5,21 +5,29 @@
     android:background="@drawable/discourse_catalogue_background">
 
     <LinearLayout
-        android:id="@+id/categories_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="10dp">
+        android:paddingHorizontal="6dp"
+        android:paddingTop="14dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
+            android:layout_marginStart="12dp"
             android:accessibilityHeading="true"
             android:text="@string/categories"
             android:textColor="@color/discourse_catalogue_text"
-            android:textSize="24sp"
+            android:textSize="30sp"
             android:textStyle="bold" />
+
+        <View
+            android:layout_width="38dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="22dp"
+            android:background="@drawable/category_heading_accent" />
 
         <TextView
             android:id="@+id/categories_status"
@@ -28,5 +36,11 @@
             android:gravity="center"
             android:minHeight="48dp"
             android:textColor="@color/discourse_catalogue_text" />
+
+        <LinearLayout
+            android:id="@+id/categories_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
