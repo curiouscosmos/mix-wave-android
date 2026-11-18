@@ -1,5 +1,6 @@
 package org.videolan.vlc.gui.audio
 
+import android.content.res.Configuration
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
@@ -269,8 +270,10 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 val image = card.findViewById<ImageView>(R.id.home_hero_image)
                 imageJobs.remove(card)?.cancel()
                 if (image.drawable == null) imageJobs[card] = viewLifecycleOwner.lifecycleScope.launch {
+                    val nightMode = image.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+                    val fileName = if (nightMode == Configuration.UI_MODE_NIGHT_YES) "osho.jpg" else "osho_light.jpg"
                     val bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        image.context.assets.open("images/images/osho.jpg").use {
+                        image.context.assets.open("images/images/$fileName").use {
                             android.graphics.BitmapFactory.decodeStream(it)
                         }
                     }
