@@ -253,7 +253,12 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                     }
                 }
                 2 -> createTrackRow(parent).apply {
-                    layoutParams.width = if (horizontal) dp(412.5f) else -1
+                    if (horizontal) {
+                        // Reserve room for both count badges and both status badges at larger font sizes.
+                        val badgeWidth = 304 * resources.configuration.fontScale.coerceAtLeast(1f)
+                        layoutParams.width = dp(176 + badgeWidth)
+                        findViewById<TextView>(R.id.discourse_track_meta).maxLines = 1
+                    }
                 }
                 else -> RecyclerView(parent.context).apply {
                     layoutParams = RecyclerView.LayoutParams(-1, -2)
