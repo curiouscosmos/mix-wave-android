@@ -12,7 +12,10 @@ internal data class ListeningStatsTrend(
     val lastWeek: List<Long>,
     val activity: List<Long?>,
     val dailyAverage: Long,
-    val streak: Int
+    val streak: Int,
+    val calendarWeek: List<Long>,
+    val yesterday: Long,
+    val previousWeek: Long
 )
 
 internal fun listeningStatsTrend(days: List<ListeningDay>, today: LocalDate): ListeningStatsTrend {
@@ -42,5 +45,7 @@ internal fun listeningStatsTrend(days: List<ListeningDay>, today: LocalDate): Li
     val firstMonday = date - today.dayOfWeek.ordinal - (13 * 7)
     return ListeningStatsTrend(today, time, peaks, (date - 6..date).map { byDay[it] ?: 0 },
         List(14 * 7) { index -> (firstMonday + index).takeIf { it <= date }?.let { byDay[it] ?: 0 } },
-        average, streak)
+        average, streak, List(7) { byDay[date - today.dayOfWeek.ordinal + it] ?: 0 },
+        byDay[date - 1] ?: 0, (date - today.dayOfWeek.ordinal - 7 until date - today.dayOfWeek.ordinal)
+            .sumOf { byDay[it] ?: 0 })
 }

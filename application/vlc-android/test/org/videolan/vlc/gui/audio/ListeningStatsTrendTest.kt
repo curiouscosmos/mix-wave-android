@@ -16,6 +16,9 @@ class ListeningStatsTrendTest {
         assertEquals(60L, trend.dailyAverage)
         assertEquals(2, trend.streak)
         assertEquals(listOf(120L, 180L, 240L, 240L, 240L), trend.periodPeaks)
+        assertEquals(listOf(0L, 60L, 120L, 0L, 0L, 0L, 0L), trend.calendarWeek)
+        assertEquals(60L, trend.yesterday)
+        assertEquals(60L, trend.previousWeek)
         assertEquals(listOf(0L, 60L, 120L, null, null, null, null), trend.activity.takeLast(7))
     }
 

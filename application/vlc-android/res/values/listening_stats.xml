@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="stats_week_comparison">%1$s from last week</string>
+    <string name="stats_day_comparison">%1$s vs. yesterday</string>
+    <string name="stats_comparison_unavailable">No listening in the previous period</string>
+    <string name="stats_highlights">Your Highlights (Today)</string>
+    <string name="stats_top_content">Top Content</string>
+    <string name="stats_repeat_listening">Repeat listening · all time</string>
+    <string name="stats_current_streak">Current streak</string>
+    <string name="stats_next_milestone">Next milestone</string>
+    <string name="stats_calendar">Listening calendar</string>
+    <string name="stats_activity_heading">Listening Activity</string>
+    <string name="stats_tracks_lifetime">Tracks · all time</string>
+    <string name="stats_discourses_lifetime">Discourses · all time</string>
+    <string name="stats_week_chart_info">Listening time for each day of the current Monday-to-Sunday week.</string>
+    <string name="stats_streak_heading">Listening Streak</string>
+    <string name="stats_listened_day">Listening recorded</string>
+    <string name="stats_empty_day">No listening recorded</string>
+    <plurals name="stats_track_quantity">
+        <item quantity="one">%d track</item>
+        <item quantity="other">%d tracks</item>
+    </plurals>
     <string name="listening_stats">Listening stats</string>
     <string name="listening_stats_heading">Listening Stats</string>
     <string name="listening_stats_time">Listening time</string>

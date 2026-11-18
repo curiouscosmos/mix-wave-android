@@ -55,6 +55,12 @@ class ListeningStatsActivity : AppCompatActivity() {
         }
         val content = findViewById<LinearLayout>(R.id.listening_stats_sections)
         dashboard = ListeningStatsDashboard(content, ::duration, ::chartDuration, savedInstanceState?.getInt("period") ?: 0)
+        findViewById<MaterialToolbar>(R.id.listening_stats_toolbar).menu.add(R.string.stats_calendar).apply {
+            setIcon(R.drawable.ic_discourse_calendar)
+            icon?.setTint(getColor(R.color.stats_text))
+            setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+            setOnMenuItemClickListener { dashboard.showCalendar(); true }
+        }
         val store = ListeningStatsStore.getInstance(this)
         val listening = store.database.listeningStatsDao()
         val downloadStore = DiscourseDownloadStore(this)
@@ -76,14 +82,13 @@ class ListeningStatsActivity : AppCompatActivity() {
                                 val date = LocalDate.ofEpochDay(it.day).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
                                 getString(R.string.listening_stats_value_detail, date, duration(it.durationMs))
                             } ?: getString(R.string.listening_stats_empty)
-                            dashboard.bindTime(trend, busiest, duration(trend.dailyAverage),
+                            dashboard.bindTime(trend, busiest,
                                 resources.getQuantityString(R.plurals.stats_streak_days, trend.streak, trend.streak))
                         }
                 }
                 launch {
                     listening.counts().catch { dashboard.libraryError(errorMessage(it)) }.collect { counts ->
-                        dashboard.bindLibrary(listOf(counts.tracks, counts.discourses, counts.repeatedTracks, counts.repeatedDiscourses)
-                            .map(numbers::format))
+                        dashboard.bindLibrary(listOf(counts.tracks, counts.discourses).map(numbers::format), counts.repeatedTracks)
                     }
                 }
                 launch {

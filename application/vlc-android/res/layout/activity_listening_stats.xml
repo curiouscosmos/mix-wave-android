@@ -13,6 +13,7 @@
         android:layout_height="?attr/actionBarSize"
         app:navigationIcon="?attr/homeAsUpIndicator"
         app:title="@string/listening_stats_heading"
+        app:titleCentered="true"
         app:titleTextAppearance="@style/ListeningStatsToolbarTitle"
         app:navigationIconTint="@color/stats_text"
         app:titleTextColor="@color/stats_text" />
