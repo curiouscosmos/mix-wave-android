@@ -53,9 +53,13 @@ internal class ListeningStatsDashboard(
     private val calendar = ListeningStatsChart(context, heatmap = true, chartDuration).apply { isVisible = false }
     private val downloaded: TextView
     private val clipTotal: TextView
-    private val topTrack: Pair<TextView, TextView>
-    private val topDiscourse: Pair<TextView, TextView>
-    private val clipNote: TextView
+    private data class TopContent(
+        val track: Pair<TextView, TextView>,
+        val discourse: Pair<TextView, TextView>,
+        val note: TextView
+    )
+
+    private val topContent: List<TopContent>
     private val busiest: TextView
     private val repeats: TextView
     private val todayClips: TextView
@@ -122,6 +126,7 @@ internal class ListeningStatsDashboard(
         busiest = detail(highlights, R.drawable.ic_search_headphones, R.string.listening_stats_busiest_day).first
         repeats = detail(highlights, R.drawable.ic_repeat, R.string.stats_repeat_listening).first
         todayClips = detail(highlights, R.drawable.ic_player_clip, R.string.listening_stats_clip_count).first
+        val todayTopContent = createTopContent()
 
         content = summaryBody
         val banner = FrameLayout(context).apply {
@@ -142,14 +147,7 @@ internal class ListeningStatsDashboard(
         summaryBody.withTopMargin(totalsRow, 14)
         downloaded = tileMetric(totalsRow, 0, R.string.listening_stats_download_section, R.drawable.ic_discourse_download, trailingIcon = true)
         clipTotal = tileMetric(totalsRow, 1, R.string.listening_stats_clips, R.drawable.ic_player_clip, trailingIcon = true)
-        val top = panel(R.string.stats_top_content, R.drawable.ic_discourse_tracks)
-        topTrack = detail(top, R.drawable.ic_player_play_solid, R.string.listening_stats_clip_track, rank = true)
-        topDiscourse = detail(top, R.drawable.ic_discourse_tracks, R.string.listening_stats_clip_discourse, rank = true)
-        clipNote = label(12f).apply {
-            setText(R.string.listening_stats_clip_legacy)
-            isVisible = false
-            top.withTopMargin(this, 6)
-        }
+        topContent = listOf(todayTopContent, createTopContent())
         val streakPanel = panel(R.string.stats_streak_heading, R.drawable.ic_discourse_calendar)
         val days = row()
         streakPanel.withTopMargin(days, 14)
@@ -212,12 +210,27 @@ internal class ListeningStatsDashboard(
     fun bindClips(total: String, track: String, trackCount: String?, discourse: String, discourseCount: String?, legacy: Boolean) {
         clipTotal.text = total
         todayClips.text = total
-        listOf(topTrack to (track to trackCount), topDiscourse to (discourse to discourseCount)).forEach { (views, data) ->
-            views.first.text = data.first
-            views.second.isVisible = data.second != null
-            views.second.text = data.second
+        for ((trackRank, discourseRank, note) in topContent) {
+            trackRank.first.text = track
+            trackRank.second.isVisible = trackCount != null
+            trackRank.second.text = trackCount
+            discourseRank.first.text = discourse
+            discourseRank.second.isVisible = discourseCount != null
+            discourseRank.second.text = discourseCount
+            note.isVisible = legacy
         }
-        clipNote.isVisible = legacy
+    }
+
+    private fun createTopContent(): TopContent {
+        val panel = panel(R.string.stats_top_content, R.drawable.ic_discourse_tracks)
+        val track = detail(panel, R.drawable.ic_player_play_solid, R.string.listening_stats_clip_track, rank = true)
+        val discourse = detail(panel, R.drawable.ic_discourse_tracks, R.string.listening_stats_clip_discourse, rank = true)
+        val note = label(12f).apply {
+            setText(R.string.listening_stats_clip_legacy)
+            isVisible = false
+            panel.withTopMargin(this, 6)
+        }
+        return TopContent(track, discourse, note)
     }
 
     fun bindDownloads(count: String) { downloaded.text = count }
