@@ -16,7 +16,7 @@
         android:layout_height="0dp"
         android:contentDescription="@null"
         android:scaleType="centerCrop"
-        app:layout_constraintDimensionRatio="H,4:3"
+        app:layout_constraintDimensionRatio="H,5:4"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -35,11 +35,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginEnd="8dp"
         android:layout_marginBottom="14dp"
         android:ellipsize="end"
         android:maxLines="2"
-        android:textColor="#FFF4E2"
+        android:textColor="@android:color/white"
         android:textSize="20sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -48,15 +48,15 @@
 
     <ImageView
         android:id="@id/category_arrow"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:layout_marginEnd="12dp"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_marginEnd="11dp"
         android:layout_marginBottom="14dp"
         android:background="@drawable/category_card_arrow_background"
         android:contentDescription="@null"
         android:padding="4dp"
         android:src="@drawable/ic_chevron_right"
-        app:tint="#FFF4E2"
+        app:tint="@android:color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

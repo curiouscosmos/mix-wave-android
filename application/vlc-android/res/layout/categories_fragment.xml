@@ -2,32 +2,14 @@
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/discourse_catalogue_background">
+    android:background="@drawable/discourse_detail_background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="6dp"
-        android:paddingTop="14dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:accessibilityHeading="true"
-            android:text="@string/categories"
-            android:textColor="@color/discourse_catalogue_text"
-            android:textSize="30sp"
-            android:textStyle="bold" />
-
-        <View
-            android:layout_width="38dp"
-            android:layout_height="3dp"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="22dp"
-            android:background="@drawable/category_heading_accent" />
+        android:paddingHorizontal="5dp"
+        android:paddingTop="10dp">
 
         <ProgressBar
             android:id="@+id/categories_progress"
