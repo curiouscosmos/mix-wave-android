@@ -2,13 +2,13 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Brand background matches the adaptive icon background. -->
     <item android:drawable="@color/ic_launcher_background" />
-    <!-- Centered app logo. The foreground already carries its own light background. -->
+    <!-- Centered app logo rendered from the high-resolution source. -->
     <item
             android:width="160dp"
             android:height="160dp"
             android:gravity="center">
         <bitmap
                 android:gravity="fill"
-                android:src="@mipmap/ic_launcher_foreground" />
+                android:src="@drawable/splash_icon" />
     </item>
 </layer-list>
