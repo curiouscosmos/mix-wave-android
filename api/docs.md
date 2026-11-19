@@ -19,6 +19,16 @@ GET /discourse-audios?language=hindi
 GET /discourse-audios?search=01&language=hindi&page=1
 GET /discourse-audios?sort=most_liked&page=1
 
+GET /discourses/category/:category_id
+GET /discourses/category/:category_id?page=2
+Returns discourses whose `category` matches the category UUID, paginated at 24 per page and ordered by title (case-insensitive ascending). The response uses the same `data` and `meta` shape as `GET /discourses`. An unknown category ID returns `404`; a missing or invalid page defaults to 1.
+
+GET /discourse-categories
+Returns all categories ordered by `label` (case-insensitive ascending):
+`{ "data": [{ "id": "UUID", "label": "Buddhism", "slug": "buddhism", "thumbnail": "https://example.com/image.jpg" }] }`.
+`thumbnail` is nullable.
+The route is not paginated and has no query parameters.
+
 Add `sort=most_liked` to either paginated list to order by descending `total_likes`. Ties retain the route's default title/name and track ordering. Omitting `sort` preserves the default order.
 The paginated `/discourses` route also accepts `language=hindi` or `language=english`; omitting `language` returns all languages.
 

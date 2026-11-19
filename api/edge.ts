@@ -33,6 +33,15 @@ async function initializeSchema(): Promise<void> {
 	`);
 
 	await db.execute(`
+        CREATE TABLE IF NOT EXISTS discourse_categories (
+                                                           id TEXT PRIMARY KEY NOT NULL,
+                                                           label TEXT NOT NULL,
+                                                           slug TEXT NOT NULL,
+                                                           thumbnail TEXT
+            )
+	`);
+
+	await db.execute(`
         CREATE TABLE IF NOT EXISTS discourse_audio (
                                                        id TEXT PRIMARY KEY,
                                                        discourse_id TEXT NOT NULL,
@@ -67,6 +76,16 @@ async function initializeSchema(): Promise<void> {
 		if (!columns.rows.some((row) => row.name === column)) {
 			await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 0`);
 		}
+	}
+
+	const discourseColumns = await db.execute("PRAGMA table_info(discourse)");
+	if (!discourseColumns.rows.some((row) => row.name === "category")) {
+		await db.execute("ALTER TABLE discourse ADD COLUMN category TEXT");
+	}
+
+	const categoryColumns = await db.execute("PRAGMA table_info(discourse_categories)");
+	if (!categoryColumns.rows.some((row) => row.name === "thumbnail")) {
+		await db.execute("ALTER TABLE discourse_categories ADD COLUMN thumbnail TEXT");
 	}
 
 	// Upgrade existing databases. Discourse has only has_cc; individual tracks
@@ -574,6 +593,104 @@ async function getDiscourses(
 			totalRecords,
 		),
 	});
+}
+
+/**
+ * GET /discourses/category/:category_id
+ *
+ * Returns a paginated list of discourses for one category,
+ * 24 per page, ordered by title.
+ */
+
+async function getDiscoursesByCategory(
+	categoryId: string,
+	url: URL,
+): Promise<Response> {
+	const page = parsePage(
+		url.searchParams.get("page"),
+	);
+
+	const category =
+		await db.execute({
+			sql: `
+                SELECT id
+                FROM discourse_categories
+                WHERE id = ?
+                    LIMIT 1
+			`,
+			args: [categoryId],
+		});
+
+	if (!category.rows.length) {
+		return jsonResponse(
+			{
+				error:
+					"Category not found.",
+			},
+			404,
+		);
+	}
+
+	const countResult =
+		await db.execute({
+			sql: `
+                SELECT COUNT(*) AS total
+                FROM discourse
+                WHERE category = ?
+			`,
+			args: [categoryId],
+		});
+
+	const totalRecords = Number(
+		countResult.rows[0]?.total ?? 0,
+	);
+
+	const offset =
+		(page - 1) * PAGE_SIZE;
+
+	const result =
+		await db.execute({
+			sql: `
+                SELECT *
+                FROM discourse
+                WHERE category = ?
+                ORDER BY title COLLATE NOCASE ASC
+                    LIMIT ?
+                OFFSET ?
+			`,
+			args: [
+				categoryId,
+				PAGE_SIZE,
+				offset,
+			],
+		});
+
+	return jsonResponse({
+		data: result.rows.map(
+			normalizeDiscourse,
+		),
+
+		meta: paginationMeta(
+			page,
+			totalRecords,
+		),
+	});
+}
+
+/**
+ * GET /discourse-categories
+ *
+ * Returns every category ordered by label.
+ */
+
+async function getDiscourseCategories(): Promise<Response> {
+	const result = await db.execute(`
+        SELECT id, label, slug, thumbnail
+        FROM discourse_categories
+        ORDER BY label COLLATE NOCASE ASC
+	`);
+
+	return jsonResponse({ data: result.rows });
 }
 
 /**
@@ -1170,8 +1287,14 @@ BunnySDK.net.http.serve(
 						discourses:
 							"/discourses",
 
+						discourses_by_category:
+							"/discourses/category/:category_id",
+
 						discourse_audios:
 							"/discourse-audios",
+
+						discourse_categories:
+							"/discourse-categories",
 
 						stats:
 							"/stats",
@@ -1185,7 +1308,7 @@ BunnySDK.net.http.serve(
 				});
 			}
 
-			if (["stats", "discourses", "discourse-audios", "likes", "timeline"].includes(resource)) {
+			if (["stats", "discourses", "discourse-audios", "discourse-categories", "likes", "timeline"].includes(resource)) {
 				await ensureSchema();
 			}
 
@@ -1230,6 +1353,21 @@ BunnySDK.net.http.serve(
 					);
 				}
 
+				/**
+				 * GET /discourses/category/:category_id
+				 */
+				if (
+					request.method ===
+					"GET" &&
+					id === "category" &&
+					action
+				) {
+					return getDiscoursesByCategory(
+						action,
+						url,
+					);
+				}
+
 				if (request.method === "POST" && id && action === "cc") {
 					return updateDiscourseClosedCaptions(id, request);
 				}
@@ -1257,6 +1395,16 @@ BunnySDK.net.http.serve(
 					},
 					404,
 				);
+			}
+
+			/**
+			 * --------------------------------
+			 * DISCOURSE CATEGORIES
+			 * --------------------------------
+			 */
+
+			if (resource === "discourse-categories" && request.method === "GET" && !id) {
+				return getDiscourseCategories();
 			}
 
 			/**

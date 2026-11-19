@@ -42,6 +42,17 @@ export type DiscourseAudio = {
 	tags: string; // comma separated
 };
 
+export type DiscourseCategory = {
+	id: string;
+	label: string;
+	slug: string;
+	thumbnail: string | null;
+};
+
+export type GetDiscourseCategoriesResponse = {
+	data: DiscourseCategory[];
+};
+
 export type GetDiscoursesRequest = {
 	page?: number;
 	search?: string;
@@ -54,6 +65,8 @@ export type GetDiscoursesResponse = {
 	data: Discourse[];
 	meta: PaginationMeta;
 };
+
+export type GetDiscoursesByCategoryResponse = GetDiscoursesResponse;
 
 export type GetDiscourseAudiosResponse = {
 	data: DiscourseAudio[];
