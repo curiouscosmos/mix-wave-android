@@ -1,6 +1,7 @@
 package org.videolan.vlc.viewmodels
 
 import androidx.lifecycle.ViewModelStore
+import java.time.LocalDate
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -8,12 +9,23 @@ import org.videolan.tools.PLAYBACK_HISTORY
 import org.videolan.tools.Settings
 import org.videolan.vlc.BaseTest
 import org.videolan.vlc.discourse.*
+import org.videolan.vlc.mediadb.models.ListeningDay
 
 @org.robolectric.annotation.Config(sdk = [28])
 class HomeViewModelTest : BaseTest() {
     private fun discourse(id: String) = Discourse(id, id, null, false, "hindi", null, "", "")
     private fun audio() = DiscourseAudio("audio", "discourse", "Discourse", null, "hindi", "Audio",
         "url", null, null, null, 1, "", "")
+
+    @Test fun listeningStatsSectionNeedsActivityBeforeTodayWithinTheWeek() {
+        val today = LocalDate.of(2026, 11, 20)
+        assertFalse(hasListeningActivityBeforeToday(emptyList(), today))
+        assertFalse(hasListeningActivityBeforeToday(listOf(ListeningDay(today.toEpochDay(), 1_000)), today))
+        assertTrue(hasListeningActivityBeforeToday(listOf(ListeningDay(today.minusDays(1).toEpochDay(), 1_000)), today))
+        assertTrue(hasListeningActivityBeforeToday(listOf(ListeningDay(today.minusDays(6).toEpochDay(), 1_000)), today))
+        assertFalse(hasListeningActivityBeforeToday(listOf(ListeningDay(today.minusDays(7).toEpochDay(), 1_000)), today))
+        assertFalse(hasListeningActivityBeforeToday(listOf(ListeningDay(today.minusDays(1).toEpochDay(), 0)), today))
+    }
 
     @Test fun weeklySectionsPublishIndependentlyAndRefreshWaitsForBoth() {
         val slow = CompletableDeferred<List<Discourse>>()

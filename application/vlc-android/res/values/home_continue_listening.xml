@@ -3,4 +3,7 @@
     <item name="continue_listening_label" type="id" />
     <string name="continue_listening">CONTINUE LISTENING</string>
     <string name="continue_listening_time">%1$s / %2$s</string>
+    <string name="home_listening_stats_label">LISTENING STATS</string>
+    <string name="home_listening_stats">Your week in listening</string>
+    <string name="home_listening_stats_detail">See your listening insights</string>
 </resources>

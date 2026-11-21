@@ -5,14 +5,18 @@ import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import java.time.LocalDate
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import org.videolan.medialibrary.interfaces.Medialibrary
 import org.videolan.medialibrary.interfaces.media.MediaWrapper
 import org.videolan.tools.PLAYBACK_HISTORY
 import org.videolan.tools.Settings
 import org.videolan.vlc.discourse.*
+import org.videolan.vlc.media.ListeningStatsStore
 import org.videolan.vlc.media.MediaSessionBrowser
 import org.videolan.vlc.media.MediaUtils
+import org.videolan.vlc.mediadb.models.ListeningDay
 
 /** Display snapshots keep mutable medialibrary objects out of diff comparisons. */
 data class HomeTrack(val key: String, val title: String?, val subtitle: String?, val artwork: String?, val audio: DiscourseAudio? = null, val playbackTime: Long = 0L) {
@@ -32,9 +36,11 @@ class HomeViewModel @JvmOverloads constructor(
     val recentTracks = MutableLiveData<List<HomeTrack>>(emptyList())
     val weeklyDiscourses = MutableLiveData<List<Discourse>>(emptyList())
     val weeklyTracks = MutableLiveData<List<DiscourseAudio>>(emptyList())
+    val showListeningStats = MutableLiveData(false)
     val refreshing = MutableLiveData(false)
     private var historyJob: Job? = null
     private var statsJob: Job? = null
+    private var listeningStatsJob: Job? = null
     private val preferences = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == PLAYBACK_HISTORY || key == "osho_api_recently_played_audios" || key == "osho_api_recently_played_discourses")
             viewModelScope.launch { refreshHistory() }
@@ -101,9 +107,32 @@ class HomeViewModel @JvmOverloads constructor(
         }
     }
 
+    fun refreshListeningStats() {
+        listeningStatsJob?.cancel()
+        if (!settings.getBoolean(PLAYBACK_HISTORY, true)) {
+            showListeningStats.value = false
+            return
+        }
+        listeningStatsJob = viewModelScope.launch {
+            val visible = withContext(Dispatchers.IO) {
+                val days = ListeningStatsStore.getInstance(getApplication())
+                    .database.listeningStatsDao().days().first()
+                hasListeningActivityBeforeToday(days, LocalDate.now())
+            }
+            showListeningStats.value = visible
+        }
+    }
+
     override fun onCleared() {
         settings.unregisterOnSharedPreferenceChangeListener(preferences)
         Medialibrary.getInstance().removeHistoryCb(history)
+        listeningStatsJob?.cancel()
         super.onCleared()
     }
+}
+
+internal fun hasListeningActivityBeforeToday(days: List<ListeningDay>, today: LocalDate): Boolean {
+    val start = today.minusDays(6).toEpochDay()
+    val yesterday = today.minusDays(1).toEpochDay()
+    return days.any { it.day in start..yesterday && it.durationMs > 0 }
 }

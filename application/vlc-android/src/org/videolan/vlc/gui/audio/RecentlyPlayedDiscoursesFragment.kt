@@ -1,5 +1,6 @@
 package org.videolan.vlc.gui.audio
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.text.TextUtils
 import android.view.View
@@ -117,6 +118,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         model.refreshing.observe(viewLifecycleOwner) { swipe.isRefreshing = it }
         model.recentDiscourses.observe(viewLifecycleOwner) { renderRows() }
         model.recentTracks.observe(viewLifecycleOwner) { renderRows() }
+        model.showListeningStats.observe(viewLifecycleOwner) { renderRows() }
         model.weeklyDiscourses.observe(viewLifecycleOwner) { renderRows() }
         model.weeklyTracks.observe(viewLifecycleOwner) { renderRows() }
         viewLifecycleOwner.lifecycleScope.launch {
@@ -184,6 +186,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         recentTracks.firstOrNull()?.let {
             result += HomeRow("continue_listening", 5, track = it)
         }
+        if (model.showListeningStats.value == true) result += HomeRow("listening_stats", 6,
+            title = getString(R.string.home_listening_stats), metadata = getString(R.string.home_listening_stats_detail))
         fun heading(key: String, label: Int) {
             result += HomeRow(key, 0, getString(label), if (result.isEmpty()) "first" else "")
         }
@@ -255,6 +259,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                     }
                 }
                 2 -> createTrackRow(parent)
+                6 -> layoutInflater.inflate(R.layout.home_listening_stats_card, parent, false)
                 else -> RecyclerView(parent.context).apply {
                     layoutParams = RecyclerView.LayoutParams(-1, -2)
                     layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
@@ -303,6 +308,12 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                     setPadding(dp(16), if (row.metadata == "first") 0 else dp(24), dp(16), dp(8))
                 }
                 1 -> bindDiscourseCard(card, row.discourse!!, row.metadata)
+                6 -> {
+                    card.contentDescription = "${row.title}. ${row.metadata}"
+                    card.setOnClickListener {
+                        startActivity(Intent(requireContext(), ListeningStatsActivity::class.java))
+                    }
+                }
                 5 -> {
                     val snapshot = row.track!!
                     bindTrackCard(card, snapshot)
@@ -438,6 +449,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     override fun onResume() {
         super.onResume()
         model.refreshHistory()
+        model.refreshListeningStats()
         model.loadWeekly()
     }
 }
