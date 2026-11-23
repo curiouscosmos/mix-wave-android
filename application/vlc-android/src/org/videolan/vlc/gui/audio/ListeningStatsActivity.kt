@@ -54,7 +54,7 @@ class ListeningStatsActivity : AppCompatActivity() {
             setNavigationOnClickListener { finish() }
         }
         val content = findViewById<LinearLayout>(R.id.listening_stats_sections)
-        dashboard = ListeningStatsDashboard(content, ::duration, ::chartDuration, savedInstanceState?.getInt("period") ?: 0)
+        dashboard = ListeningStatsDashboard(content, ::duration, ::chartDuration)
         findViewById<MaterialToolbar>(R.id.listening_stats_toolbar).menu.add(R.string.stats_calendar).apply {
             setIcon(R.drawable.ic_discourse_calendar)
             icon?.setTint(getColor(R.color.stats_text))
@@ -115,11 +115,6 @@ class ListeningStatsActivity : AppCompatActivity() {
                 }
             }
         }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putInt("period", dashboard.period)
-        super.onSaveInstanceState(outState)
     }
 
     private fun summarizeClips(rows: List<ClipTrackCount>): ClipStats {

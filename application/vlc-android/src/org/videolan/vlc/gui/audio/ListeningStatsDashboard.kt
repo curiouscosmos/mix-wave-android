@@ -19,8 +19,7 @@ import org.videolan.vlc.R
 internal class ListeningStatsDashboard(
     private val root: LinearLayout,
     private val duration: (Long) -> String,
-    private val chartDuration: (Long) -> String,
-    initialPeriod: Int
+    private val chartDuration: (Long) -> String
 ) {
     private val context = root.context
     private val primaryTextColor = context.getColor(R.color.stats_text)
@@ -28,18 +27,9 @@ internal class ListeningStatsDashboard(
     private val accent = context.getColor(R.color.stats_accent)
     private val border = context.getColor(R.color.stats_border)
     private val tile = context.getColor(R.color.stats_tile)
-    private val periods = listOf(R.string.listening_stats_today, R.string.stats_period_week, R.string.stats_period_month,
-        R.string.stats_period_year, R.string.stats_period_all)
-    private val windows = listOf(R.string.listening_stats_today, R.string.listening_stats_week, R.string.listening_stats_month,
-        R.string.listening_stats_year, R.string.listening_stats_overall)
-    var period = initialPeriod.coerceIn(periods.indices)
-        private set
     private var trend: ListeningStatsTrend? = null
 
-    private val todayBody = column()
-    private val summaryBody = column()
-    private var content = todayBody
-    private val tabs: List<TextView>
+    private val content = column()
     private val ring = ListeningStatsRing(context)
     private val heroDuration = headline(38).apply { gravity = Gravity.CENTER }
     private val heroTracks: TextView
@@ -47,8 +37,6 @@ internal class ListeningStatsDashboard(
     private val dayComparison = label(15f).apply { gravity = Gravity.CENTER }
     private val summaryPeriod = label(17f).apply { setTextColor(android.graphics.Color.WHITE) }
     private val summaryDuration = headline(39).apply { setTextColor(android.graphics.Color.WHITE) }
-    private val weekComparison = label(14f).apply { setTextColor(android.graphics.Color.WHITE) }
-    private val dayBars = ListeningStatsChart(context, heatmap = false, chartDuration)
     private val weekBars = ListeningStatsChart(context, heatmap = false, chartDuration)
     private val calendar = ListeningStatsChart(context, heatmap = true, chartDuration).apply { isVisible = false }
     private val downloaded: TextView
@@ -59,7 +47,7 @@ internal class ListeningStatsDashboard(
         val note: TextView
     )
 
-    private val topContent: List<TopContent>
+    private val topContent: TopContent
     private val busiest: TextView
     private val repeats: TextView
     private val todayClips: TextView
@@ -68,29 +56,22 @@ internal class ListeningStatsDashboard(
     private val milestone: TextView
 
     init {
-        val segmented = row().apply {
-            background = rounded(tile, 28, border)
-            setPadding(dp(2), dp(2), dp(2), dp(2))
-        }
-        root.withTopMargin(segmented, 8)
-        tabs = periods.mapIndexed { index, title ->
-            label(14f).apply {
-                setText(title)
-                gravity = Gravity.CENTER
-                minHeight = dp(42)
-                isFocusable = true
-                segmented.addView(this, LinearLayout.LayoutParams(0, -2, 1f))
-                setOnClickListener {
-                    period = index
-                    updateOverview()
-                    (root.parent as? android.widget.ScrollView)?.scrollTo(0, 0)
-                }
-            }
-        }
-
         root.withTopMargin(calendar, 14)
-        root.addView(todayBody)
-        root.addView(summaryBody)
+        root.addView(content)
+
+        val banner = FrameLayout(context).apply {
+            background = rounded(accent, 22)
+            clipToOutline = true
+            addView(ListeningStatsSunset(context), FrameLayout.LayoutParams(-1, -1))
+            addView(column().apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(20), 0, dp(72), 0)
+                addView(summaryPeriod)
+                addView(summaryDuration, LinearLayout.LayoutParams(-1, dp(58)))
+            }, FrameLayout.LayoutParams(-1, -1))
+        }
+        content.withTopMargin(banner, 19, 148)
+
         val dial = FrameLayout(context).apply {
             addView(ImageView(context).apply {
                 setImageResource(R.drawable.discourse_card_wave)
@@ -115,39 +96,14 @@ internal class ListeningStatsDashboard(
                 })
             }, FrameLayout.LayoutParams(dp(218), -1, Gravity.CENTER))
         }
-        todayBody.withTopMargin(dial, 24, (context.resources.configuration.screenWidthDp * .65f).toInt().coerceIn(220, 310))
-        todayBody.withTopMargin(dayComparison, 16)
+        content.withTopMargin(dial, 24, (context.resources.configuration.screenWidthDp * .65f).toInt().coerceIn(220, 310))
+        content.withTopMargin(dayComparison, 16)
         val totals = row()
-        todayBody.withTopMargin(totals, 21)
+        content.withTopMargin(totals, 21)
         heroTracks = tileMetric(totals, 0, R.string.stats_tracks_lifetime, R.drawable.ic_discourse_tracks)
         heroDiscourses = tileMetric(totals, 1, R.string.stats_discourses_lifetime, R.drawable.ic_player_discourse)
-        panel(R.string.stats_activity_heading).withTopMargin(dayBars, 4, 146)
-        val highlights = panel(R.string.stats_highlights, R.drawable.ic_information)
-        busiest = detail(highlights, R.drawable.ic_search_headphones, R.string.listening_stats_busiest_day).first
-        repeats = detail(highlights, R.drawable.ic_repeat, R.string.stats_repeat_listening).first
-        todayClips = detail(highlights, R.drawable.ic_player_clip, R.string.listening_stats_clip_count).first
-        val todayTopContent = createTopContent()
-
-        content = summaryBody
-        val banner = FrameLayout(context).apply {
-            background = rounded(accent, 22)
-            clipToOutline = true
-            addView(ListeningStatsSunset(context), FrameLayout.LayoutParams(-1, -1))
-            addView(column().apply {
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(20), 0, dp(72), 0)
-                addView(summaryPeriod)
-                addView(summaryDuration, LinearLayout.LayoutParams(-1, dp(58)))
-                addView(weekComparison)
-            }, FrameLayout.LayoutParams(-1, -1))
-        }
-        summaryBody.withTopMargin(banner, 19, 148)
         panel(R.string.listening_stats_time, R.drawable.ic_sort_number).withTopMargin(weekBars, 2, 160)
-        val totalsRow = row()
-        summaryBody.withTopMargin(totalsRow, 14)
-        downloaded = tileMetric(totalsRow, 0, R.string.listening_stats_download_section, R.drawable.ic_discourse_download, trailingIcon = true)
-        clipTotal = tileMetric(totalsRow, 1, R.string.listening_stats_clips, R.drawable.ic_player_clip, trailingIcon = true)
-        topContent = listOf(todayTopContent, createTopContent())
+
         val streakPanel = panel(R.string.stats_streak_heading, R.drawable.ic_discourse_calendar)
         val days = row()
         streakPanel.withTopMargin(days, 14)
@@ -174,13 +130,23 @@ internal class ListeningStatsDashboard(
         milestones.addView(next, weighted(1))
         streak = metric(current, R.string.stats_current_streak, 19f)
         milestone = metric(next, R.string.stats_next_milestone, 19f)
+
+        val highlights = panel(R.string.stats_highlights, R.drawable.ic_information)
+        busiest = detail(highlights, R.drawable.ic_search_headphones, R.string.listening_stats_busiest_day).first
+        repeats = detail(highlights, R.drawable.ic_repeat, R.string.stats_repeat_listening).first
+        todayClips = detail(highlights, R.drawable.ic_player_clip, R.string.listening_stats_clip_count).first
+
+        val totalsRow = row()
+        content.withTopMargin(totalsRow, 14)
+        downloaded = tileMetric(totalsRow, 0, R.string.listening_stats_download_section, R.drawable.ic_discourse_download, trailingIcon = true)
+        clipTotal = tileMetric(totalsRow, 1, R.string.listening_stats_clips, R.drawable.ic_player_clip, trailingIcon = true)
+        topContent = createTopContent()
         updateOverview()
     }
 
     fun bindTime(trend: ListeningStatsTrend, busiest: String, streak: String) {
         this.trend = trend
         updateOverview()
-        dayBars.bind(trend)
         weekBars.bind(trend, calendarWeek = true)
         calendar.bind(trend)
         this.busiest.text = busiest
@@ -210,15 +176,14 @@ internal class ListeningStatsDashboard(
     fun bindClips(total: String, track: String, trackCount: String?, discourse: String, discourseCount: String?, legacy: Boolean) {
         clipTotal.text = total
         todayClips.text = total
-        for ((trackRank, discourseRank, note) in topContent) {
-            trackRank.first.text = track
-            trackRank.second.isVisible = trackCount != null
-            trackRank.second.text = trackCount
-            discourseRank.first.text = discourse
-            discourseRank.second.isVisible = discourseCount != null
-            discourseRank.second.text = discourseCount
-            note.isVisible = legacy
-        }
+        val (trackRank, discourseRank, note) = topContent
+        trackRank.first.text = track
+        trackRank.second.isVisible = trackCount != null
+        trackRank.second.text = trackCount
+        discourseRank.first.text = discourse
+        discourseRank.second.isVisible = discourseCount != null
+        discourseRank.second.text = discourseCount
+        note.isVisible = legacy
     }
 
     private fun createTopContent(): TopContent {
@@ -250,29 +215,16 @@ internal class ListeningStatsDashboard(
     fun clipsError(error: String) = bindClips(error, error, null, error, null, false)
 
     private fun updateOverview() {
-        todayBody.isVisible = period == 0
-        summaryBody.isVisible = period != 0
-        tabs.forEachIndexed { index, tab ->
-            tab.isSelected = index == period
-            tab.setTextColor(if (tab.isSelected) context.getColor(R.color.stats_on_accent) else primaryTextColor)
-            tab.background = if (tab.isSelected) rounded(accent, 25) else null
-        }
-        summaryPeriod.setText(windows[period])
+        summaryPeriod.setText(R.string.listening_stats_overall)
         val data = trend ?: return
         val totals = data.time
-        val selected = listOf(totals.today, totals.week, totals.month, totals.year, totals.overall)[period]
-        if (period == 0) {
-            heroDuration.text = chartDuration(selected)
-            heroDuration.contentDescription = duration(selected)
-            val peak = data.periodPeaks[0]
-            ring.fraction = if (peak > 0) (selected.toDouble() / peak).toFloat().coerceIn(0f, 1f) else 0f
-            setComparison(dayComparison, selected, data.yesterday, R.string.stats_day_comparison)
-        } else {
-            summaryDuration.text = chartDuration(selected)
-            summaryDuration.contentDescription = duration(selected)
-            weekComparison.isVisible = period == 1
-            if (period == 1) setComparison(weekComparison, selected, data.previousWeek, R.string.stats_week_comparison)
-        }
+        heroDuration.text = chartDuration(totals.today)
+        heroDuration.contentDescription = duration(totals.today)
+        val peak = data.periodPeaks[0]
+        ring.fraction = if (peak > 0) (totals.today.toDouble() / peak).toFloat().coerceIn(0f, 1f) else 0f
+        setComparison(dayComparison, totals.today, data.yesterday, R.string.stats_day_comparison)
+        summaryDuration.text = chartDuration(totals.overall)
+        summaryDuration.contentDescription = duration(totals.overall)
     }
 
     private fun setComparison(view: TextView, current: Long, previous: Long, @StringRes message: Int) {
@@ -293,7 +245,7 @@ internal class ListeningStatsDashboard(
             if (start >= 0 && delta > 0) {
                 val dark = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
                     android.content.res.Configuration.UI_MODE_NIGHT_YES
-                val color = if (view === weekComparison || dark) 0xFF99E6A5.toInt() else 0xFF186B36.toInt()
+                val color = if (dark) 0xFF99E6A5.toInt() else 0xFF186B36.toInt()
                 setSpan(android.text.style.ForegroundColorSpan(color), start, start + change.length, 0)
                 setSpan(android.text.style.StyleSpan(Typeface.BOLD), start, start + change.length, 0)
             }
