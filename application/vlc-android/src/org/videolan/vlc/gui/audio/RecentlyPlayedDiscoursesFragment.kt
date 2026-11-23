@@ -3,6 +3,7 @@ package org.videolan.vlc.gui.audio
 import android.content.Intent
 import android.content.res.Configuration
 import android.text.TextUtils
+import java.text.NumberFormat
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -56,6 +57,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private val discourseCards = HashMap<String, MutableSet<View>>()
     private val playbackStore by lazy { DiscoursePlaybackStore(requireContext()) }
     private val downloads by lazy { DiscourseDownloadStore(requireContext()) }
+    private val numbers by lazy { NumberFormat.getIntegerInstance(resources.configuration.locales[0]) }
     private fun bindProgress(card: View, id: String, count: Int?) {
         progressCards[card] = id to count
         (if (count == null) audioCards else discourseCards).getOrPut(id) { HashSet() }.add(card)
@@ -119,6 +121,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
         model.recentDiscourses.observe(viewLifecycleOwner) { renderRows() }
         model.recentTracks.observe(viewLifecycleOwner) { renderRows() }
         model.showListeningStats.observe(viewLifecycleOwner) { renderRows() }
+        model.weekListeningMs.observe(viewLifecycleOwner) { renderRows() }
         model.weeklyDiscourses.observe(viewLifecycleOwner) { renderRows() }
         model.weeklyTracks.observe(viewLifecycleOwner) { renderRows() }
         viewLifecycleOwner.lifecycleScope.launch {
@@ -141,6 +144,7 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                                 }
                             }
                         }
+                        if (changed.isNotEmpty()) renderRows()
                     }
                 }
                 progressCards.forEach { (card, item) -> updateProgress(card, item.first, item.second) }
@@ -187,7 +191,9 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
             result += HomeRow("continue_listening", 5, track = it)
         }
         if (model.showListeningStats.value == true) result += HomeRow("listening_stats", 6,
-            title = getString(R.string.home_listening_stats), metadata = getString(R.string.home_listening_stats_detail))
+            title = getString(R.string.home_listening_stats),
+            metadata = getString(R.string.home_listening_stats_detail,
+                statsWeekDuration(model.weekListeningMs.value ?: 0L), numbers.format(downloads.totalDownloadedCount())))
         fun heading(key: String, label: Int) {
             result += HomeRow(key, 0, getString(label), if (result.isEmpty()) "first" else "")
         }
@@ -309,6 +315,8 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 }
                 1 -> bindDiscourseCard(card, row.discourse!!, row.metadata)
                 6 -> {
+                    card.findViewById<TextView>(R.id.home_listening_stats_title).text = row.title
+                    card.findViewById<TextView>(R.id.home_listening_stats_detail).text = row.metadata
                     card.contentDescription = "${row.title}. ${row.metadata}"
                     card.setOnClickListener {
                         startActivity(Intent(requireContext(), ListeningStatsActivity::class.java))
@@ -352,6 +360,16 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
     private class HomeHolder(view: View) : RecyclerView.ViewHolder(view) { var key: String? = null }
     private fun dp(value: Int) = dp(value.toFloat())
     private fun dp(value: Float) = (value * resources.displayMetrics.density).toInt()
+
+    private fun statsWeekDuration(ms: Long): String {
+        val minutes = ms / 60_000
+        return when {
+            minutes >= 60 -> getString(R.string.home_listening_stats_hours_minutes,
+                numbers.format(minutes / 60), numbers.format(minutes % 60))
+            minutes == 0L && ms > 0 -> getString(R.string.home_listening_stats_under_minute)
+            else -> getString(R.string.home_listening_stats_minutes, numbers.format(minutes))
+        }
+    }
 
     private fun updateContinueListening(card: View, track: MediaWrapper) {
         val position = track.discoursePlaybackIds()?.let { playbackStore.position(it.audioId) } ?: track.time

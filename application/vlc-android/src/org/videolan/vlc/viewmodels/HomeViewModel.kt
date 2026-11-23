@@ -16,6 +16,7 @@ import org.videolan.vlc.discourse.*
 import org.videolan.vlc.media.ListeningStatsStore
 import org.videolan.vlc.media.MediaSessionBrowser
 import org.videolan.vlc.media.MediaUtils
+import org.videolan.vlc.media.listeningTime
 import org.videolan.vlc.mediadb.models.ListeningDay
 
 /** Display snapshots keep mutable medialibrary objects out of diff comparisons. */
@@ -37,6 +38,7 @@ class HomeViewModel @JvmOverloads constructor(
     val weeklyDiscourses = MutableLiveData<List<Discourse>>(emptyList())
     val weeklyTracks = MutableLiveData<List<DiscourseAudio>>(emptyList())
     val showListeningStats = MutableLiveData(false)
+    val weekListeningMs = MutableLiveData(0L)
     val refreshing = MutableLiveData(false)
     private var historyJob: Job? = null
     private var statsJob: Job? = null
@@ -111,15 +113,18 @@ class HomeViewModel @JvmOverloads constructor(
         listeningStatsJob?.cancel()
         if (!settings.getBoolean(PLAYBACK_HISTORY, true)) {
             showListeningStats.value = false
+            weekListeningMs.value = 0L
             return
         }
         listeningStatsJob = viewModelScope.launch {
-            val visible = withContext(Dispatchers.IO) {
+            val (visible, weekMs) = withContext(Dispatchers.IO) {
+                val today = LocalDate.now()
                 val days = ListeningStatsStore.getInstance(getApplication())
                     .database.listeningStatsDao().days().first()
-                hasListeningActivityBeforeToday(days, LocalDate.now())
+                hasListeningActivityBeforeToday(days, today) to listeningTime(days, today).week
             }
             showListeningStats.value = visible
+            weekListeningMs.value = weekMs
         }
     }
 

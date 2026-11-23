@@ -5,5 +5,8 @@
     <string name="continue_listening_time">%1$s / %2$s</string>
     <string name="home_listening_stats_label">LISTENING STATS</string>
     <string name="home_listening_stats">Your week in listening</string>
-    <string name="home_listening_stats_detail">See your listening insights</string>
+    <string name="home_listening_stats_detail">%1$s this week · %2$s Downloads</string>
+    <string name="home_listening_stats_hours_minutes">%1$sh %2$smin</string>
+    <string name="home_listening_stats_minutes">%1$smin</string>
+    <string name="home_listening_stats_under_minute">Less than 1 min</string>
 </resources>

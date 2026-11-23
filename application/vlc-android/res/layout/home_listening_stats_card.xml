@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="10dp"
@@ -58,9 +59,9 @@
             android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="@string/home_listening_stats_detail"
             android:textColor="@color/discourse_track_secondary"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            tools:text="2h 15min this week · 256 Downloads" />
     </LinearLayout>
 
     <ImageView
