@@ -111,3 +111,33 @@
 -dontwarn retrofit2.-KotlinExtensions
 
 -keep class com.google.android.material.** { *; }
+
+# ---------------------------------------------------------------------------
+# R8 keeps for reflection-based JSON (Moshi 1.8, no code generation)
+# ---------------------------------------------------------------------------
+
+# Default Moshi adapters read property names from the Java fields, so these
+# classes must keep their fields unrenamed or the JSON keys change.
+-keep class org.videolan.moviepedia.models.** { *; }
+-keep class org.videolan.resources.opensubtitles.** { *; }
+-keep class org.videolan.vlc.mediadb.models.** { *; }
+-keep class org.videolan.vlc.util.VLCLocale { *; }
+-keep class org.videolan.vlc.util.EqualizerExport { *; }
+-keep class org.videolan.vlc.util.EqualizerState { *; }
+-keep class org.videolan.vlc.gui.Licenses { *; }
+-keep class org.videolan.vlc.gui.Library { *; }
+-keep class org.videolan.vlc.gui.License { *; }
+-keep class org.videolan.vlc.gui.preferences.widgets.SavedColors { *; }
+-keep class org.videolan.vlc.gui.preferences.search.SettingsBackup { *; }
+-keep class org.videolan.vlc.gui.preferences.search.SettingEntry { *; }
+
+# KotlinJsonAdapterFactory resolves constructor parameters through Kotlin
+# metadata and kotlin-reflect, so the discourse models and runtime must stay.
+-keep class org.videolan.vlc.discourse.** { *; }
+-keep class kotlin.Metadata { *; }
+-keep class kotlin.reflect.jvm.internal.** { *; }
+-dontwarn kotlin.reflect.**
+
+# Enum constant names are persisted in SharedPreferences and JSON payloads,
+# so valueOf()/name() must remain stable across app upgrades.
+-keepclassmembers enum * { *; }
