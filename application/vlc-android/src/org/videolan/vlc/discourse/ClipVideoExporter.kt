@@ -19,6 +19,7 @@ import android.os.Build
 import android.os.SystemClock
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import org.videolan.vlc.gui.helpers.BitmapUtil
 import java.io.Closeable
 import java.io.File
 import java.nio.ByteBuffer
@@ -162,9 +163,10 @@ internal object ClipVideoExporter {
     }
 
     private fun endCard(context: Context, width: Int, height: Int): Bitmap {
-        val image = context.assets.open("images/cliip-image/clip-image.png").use {
-            BitmapFactory.decodeStream(it) ?: error("Cannot decode clip end card")
-        }
+        val target = minOf(width, height)
+        val image = BitmapUtil.decodeSampledAsset(
+            context.assets, "images/cliip-image/clip-image.png", target, target
+        ) ?: error("Cannot decode clip end card")
         try {
             val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             try {

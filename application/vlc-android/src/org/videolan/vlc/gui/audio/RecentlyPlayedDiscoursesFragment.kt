@@ -42,6 +42,7 @@ import org.videolan.vlc.discourse.DiscourseAudio
 import org.videolan.vlc.discourse.DiscourseDownloadStore
 import org.videolan.vlc.discourse.playDiscourseAudio
 import org.videolan.vlc.discourse.resolveDiscourseUrl
+import org.videolan.vlc.gui.helpers.BitmapUtil
 import org.videolan.vlc.gui.helpers.UiTools
 import org.videolan.vlc.gui.helpers.getAudioIconDrawable
 import org.videolan.vlc.media.MediaUtils
@@ -283,12 +284,13 @@ class RecentlyPlayedDiscoursesFragment : Fragment(R.layout.recently_played_disco
                 if (image.drawable == null) imageJobs[card] = viewLifecycleOwner.lifecycleScope.launch {
                     val nightMode = image.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
                     val fileName = if (nightMode == Configuration.UI_MODE_NIGHT_YES) "osho.jpg" else "osho_light.jpg"
+                    val targetWidth = image.width.takeIf { it > 0 }
+                        ?: image.resources.displayMetrics.widthPixels
+                    val targetHeight = targetWidth * 2 / 3
                     val bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        image.context.assets.open("images/images/$fileName").use {
-                            android.graphics.BitmapFactory.decodeStream(it)
-                        }
+                        BitmapUtil.decodeSampledAsset(image.context.assets, "images/images/$fileName", targetWidth, targetHeight)
                     }
-                    image.setImageBitmap(bitmap)
+                    bitmap?.let { image.setImageBitmap(it) }
                 }
                 return
             }

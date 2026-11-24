@@ -28,7 +28,6 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
@@ -58,6 +57,7 @@ import org.videolan.vlc.databinding.WidgetMiniPlayerConfigureBinding
 import org.videolan.vlc.gui.BaseActivity
 import org.videolan.vlc.gui.dialogs.WidgetExplanationDialog
 import org.videolan.vlc.gui.helpers.bitmapFromView
+import org.videolan.vlc.gui.helpers.getBitmapFromDrawable
 import org.videolan.vlc.gui.preferences.widgets.PreferencesWidgets
 import org.videolan.vlc.gui.preferences.widgets.WIDGET_ID
 import org.videolan.vlc.widget.utils.WidgetCache
@@ -161,7 +161,8 @@ class MiniPlayerConfigureActivity : BaseActivity() {
         model.widget.value?.let {widget ->
             lifecycleScope.launch {
                 withContext((Dispatchers.IO)) {
-                        val coverBitmap = BitmapFactory.decodeResource(resources, R.drawable.vlc_fake_cover)
+                        val coverBitmap = this@MiniPlayerConfigureActivity.getBitmapFromDrawable(R.drawable.vlc_fake_cover, 256, 256)
+                            ?: return@withContext
                         val palette = Palette.from(coverBitmap).generate()
                     val provider = MiniPlayerAppWidgetProvider()
                     model.widget.value?.widgetId?.let { id ->

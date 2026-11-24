@@ -23,6 +23,7 @@ import org.videolan.tools.ErrorReporter
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.res.AssetManager
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -90,26 +91,54 @@ object BitmapUtil {
         return picture ?: fetchPicture(media)
     }
 
+    /**
+     * Smallest power-of-two sample size that keeps the decoded bitmap at least
+     * as large as [reqWidth] x [reqHeight].
+     */
+    fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        var inSampleSize = 1
+        if (reqWidth > 0 && reqHeight > 0 &&
+                (options.outHeight > reqHeight || options.outWidth > reqWidth)) {
+            val halfHeight = options.outHeight / 2
+            val halfWidth = options.outWidth / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
+    }
+
+    /**
+     * Decode an asset, downsampling it to at least [reqWidth] x [reqHeight].
+     * The asset is opened twice: once for bounds, once for the sampled decode.
+     */
+    fun decodeSampledAsset(assets: AssetManager, name: String, reqWidth: Int, reqHeight: Int): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        assets.open(name).use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = calculateInSampleSize(bounds, reqWidth, reqHeight)
+        }
+        return assets.open(name).use { BitmapFactory.decodeStream(it, null, options) }
+    }
+
     private fun readCoverBitmap(path: String?): Bitmap? {
         if (path == null) return null
         val ctx = AppContextProvider.appContext
         val res = ctx.resources
         val uri = Uri.decode(path).removeFileScheme()
         var cover: Bitmap? = null
-        val options = BitmapFactory.Options()
         val height = res.getDimensionPixelSize(R.dimen.grid_card_thumb_height)
         val width = res.getDimensionPixelSize(R.dimen.grid_card_thumb_width)
 
         /* Get the resolution of the bitmap without allocating the memory */
-        options.inJustDecodeBounds = true
-        BitmapFactory.decodeFile(uri, options)
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(uri, bounds)
 
-        if (options.outWidth > 0 && options.outHeight > 0) {
-            if (options.outWidth > width) {
-                options.outWidth = width
-                options.outHeight = height
+        if (bounds.outWidth > 0 && bounds.outHeight > 0) {
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = calculateInSampleSize(bounds, width, height)
             }
-            options.inJustDecodeBounds = false
 
             // Decode the file (with memory allocation this time)
             try {
@@ -117,7 +146,6 @@ object BitmapUtil {
             } catch (e: OutOfMemoryError) {
                 cover = null
             }
-
         }
 
         return cover
@@ -385,7 +413,18 @@ fun Context.getBitmapFromDrawable(@DrawableRes drawableId: Int, width: Int = -1,
             drawable.draw(canvas)
             bitmap
         }
-        else -> BitmapFactory.decodeResource(this.resources, drawableId)
+        else -> {
+            val options = BitmapFactory.Options()
+            if (width > 0 && height > 0) {
+                options.inJustDecodeBounds = true
+                BitmapFactory.decodeResource(this.resources, drawableId, options)
+                options.inSampleSize = BitmapUtil.calculateInSampleSize(options, width, height)
+                options.inJustDecodeBounds = false
+            } else {
+                options.inSampleSize = 1
+            }
+            BitmapFactory.decodeResource(this.resources, drawableId, options)
+        }
     }
 }
 
