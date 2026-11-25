@@ -110,6 +110,14 @@
 # Top-level functions that can only be used by Kotlin.
 -dontwarn retrofit2.-KotlinExtensions
 
+# R8 full mode strips generic signatures from classes that are not kept. Retrofit
+# reads the Continuation type argument of Kotlin suspend methods, so its signature
+# must survive or every call fails with "Class cannot be cast to ParameterizedType".
+# Shrinking and obfuscation stay allowed.
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+
 -keep class com.google.android.material.** { *; }
 
 # ---------------------------------------------------------------------------
