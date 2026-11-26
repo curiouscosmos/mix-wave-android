@@ -114,16 +114,29 @@ class DiscourseDownloadStore(context: Context) {
         val id = downloads()[audio.id]
             ?: return Snapshot(DiscourseDownloadState.MISSING, DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING))
         val info = downloadInfo(id)
+        if (!info.exists) {
+            // The DownloadManager record is gone (restored preferences after a reinstall or
+            // system cleanup) but the local file was not usable above. Forget the stale id so
+            // the row shows "not downloaded" instead of a permanent failure.
+            forgetDownload(audio.id)
+            return Snapshot(DiscourseDownloadState.MISSING, DiscourseDownloadProgress(null, DiscourseDownloadState.MISSING))
+        }
         val state = when (info.status) {
             DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> DiscourseDownloadState.DOWNLOADING
-            DownloadManager.STATUS_SUCCESSFUL -> if (!file(audio).isFile) DiscourseDownloadState.MISSING
-                else DiscourseDownloadState.FAILED.also { reportFailure(audio, id, info) }
+            DownloadManager.STATUS_SUCCESSFUL -> DiscourseDownloadState.MISSING
             else -> DiscourseDownloadState.FAILED.also { reportFailure(audio, id, info) }
         }
         val progress = if (state == DiscourseDownloadState.DOWNLOADING)
             DiscourseDownloadProgress(downloadPercent(info.downloadedBytes, info.totalBytes, audio.fileSize), state)
         else DiscourseDownloadProgress(null, state)
         return Snapshot(state, progress)
+    }
+
+    private fun forgetDownload(audioId: String) = synchronized(downloadsLock) {
+        val current = downloads()
+        if (audioId !in current) return@synchronized
+        save(current - audioId)
+        saveDownloadDiscourses(downloadDiscourses() - audioId)
     }
 
     fun playbackUri(audio: DiscourseAudio): Uri? = verifiedFile(audio)?.let(Uri::fromFile)
@@ -170,18 +183,18 @@ class DiscourseDownloadStore(context: Context) {
         val (ids, discourses) = synchronized(downloadsLock) { downloads() to downloadDiscourses() }
         val audioIds = ids.entries.associate { it.value to it.key }
         val next = mutableMapOf<String, Summary>()
+        val directory = context.getExternalFilesDir("discourses") ?: context.filesDir
+        val seen = mutableSetOf<String>()
         if (ids.isNotEmpty()) manager.query(DownloadManager.Query().setFilterById(*ids.values.toLongArray())).use { cursor ->
-            val directory = context.getExternalFilesDir("discourses") ?: context.filesDir
             while (cursor.moveToNext()) {
                 val audioId = audioIds[cursor.long(DownloadManager.COLUMN_ID)] ?: continue
+                seen += audioId
                 val discourseId = discourses[audioId].orEmpty()
                 val status = cursor.int(DownloadManager.COLUMN_STATUS)
                 val active = status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_RUNNING ||
                     status == DownloadManager.STATUS_PAUSED
                 val downloaded = status == DownloadManager.STATUS_SUCCESSFUL &&
-                    File(directory, "$audioId.audio").let { file ->
-                        file.isFile && isCompletedDownload(file.length(), true, cursor.long(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    }
+                    File(directory, "$audioId.audio").let { file -> file.isFile && file.length() > 0L }
                 val previous = next[discourseId] ?: Summary()
                 val percent = if (active) downloadPercent(cursor.long(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR),
                     cursor.long(DownloadManager.COLUMN_TOTAL_SIZE_BYTES), null) ?: 0 else null
@@ -189,6 +202,15 @@ class DiscourseDownloadStore(context: Context) {
                     if (downloaded) previous.audioIds + audioId else previous.audioIds,
                     if (percent != null) previous.activeProgress + (audioId to percent) else previous.activeProgress)
             }
+        }
+        // DownloadManager records can outlive their rows (or disappear while the file stays on
+        // disk). Count those files so restored downloads are not reported as missing.
+        (ids.keys - seen).forEach { audioId ->
+            val file = File(directory, "$audioId.audio")
+            if (!file.isFile || file.length() <= 0L) return@forEach
+            val discourseId = discourses[audioId].orEmpty()
+            val previous = next[discourseId] ?: Summary()
+            next[discourseId] = Summary(previous.downloaded + 1, previous.audioIds + audioId, previous.activeProgress)
         }
         return next
     }
@@ -237,13 +259,21 @@ class DiscourseDownloadStore(context: Context) {
 
     fun verifiedFile(audio: DiscourseAudio): File? {
         val file = file(audio)
-        if (!isVerifiedDownload(file.takeIf(File::isFile)?.length(), audio.fileSize)) return null
-        // DownloadManager writes directly into the destination, including while it is incomplete.
-        val id = downloads()[audio.id] ?: return null
-        val info = downloadInfo(id)
-        return file.takeIf {
-            isCompletedDownload(file.length(), info.status == DownloadManager.STATUS_SUCCESSFUL, info.totalBytes)
-        }
+        val length = file.takeIf(File::isFile)?.length() ?: return null
+        if (length <= 0L) return null
+        val info = downloads()[audio.id]?.let(::downloadInfo)
+        // A successful DownloadManager record is authoritative even if the API's size changed.
+        if (info != null && info.exists && info.status == DownloadManager.STATUS_SUCCESSFUL) return file
+        // An active download writes directly into the destination, so it is not complete yet.
+        if (info != null && info.exists && info.status != DownloadManager.STATUS_FAILED) return null
+        // No usable record (restored preferences, system cleanup, or a failed record) or a
+        // record for a failed download: accept the file when its size matches the API value.
+        return file.takeIf { matchesExpectedSize(audio, length) }
+    }
+
+    private fun matchesExpectedSize(audio: DiscourseAudio, length: Long): Boolean {
+        val expected = audio.fileSize ?: return true
+        return expected <= 0L || expected == length
     }
 
     private fun file(audio: DiscourseAudio) = File(context.getExternalFilesDir("discourses") ?: context.filesDir, fileName(audio))
@@ -254,10 +284,16 @@ class DiscourseDownloadStore(context: Context) {
         ErrorReporter.error(TAG, "Download failed for track ${audio.id} (${audio.title}); status=${info.status}, reason=${info.reason}")
     }
 
-    private data class DownloadInfo(val status: Int, val downloadedBytes: Long?, val totalBytes: Long?, val reason: Int?)
+    private data class DownloadInfo(
+        val status: Int,
+        val downloadedBytes: Long?,
+        val totalBytes: Long?,
+        val reason: Int?,
+        val exists: Boolean = true
+    )
 
     private fun downloadInfo(id: Long): DownloadInfo = manager.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
-        if (!cursor.moveToFirst()) return@use DownloadInfo(DownloadManager.STATUS_FAILED, null, null, null)
+        if (!cursor.moveToFirst()) return@use DownloadInfo(DownloadManager.STATUS_FAILED, null, null, null, exists = false)
         DownloadInfo(
             cursor.int(DownloadManager.COLUMN_STATUS) ?: DownloadManager.STATUS_FAILED,
             cursor.long(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR),

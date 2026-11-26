@@ -672,7 +672,7 @@ class DiscourseFragment : BaseFragment() {
         override fun onBindViewHolder(holder: DiscourseTrackHolder, position: Int) {
             val item = items[position]
             holder.number.text = (item.trackNumber ?: position + 1).toString()
-            bindTrackImage(holder, item)
+            bindTrackImage(holder)
             holder.title.text = item.title
             holder.likes.isVisible = false
             holder.meta.bindTrackStats(TrackCardStats(item.plays.toLong(), item.totalLikes,
@@ -725,7 +725,7 @@ class DiscourseFragment : BaseFragment() {
             if (payloads.isEmpty()) onBindViewHolder(holder, position)
             else {
                 val item = items[position]
-                if ("thumb" in payloads) bindTrackImage(holder, item)
+                if ("thumb" in payloads) bindTrackImage(holder)
                 val downloadState = downloads.cachedState(item)
                 val downloadProgress = downloads.cachedProgress(item)
                 bindProgress(holder, item, downloadState)
@@ -738,9 +738,9 @@ class DiscourseFragment : BaseFragment() {
             changed.forEach { id -> positions[id]?.let { notifyItemChanged(it, "download") } }
         }
         fun refreshThumbnails() = notifyItemRangeChanged(0, items.size, "thumb")
-        private fun bindTrackImage(holder: DiscourseTrackHolder, item: DiscourseAudio) {
+        private fun bindTrackImage(holder: DiscourseTrackHolder) {
             val bitmap = trackThumbnail
-            if (bitmap != null && trackThumbnailUrl == item.discourseThumbnailUrl) {
+            if (bitmap != null) {
                 holder.image.setImageBitmap(bitmap)
             } else {
                 holder.image.setImageDrawable(UiTools.getDefaultAudioDrawable(requireContext()))
