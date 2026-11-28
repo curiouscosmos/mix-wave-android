@@ -3,7 +3,7 @@
     <string name="clip_history_empty">No saved clips for this track.</string>
     <string name="clip_history_save_failed">Could not save clip history. Please try again.</string>
     <string name="clip_history_load_failed">Could not load clip history. Please try again.</string>
-    <string name="clip_history_empty_all">No clip history yet.</string>
+    <string name="clip_history_empty_all">No clip history found</string>
     <string name="clip_history_play_failed">Cannot play this clip right now.</string>
     <string name="clip_history_play_description">Play clip from %1$s to %2$s</string>
 </resources>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="bookmark_limit_reached">Bookmark limit reached</string>
-    <string name="bookmarks_empty">No bookmarks yet</string>
+    <string name="bookmarks_empty">No bookmarks found</string>
     <string name="bookmark_delete_title">Delete bookmark?</string>
     <string name="bookmark_delete_message">Remove the bookmark at %1$s?</string>
     <string name="bookmark_deleted">Bookmark removed</string>
