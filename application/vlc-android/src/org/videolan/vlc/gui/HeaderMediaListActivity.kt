@@ -303,6 +303,8 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
                     val radius = if (isPlaylist) 25f else 15f
                     UiTools.blurView(binding.backgroundView, cover, radius, UiTools.getColorFromAttribute(context, R.attr.audio_player_background_tint))
                 }
+            } else if (isPlaylist) {
+                binding.cover = UiTools.getDefaultAudioDrawableBig(this@HeaderMediaListActivity)
             }
         }
 
