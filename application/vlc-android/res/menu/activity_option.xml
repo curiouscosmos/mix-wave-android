@@ -190,6 +190,13 @@
             android:title="@string/refresh"
             vlc:showAsAction="never" />
     <item
+            android:id="@+id/ml_menu_bookmarks"
+            android:icon="@drawable/ic_bookmark"
+            android:orderInCategory="6"
+            android:title="@string/bookmarks_title"
+            android:visible="false"
+            vlc:showAsAction="never" />
+    <item
             android:id="@+id/ml_menu_listening_stats"
             android:orderInCategory="6"
             android:title="@string/listening_stats"

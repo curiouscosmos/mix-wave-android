@@ -30,7 +30,8 @@ internal fun discourseContinuation(audios: List<DiscourseAudio>, ids: DiscourseP
 
 internal fun discourseCheckpointDue(lastCheckpoint: Long, elapsedTime: Long) = elapsedTime - lastCheckpoint >= 30_000L
 
-fun DiscourseAudio.toMediaWrapper(context: Context, startFromBeginning: Boolean = false): MediaWrapper = MLServiceLocator.getAbstractMediaWrapper(
+fun DiscourseAudio.toMediaWrapper(context: Context, startFromBeginning: Boolean = false,
+                                  startAt: Long? = null): MediaWrapper = MLServiceLocator.getAbstractMediaWrapper(
     DiscourseDownloadStore(context).playbackUri(this) ?: Uri.EMPTY,
     0L,
     0f,
@@ -56,7 +57,7 @@ fun DiscourseAudio.toMediaWrapper(context: Context, startFromBeginning: Boolean 
     0L,
     0L
 ).apply {
-    time = DiscoursePlaybackStore(context).position(this@toMediaWrapper.id) ?: 0L
+    time = startAt?.coerceAtLeast(0L) ?: DiscoursePlaybackStore(context).position(this@toMediaWrapper.id) ?: 0L
     if (startFromBeginning) {
         time = 0L
         addFlags(MediaWrapper.MEDIA_FROM_START)
@@ -120,12 +121,12 @@ internal fun MediaWrapper.recordDiscourseRecentlyPlayed(context: Context) {
     }
 }
 
-fun Context.playDiscourseAudio(audio: DiscourseAudio) {
+fun Context.playDiscourseAudio(audio: DiscourseAudio, startAt: Long? = null) {
     val context = applicationContext
     AppScope.launch {
         val media = withContext(Dispatchers.IO) {
             DiscoursePlaybackStore(context).register(listOf(audio))
-            audio.toMediaWrapper(context)
+            audio.toMediaWrapper(context, startAt = startAt)
         }
         MediaUtils.openMedia(context, media)
     }

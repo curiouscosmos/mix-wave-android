@@ -35,6 +35,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.os.Vibrator
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.Editable
@@ -66,6 +67,7 @@ import androidx.window.layout.WindowInfoTracker
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
@@ -102,6 +104,10 @@ import org.videolan.tools.setVisible
 import org.videolan.vlc.PlaybackService
 import org.videolan.vlc.R
 import org.videolan.vlc.VlcMigrationHelper
+import org.videolan.vlc.bookmarks.BookmarkAddOutcome
+import org.videolan.vlc.bookmarks.BookmarkStore
+import org.videolan.vlc.bookmarks.bookmarkKey
+import org.videolan.vlc.bookmarks.toBookmarkedTrack
 import org.videolan.vlc.databinding.AudioPlayerBinding
 import org.videolan.vlc.gui.AudioPlayerContainerActivity
 import org.videolan.vlc.gui.HeaderMediaListActivity
@@ -157,6 +163,7 @@ import org.videolan.vlc.viewmodels.PlaylistModel
 
 private const val TAG = "VLC/AudioPlayer"
 private const val SEARCH_TIMEOUT_MILLIS = 10000L
+private const val BOOKMARK_COOLDOWN_MS = 5_000L
 
 class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlayerAnimator by AudioPlayerAnimator() {
     private var clipEditor: ClipEditor? = null
@@ -166,6 +173,10 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
     internal fun refreshCaptionRange() { captions?.render() }
     internal fun slideCaptions(offset: Float) { captionSlideOffset = offset; captions?.onSlide(offset) }
     private val trackDownloads by lazy { DiscourseDownloadStore(requireContext()) }
+    private val bookmarkStore by lazy { BookmarkStore.shared(requireContext()) }
+    private var bookmarkCooldownUntil = 0L
+    private var bookmarkCooldownJob: Job? = null
+    private var bookmarkTrackKey: String? = null
 
     internal fun refreshClipEditor() { clipEditor?.render() }
 
@@ -266,6 +277,12 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         }
         captions = PlayerCaptions(this, binding, clipEditor!!, savedInstanceState)
         captions?.onSlide(captionSlideOffset)
+        binding.playerBookmark.setOnClickListener { addCurrentBookmark() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                bookmarkStore.state.collect { updateBookmarkUi() }
+            }
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 trackDownloads.invalidate()
@@ -686,8 +703,76 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         binding.audioForwardText.text = "${Settings.audioJumpDelay}"
         binding.audioForward10.contentDescription = getString(R.string.talkback_action_forward, Settings.audioJumpDelay.toString())
         binding.audioRewind10.contentDescription = getString(R.string.talkback_action_rewind, Settings.audioJumpDelay.toString())
+        updateBookmarkUi()
         updateBackground()
 
+    }
+
+    private fun addCurrentBookmark() {
+        val service = playlistModel.service ?: return
+        val media = playlistModel.currentMediaWrapper ?: return
+        val now = SystemClock.elapsedRealtime()
+        if (now < bookmarkCooldownUntil) return
+        val key = media.bookmarkKey() ?: return
+        if (bookmarkStore.countFor(key) >= BookmarkStore.MAX_STAMPS) {
+            updateBookmarkUi()
+            return
+        }
+        val position = service.getTime()
+        if (position <= 0L) return
+        val track = media.toBookmarkedTrack(requireContext()) ?: return
+        val outcome = bookmarkStore.add(track, position).outcome
+        when (outcome) {
+            BookmarkAddOutcome.ADDED, BookmarkAddOutcome.DUPLICATE -> {
+                bookmarkCooldownUntil = now + BOOKMARK_COOLDOWN_MS
+                bookmarkCooldownJob?.cancel()
+                bookmarkCooldownJob = viewLifecycleOwner.lifecycleScope.launch {
+                    delay(BOOKMARK_COOLDOWN_MS)
+                    if (isAdded && ::binding.isInitialized) updateBookmarkButton()
+                }
+                if (outcome == BookmarkAddOutcome.ADDED)
+                    binding.playerBookmark.announceForAccessibility(getString(R.string.bookmark_added))
+            }
+            BookmarkAddOutcome.LIMIT_REACHED, BookmarkAddOutcome.INVALID -> Unit
+        }
+        updateBookmarkUi()
+    }
+
+    private fun updateBookmarkUi() {
+        if (!::binding.isInitialized) return
+        updateBookmarkButton()
+        updateBookmarkMarkers()
+    }
+
+    private fun updateBookmarkButton() {
+        val service = playlistModel.service
+        val key = playlistModel.currentMediaWrapper?.bookmarkKey()
+        if (key != bookmarkTrackKey) {
+            bookmarkTrackKey = key
+            bookmarkCooldownUntil = 0L
+            bookmarkCooldownJob?.cancel()
+            bookmarkCooldownJob = null
+        }
+        val count = key?.let(bookmarkStore::countFor) ?: 0
+        val atLimit = count >= BookmarkStore.MAX_STAMPS
+        val cooling = SystemClock.elapsedRealtime() < bookmarkCooldownUntil
+        binding.playerBookmark.isEnabled = service != null && key != null && !atLimit && !cooling
+        binding.playerBookmark.alpha = if (binding.playerBookmark.isEnabled) 1f else 0.4f
+        binding.playerBookmark.contentDescription = getString(when {
+            atLimit -> R.string.bookmark_limit_reached
+            cooling -> R.string.bookmark_added
+            else -> R.string.add_bookmark
+        })
+    }
+
+    private fun updateBookmarkMarkers() {
+        val stamps = playlistModel.currentMediaWrapper?.bookmarkKey()?.let(bookmarkStore::stampsFor).orEmpty()
+        val duration = playlistModel.service?.length
+            ?: playlistModel.currentMediaWrapper?.length
+            ?: 0L
+        BookmarkTimelineRenderer.render(binding.bookmarkStampContainer, duration, stamps) {
+            playlistModel.service?.setTime(it)
+        }
     }
 
     private var wasPlaying = true

@@ -693,14 +693,22 @@
                 app:layout_constraintEnd_toStartOf="@id/guideline14" />
         <include android:id="@+id/player_download" layout="@layout/player_track_download"
                 android:layout_width="64dp" android:layout_height="64dp" android:visibility="gone"
-                app:layout_constraintStart_toStartOf="@id/guideline14" app:layout_constraintEnd_toStartOf="@id/player_clip"
+                app:layout_constraintStart_toStartOf="@id/guideline14" app:layout_constraintEnd_toStartOf="@id/player_bookmark"
                 app:layout_constraintHorizontal_chainStyle="packed" app:layout_goneMarginBottom="48dp"
                 app:layout_constraintBottom_toTopOf="@id/clip_controls" />
+        <androidx.appcompat.widget.AppCompatImageButton android:id="@+id/player_bookmark" android:scaleType="center"
+                android:layout_width="64dp" android:layout_height="64dp"
+                android:contentDescription="@string/add_bookmark" android:src="@drawable/ic_bookmark" android:focusable="true" android:clickable="true" android:visibility="gone"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:layout_constraintStart_toEndOf="@id/player_download" app:layout_constraintEnd_toStartOf="@id/player_clip"
+                app:layout_constraintHorizontal_chainStyle="packed" app:layout_goneMarginBottom="48dp"
+                app:layout_constraintBottom_toTopOf="@id/clip_controls"
+                app:tint="?attr/font_default" />
         <androidx.appcompat.widget.AppCompatImageButton android:id="@+id/player_clip" android:scaleType="center"
                 android:layout_width="64dp" android:layout_height="64dp"
                 android:contentDescription="@string/clip_label" android:src="@drawable/ic_player_clip" android:focusable="true" android:clickable="true" android:visibility="gone"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                app:layout_constraintStart_toEndOf="@id/player_download" app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/player_bookmark" app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_chainStyle="packed" app:layout_goneMarginBottom="48dp"
                 app:layout_constraintBottom_toTopOf="@id/clip_controls"
                 app:tint="@color/player_clip_action_tint" />
@@ -931,6 +939,19 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/bookmark_stamp_container"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="2dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:elevation="6dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toTopOf="@+id/timeline"
+                app:layout_constraintEnd_toEndOf="@+id/timeline"
+                app:layout_constraintStart_toStartOf="@+id/timeline" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/bookmark_marker_container"

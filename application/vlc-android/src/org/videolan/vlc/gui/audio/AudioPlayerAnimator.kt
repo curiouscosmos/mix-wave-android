@@ -173,6 +173,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
 
         hidePlaylistConstraint.setVisibility(R.id.songs_list, View.GONE)
         if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.player_clip, View.VISIBLE)
+        if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.player_bookmark, View.VISIBLE)
         if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.player_download, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.audio_rewind_10, View.VISIBLE)
@@ -197,6 +198,7 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
 
         hidePlaylistLandscapeConstraint.setVisibility(R.id.songs_list, View.GONE)
         if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.player_clip, View.VISIBLE)
+        if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.player_bookmark, View.VISIBLE)
         if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.player_download, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.audio_rewind_10, View.VISIBLE)
@@ -289,8 +291,10 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.expandedActions?.alpha = slideOffset
         if (binding.expandedActions == null) {
             binding.playerClip.alpha = slideOffset
+            binding.playerBookmark.alpha = slideOffset
             val actionsVisibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
             binding.playerClip.visibility = actionsVisibility
+            binding.playerBookmark.visibility = actionsVisibility
             binding.root.findViewById<View>(R.id.player_download).visibility = actionsVisibility
         }
         binding.playerAddPlaylist?.alpha = slideOffset

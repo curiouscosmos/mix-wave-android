@@ -594,6 +594,21 @@
                 android:layout_height="48dp"
                 android:background="?attr/default_divider" />
             <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/player_bookmark" android:scaleType="center"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:contentDescription="@string/add_bookmark"
+                android:src="@drawable/ic_bookmark"
+                app:tint="?attr/font_default"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true" />
+            <View
+                android:layout_width="1dp"
+                android:layout_height="48dp"
+                android:background="?attr/default_divider" />
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/player_clip" android:scaleType="center"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -1002,6 +1017,19 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/bookmark_stamp_container"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="2dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:elevation="6dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toTopOf="@+id/timeline"
+                app:layout_constraintEnd_toEndOf="@+id/timeline"
+                app:layout_constraintStart_toStartOf="@+id/timeline" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/bookmark_marker_container"
