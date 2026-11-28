@@ -420,7 +420,14 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
     }
 
     fun play() {
-        if (hasMedia()) player.play()
+        if (!hasMedia()) return
+        val controller = player
+        if (controller.mediaplayer.hasMedia() && !controller.mediaplayer.isReleased) {
+            controller.play()
+        } else if (currentIndex in 0 until mediaList.size()) {
+            // A stopped/recreated native player has no input to resume; reload the queue item.
+            launch { playIndex(currentIndex) }
+        }
     }
 
     fun pause() {

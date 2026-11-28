@@ -287,6 +287,8 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     private var mixerStartJob: Job? = null
     private var mixerFadeJob: Job? = null
     private var mixerStopJob: Job? = null
+    // LibVLC pause() toggles, so mixer commands must only be issued on intent changes.
+    private var mixerPlayRequested = false
     private var playbackHistoryJob: Job? = null
     private val playbackHistoryTimer = org.videolan.vlc.media.PlaybackHistoryTimer()
     var mixerMedia: MediaWrapper? = null
@@ -2101,7 +2103,10 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         val player = mixerPlayer ?: MediaPlayer(VLCInstance.getInstance(this)).also { newPlayer ->
             newPlayer.setEventListener { event ->
                 when (event.type) {
-                    MediaPlayer.Event.Playing -> newPlayer.setVolume(mixerVolume)
+                    // A mixer that finishes opening after the main player paused must not
+                    // resume on its own, and a second pause request must not toggle it back on.
+                    MediaPlayer.Event.Playing -> if (mixerPlayRequested && isPlaying) newPlayer.setVolume(mixerVolume)
+                        else newPlayer.pause()
                     MediaPlayer.Event.EndReached -> if (mixerLoop && mixerEnabled && isPlaying && canPlayAudioMixer()) restartAudioMixer()
                 }
             }
@@ -2121,6 +2126,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
             return
         }
         val player = mixerPlayer ?: mediaWrapper?.let { loadAudioMixerMedia(it) } ?: return
+        mixerPlayRequested = true
         if (player.isPlaying && mixerStopJob?.isActive != true) return
         mixerFadeJob?.cancel()
         mixerStopJob?.cancel()
@@ -2136,6 +2142,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         }
         mediaWrapper?.let {
             val player = loadAudioMixerMedia(it)
+            mixerPlayRequested = true
             player.setVolume(mixerVolume)
             player.play()
         }
@@ -2143,6 +2150,8 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
     private fun pauseAudioMixer() {
         mixerStartJob?.cancel()
+        if (!mixerPlayRequested) return
+        mixerPlayRequested = false
         mixerPlayer?.pause()
     }
 
@@ -2150,6 +2159,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         mixerStartJob?.cancel()
         mixerFadeJob?.cancel()
         mixerStopJob?.cancel()
+        mixerPlayRequested = false
         mixerPlayer?.stop()
     }
 
@@ -2177,6 +2187,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         else mixerPlayer?.let { player ->
             mixerStartJob?.cancel()
             mixerStopJob?.cancel()
+            mixerPlayRequested = false
             fadeAudioMixer(player, mixerVolume, 0)
             mixerStopJob = lifecycleScope.launch {
                 delay(220L)
@@ -2203,6 +2214,7 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         mixerPlayer = null
         mixerMedia = null
         mixerEnabled = false
+        mixerPlayRequested = false
     }
 
     fun clearAudioMixer(mediaWrapper: MediaWrapper? = null) {
