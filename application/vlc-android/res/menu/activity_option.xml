@@ -197,6 +197,13 @@
             android:visible="false"
             vlc:showAsAction="never" />
     <item
+            android:id="@+id/ml_menu_clip_history"
+            android:icon="@drawable/ic_player_clip"
+            android:orderInCategory="6"
+            android:title="@string/clip_history"
+            android:visible="false"
+            vlc:showAsAction="never" />
+    <item
             android:id="@+id/ml_menu_listening_stats"
             android:orderInCategory="6"
             android:title="@string/listening_stats"

@@ -267,6 +267,7 @@ class MainActivity : ContentActivity(),
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.findItem(R.id.ml_menu_listening_stats)?.isVisible = true
         menu?.findItem(R.id.ml_menu_bookmarks)?.isVisible = currentFragmentId == R.id.nav_audio
+        menu?.findItem(R.id.ml_menu_clip_history)?.isVisible = currentFragmentId == R.id.nav_audio
         menu?.findItem(R.id.ml_menu_refresh)?.isVisible = Permissions.canReadStorage(this)
         menu?.findItem(R.id.ml_menu_discourse_search)?.isVisible = currentFragmentId == R.id.nav_audio
         return super.onPrepareOptionsMenu(menu)
@@ -283,6 +284,11 @@ class MainActivity : ContentActivity(),
             R.id.ml_menu_bookmarks -> {
                 startActivity(Intent(this, SecondaryActivity::class.java)
                     .putExtra(SecondaryActivity.KEY_FRAGMENT, SecondaryActivity.BOOKMARKS))
+                true
+            }
+            R.id.ml_menu_clip_history -> {
+                startActivity(Intent(this, SecondaryActivity::class.java)
+                    .putExtra(SecondaryActivity.KEY_FRAGMENT, SecondaryActivity.CLIP_HISTORY))
                 true
             }
             R.id.ml_menu_listening_stats -> {

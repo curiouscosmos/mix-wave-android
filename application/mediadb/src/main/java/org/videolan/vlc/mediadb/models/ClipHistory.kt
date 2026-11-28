@@ -11,3 +11,8 @@ data class ClipHistory(
 data class ClipTrackCount(
     val audioId: String, val trackTitle: String?, val discourseId: String?, val discourseTitle: String?, val count: Int
 )
+
+data class ClipTrackSummary(
+    val audioId: String, val trackTitle: String?, val discourseId: String?, val discourseTitle: String?,
+    val latestAt: Long, val count: Int
+)

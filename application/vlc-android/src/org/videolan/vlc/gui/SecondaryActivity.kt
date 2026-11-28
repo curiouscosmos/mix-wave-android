@@ -56,6 +56,7 @@ import org.videolan.vlc.gui.audio.AudioAlbumsSongsFragment
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
 import org.videolan.vlc.gui.bookmarks.BookmarksFragment
 import org.videolan.vlc.gui.browser.FileBrowserFragment
+import org.videolan.vlc.gui.cliphistory.ClipHistoryFragment
 import org.videolan.vlc.gui.browser.KEY_JUMP_TO
 import org.videolan.vlc.gui.browser.KEY_MEDIA
 import org.videolan.vlc.gui.browser.MLStorageBrowserFragment
@@ -198,6 +199,7 @@ class SecondaryActivity : ContentActivity(), IDialogManager {
             DISCLAIMER -> fragment = DisclaimerFragment()
             HISTORY -> fragment = HistoryFragment()
             BOOKMARKS -> fragment = BookmarksFragment()
+            CLIP_HISTORY -> fragment = ClipHistoryFragment()
             VIDEO_GROUP_LIST -> {
                 fragment = VideoGridFragment().apply {
                     arguments = bundleOf(
@@ -233,6 +235,7 @@ class SecondaryActivity : ContentActivity(), IDialogManager {
         const val DISCLAIMER = "disclaimer"
         const val HISTORY = "history"
         const val BOOKMARKS = "bookmarks"
+        const val CLIP_HISTORY = "clipHistory"
         const val VIDEO_GROUP_LIST = "videoGroupList"
         const val STORAGE_BROWSER = "storage_browser"
         const val STORAGE_BROWSER_ONBOARDING = "storage_browser_onboarding"

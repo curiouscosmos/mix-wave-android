@@ -5,6 +5,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.videolan.vlc.database.MediaDatabase
 import org.videolan.vlc.mediadb.models.ClipHistory
+import org.videolan.vlc.mediadb.models.ClipTrackSummary
+
+data class ClipHistoryGroup(val summary: ClipTrackSummary, val clips: List<ClipHistory>)
 
 class ClipHistoryStore(context: Context) {
     private val dao = MediaDatabase.getInstance(context).clipHistoryDao()
@@ -19,4 +22,13 @@ class ClipHistoryStore(context: Context) {
     }
 
     suspend fun getForAudio(audioId: String) = withContext(Dispatchers.IO) { dao.getForAudio(audioId) }
+
+    suspend fun trackCount() = withContext(Dispatchers.IO) { dao.trackCount() }
+
+    suspend fun page(limit: Int, offset: Int): List<ClipHistoryGroup> = withContext(Dispatchers.IO) {
+        val summaries = dao.tracksPage(limit, offset)
+        if (summaries.isEmpty()) return@withContext emptyList()
+        val clips = dao.clipsFor(summaries.map { it.audioId }).groupBy { it.audioId }
+        summaries.map { summary -> ClipHistoryGroup(summary, clips[summary.audioId].orEmpty()) }
+    }
 }
