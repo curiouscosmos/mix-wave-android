@@ -34,6 +34,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.MotionEventCompat
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.databinding.ViewDataBinding
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
@@ -95,7 +96,8 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         internal var cardSize: Int = SHOW_IN_LIST,
         val playlistStyle: Boolean = false,
         internal val mixerStyle: Boolean = false,
-        useTrackCards: Boolean = true
+        useTrackCards: Boolean = true,
+        private val playlistTrackActions: Boolean = false
 ) : PagedListAdapter<MediaLibraryItem,
         AudioBrowserAdapter.AbstractMediaItemViewHolder<ViewDataBinding>>(DIFF_CALLBACK),
         FastScroller.SeparatedAdapter, MultiSelectAdapter<MediaLibraryItem>, SwipeDragHelperAdapter
@@ -196,12 +198,14 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         if (item is Genre) item.description = holder.binding.root.context.resources.getQuantityString(R.plurals.track_quantity, item.tracksCount, item.tracksCount)
         val isSelected = multiSelectHelper.isSelected(position)
         holder.selectView(isSelected)
+        val played = (item as? MediaWrapper)?.playCount?.let { it > 0L } == true
+        val showPlayedBadge = trackStyle && playlistTrackActions
         if (item is MediaWrapper) {
             holder.binding.setVariable(BR.isNetwork, item.uri.scheme.isSchemeSMB())
             holder.binding.setVariable(BR.isOTG, item.uri.isOTG())
             holder.binding.setVariable(BR.isSD, item.uri.isSD())
             holder.binding.setVariable(BR.isPresent, item.isPresent)
-            holder.binding.setVariable(BR.played, item.playCount > 0L)
+            holder.binding.setVariable(BR.played, played && !showPlayedBadge)
         } else {
             holder.binding.setVariable(BR.isPresent, true)
             holder.binding.setVariable(BR.played, false)
@@ -223,7 +227,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
         holder.binding.setVariable(BR.inSelection,multiSelectHelper.inActionMode)
         holder.binding.invalidateAll()
         holder.binding.executePendingBindings()
-        if (trackStyle && holder is MediaItemViewHolder) holder.bindTrack(item as? MediaWrapper)
+        if (trackStyle && holder is MediaItemViewHolder) holder.bindTrack(item as? MediaWrapper, played && showPlayedBadge)
         if (position == focusNext) {
             holder.binding.root.requestFocus()
             focusNext = -1
@@ -364,27 +368,44 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
                 binding.subtitle.setTextColor(binding.root.context.getColor(R.color.discourse_track_secondary))
                 binding.subtitle.textSize = 12f
                 binding.itemMore.imageTintList = android.content.res.ColorStateList.valueOf(binding.title.currentTextColor)
-                (binding.title.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
-                    endToStart = R.id.track_play
+                (binding.title.layoutParams as ConstraintLayout.LayoutParams).apply {
+                    endToStart = if (playlistTrackActions) R.id.discourse_like else R.id.track_play
                     verticalBias = 0f
                     topMargin = 12.dp
                 }
                 binding.subtitle.isSingleLine = false
                 binding.subtitle.maxLines = 2
-                (binding.subtitle.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                (binding.subtitle.layoutParams as ConstraintLayout.LayoutParams).apply {
                     bottomToBottom = -1
                     bottomToTop = R.id.track_progress
                 }
-                (binding.linearLayout6.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
+                (binding.linearLayout6.layoutParams as ConstraintLayout.LayoutParams).apply {
                     endToStart = -1; endToEnd = R.id.media_cover
                     topToTop = R.id.media_cover; bottomToBottom = R.id.media_cover
                     verticalBias = 0f
                 }
-                (binding.itemMore.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams).apply {
-                    width = 48.dp; height = 48.dp
-                    endToStart = -1; endToEnd = R.id.media_cover
-                    topToTop = R.id.media_cover; bottomToBottom = R.id.media_cover
-                    verticalBias = 1f
+                if (playlistTrackActions) {
+                    val heart = binding.root.findViewById<View>(R.id.discourse_like)
+                    (binding.itemMore.layoutParams as ConstraintLayout.LayoutParams).apply {
+                        width = 48.dp; height = 48.dp
+                        endToStart = -1; endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                        topToTop = -1; topToBottom = R.id.track_play
+                        bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                        verticalBias = 1f
+                    }
+                    (heart.layoutParams as ConstraintLayout.LayoutParams).apply {
+                        endToStart = R.id.item_more; endToEnd = -1
+                        topToTop = -1; topToBottom = R.id.track_play
+                        bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                        verticalBias = 1f
+                    }
+                } else {
+                    (binding.itemMore.layoutParams as ConstraintLayout.LayoutParams).apply {
+                        width = 48.dp; height = 48.dp
+                        endToStart = -1; endToEnd = R.id.media_cover
+                        topToTop = R.id.media_cover; bottomToBottom = R.id.media_cover
+                        verticalBias = 1f
+                    }
                 }
             }
             if (mixerStyle) {
@@ -431,7 +452,7 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             binding.item = item
         }
 
-        fun bindTrack(item: MediaWrapper?) {
+        fun bindTrack(item: MediaWrapper?, showPlayedBadge: Boolean = false) {
             if (likesUi.isInitialized()) likesUi.value?.unbind(binding.root)
             val heart = binding.root.findViewById<TextView>(R.id.discourse_like)
             heart.visibility = if (item == null || multiSelectHelper.inActionMode) View.GONE else View.VISIBLE
@@ -439,7 +460,8 @@ open class AudioBrowserAdapter @JvmOverloads constructor(
             val ids = item.discoursePlaybackIds()
             val audio = item.discourseAudioSnapshot()
             binding.subtitle.bindTrackStats(TrackCardStats(audio?.plays?.toLong() ?: item.playCount,
-                audio?.totalLikes ?: 0, item.uri.scheme in listOf("file", "content")))
+                audio?.totalLikes ?: 0, item.uri.scheme in listOf("file", "content"),
+                played = showPlayedBadge && item.playCount > 0L))
             if (ids != null) {
                 likesUi.value?.bind(binding.root, ids.audioId, true, item.title.orEmpty(), audio?.totalLikes ?: 0, audioItem = audio)
             } else {

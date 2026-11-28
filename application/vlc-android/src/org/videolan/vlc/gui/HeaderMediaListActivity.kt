@@ -232,7 +232,8 @@ open class HeaderMediaListActivity : AudioPlayerContainerActivity(), IEventsHand
         }
 
         if (isPlaylist) {
-            audioBrowserAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, if (isReadOnlyPlaylist) null else this, !isReadOnlyPlaylist)
+            audioBrowserAdapter = AudioBrowserAdapter(MediaLibraryItem.TYPE_MEDIA, this, if (isReadOnlyPlaylist) null else this, !isReadOnlyPlaylist,
+                playlistTrackActions = true)
             if (!isReadOnlyPlaylist) {
                 itemTouchHelperCallback = SwipeDragItemTouchHelperCallback(audioBrowserAdapter, lockedInSafeMode = Settings.safeMode)
                 itemTouchHelperCallback.swipeAttemptListener = {
