@@ -15,7 +15,6 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.videolan.vlc.audio.NoiseCancellationLevel
 import java.io.File
 import java.nio.ByteBuffer
 import kotlin.math.abs
@@ -77,7 +76,7 @@ class ClipVideoExporterTest {
     }
 
     @Test fun requestRoundTripIncludesVisualAndOldRequestsDefaultToAudio() {
-        val options = ClipExportOptions(NoiseCancellationLevel.HIGH,
+        val options = ClipExportOptions(
             ClipMixerOptions("content://music/1", "Music", 37, true), ClipOutput.VIDEO, "content://photos/1", fadeIn = true, fadeOut = true)
         assertEquals(options, ClipExportOptions.fromJson(JSONObject(options.toJson().toString())))
         assertEquals(ClipOutput.AUDIO, ClipExportOptions.fromJson(JSONObject("{\"noise\":\"OFF\"}")).output)

@@ -172,7 +172,6 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         }
 
         hidePlaylistConstraint.setVisibility(R.id.songs_list, View.GONE)
-        if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.noise_cancellation, View.VISIBLE)
         if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.player_clip, View.VISIBLE)
         if (binding.expandedActions == null) hidePlaylistConstraint.setVisibility(R.id.player_download, View.VISIBLE)
         hidePlaylistConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
@@ -197,7 +196,6 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         headerHidePlaylistConstraint.connect(R.id.playback_chips, ConstraintSet.BOTTOM, R.id.guideline_header_bottom, ConstraintSet.BOTTOM)
 
         hidePlaylistLandscapeConstraint.setVisibility(R.id.songs_list, View.GONE)
-        if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.noise_cancellation, View.VISIBLE)
         if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.player_clip, View.VISIBLE)
         if (binding.expandedActions == null) hidePlaylistLandscapeConstraint.setVisibility(R.id.player_download, View.VISIBLE)
         hidePlaylistLandscapeConstraint.setVisibility(R.id.cover_media_switcher, View.VISIBLE)
@@ -289,12 +287,10 @@ internal class AudioPlayerAnimator : IAudioPlayerAnimator, LifecycleObserver {
         binding.contentLayout.setBackgroundResource(if (slideOffset == 0f) android.R.color.transparent else R.drawable.audio_player_screen_background)
         binding.backgroundView.alpha = slideOffset * if (binding.expandedActions != null) 0.55f else 1f
         binding.expandedActions?.alpha = slideOffset
-        binding.noiseCancellation.alpha = if (binding.expandedActions == null) slideOffset else 1f
         if (binding.expandedActions == null) {
             binding.playerClip.alpha = slideOffset
             val actionsVisibility = if (showCover && slideOffset > 0F) View.VISIBLE else View.GONE
             binding.playerClip.visibility = actionsVisibility
-            binding.noiseCancellation.visibility = actionsVisibility
             binding.root.findViewById<View>(R.id.player_download).visibility = actionsVisibility
         }
         binding.playerAddPlaylist?.alpha = slideOffset

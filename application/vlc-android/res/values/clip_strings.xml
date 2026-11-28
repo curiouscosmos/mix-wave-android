@@ -6,7 +6,6 @@
     <string name="clip_create_video">Create video from clip</string>
     <string name="clip_select_video_or_photo">Select video or photo</string>
     <string name="clip_export_title">Export Clip</string>
-    <string name="clip_noise_cancellation">Noise cancellation</string>
     <string name="clip_background_music">Background music</string>
     <string name="clip_export_captions">Export closed captions</string>
     <string name="clip_captions_unavailable">Not available for this track</string>
@@ -43,7 +42,6 @@
     <string name="clip_started">Clip export started. You can keep listening.</string>
     <string name="clip_permission">Storage permission is needed to save clips to Downloads.</string>
     <string name="clip_invalid">Enter a valid time (m:ss or h:mm:ss) within the track. Select at least one second.</string>
-    <string name="clip_noise_loading">Wait for noise cancellation to finish loading, then tap Cut again.</string>
     <string name="clip_processing">Processing and saving clip…</string>
     <string name="clip_processing_failed">Could not process clip. Check that the source and selected background file are available, then try exporting again.</string>
     <string name="clip_processing_unsupported">This audio format cannot be processed on this device. Choose another background file or turn off export effects, then try again.</string>

@@ -92,8 +92,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.videolan.libvlc.FactoryManager
-import org.videolan.vlc.audio.NoiseOutput
-import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.videolan.libvlc.MediaPlayer
 import org.videolan.libvlc.RendererItem
 import org.videolan.libvlc.interfaces.IMedia
@@ -497,7 +495,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
                 // Input stops also occur between tracks; onPlaybackStopped handles queue stops.
             }
         }
-        refreshNoiseCancellation()
         cbActor.trySend(CbMediaPlayerEvent(event))
     }
 
@@ -867,7 +864,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         settings = Settings.getInstance(this)
         settings.registerOnSharedPreferenceChangeListener(listeningPrivacyListener)
         playlistManager = PlaylistManager(this)
-        playlistManager.player.onNoiseReset = { resetNoiseCancellationState() }
         Util.checkCpuCompatibility(this)
 
         medialibrary = Medialibrary.getInstance()
@@ -1043,8 +1039,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     override fun onDestroy() {
         settings.unregisterOnSharedPreferenceChangeListener(listeningPrivacyListener)
         pauseListening(finish = true)
-        resetNoiseCancellationState()
-        playlistManager.player.resetNoiseCancellation()
         cancelPlaybackHistoryTimer(reset = true)
         releaseAudioMixer()
         serviceFlow.value = null
@@ -1222,7 +1216,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         pauseListening(finish = true)
         cancelPlaybackHistoryTimer(reset = true)
         stopAudioMixer()
-        refreshNoiseCancellation()
         if (!systemExit) hideNotification(isForeground)
         removePopup()
         if (wakeLock.isHeld) wakeLock.release()
@@ -2025,7 +2018,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
     @MainThread
     fun setRate(rate: Float, save: Boolean) {
         playlistManager.player.setRate(rate, save)
-        refreshNoiseCancellation()
         lifecycleScope.launch(Dispatchers.Main) {
             executeUpdate(true)
         }
@@ -2286,10 +2278,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
 
     @MainThread
     fun setRenderer(item: RendererItem?) {
-        if (item != null) {
-            if (noiseCancellation.value.enabled) setNoiseCancellation(NoiseCancellationLevel.OFF)
-            resetNoiseCancellationState()
-        }
         val wasOnRenderer = hasRenderer()
         if (wasOnRenderer && !hasRenderer() && canSwitchToVideo())
             VideoPlayerActivity.startOpened(applicationContext,
@@ -2297,79 +2285,6 @@ class PlaybackService : MediaBrowserServiceCompat(), LifecycleOwner, CoroutineSc
         playlistManager.setRenderer(item)
         if (!wasOnRenderer && item != null) audioFocusHelper.changeAudioFocus(false)
         else if (wasOnRenderer && item == null && isPlaying) audioFocusHelper.changeAudioFocus(true)
-        refreshNoiseCancellation()
-    }
-
-    data class NoiseCancellationState(val level: NoiseCancellationLevel = NoiseCancellationLevel.OFF, val loading: Boolean = false, val available: Boolean = false) {
-        val enabled get() = level != NoiseCancellationLevel.OFF
-    }
-    val noiseCancellation = MutableStateFlow(NoiseCancellationState())
-    private var noiseRequest = 0L
-
-    private fun noiseCancellationAvailable() = this::playlistManager.isInitialized &&
-        BuildConfig.VLC_MAJOR_VERSION == 3 && playlistManager.player.mediaplayer.isSeekable && (playlistManager.player.mediaplayer.isPlaying || isPaused) &&
-        !hasRenderer() && !isVideoPlaying
-
-    private fun refreshNoiseCancellation() {
-        noiseCancellation.value = noiseCancellation.value.copy(available = noiseCancellationAvailable())
-    }
-
-    private fun resetNoiseCancellationState() {
-        noiseRequest++
-        noiseCancellation.value = NoiseCancellationState(available = noiseCancellationAvailable())
-    }
-
-    @MainThread
-    fun setNoiseCancellation(level: NoiseCancellationLevel) {
-        val state = noiseCancellation.value
-        if (level == NoiseCancellationLevel.OFF) {
-            if (!state.enabled && !state.loading) return
-            noiseRequest++
-            if (state.enabled) playlistManager.player.changeNoiseOutput(null)
-            resetNoiseCancellationState()
-            return
-        }
-        if (state.loading || level == state.level) return
-        if (state.enabled) {
-            if (playlistManager.player.setNoiseCancellationLevel(level)) noiseCancellation.value = state.copy(level = level)
-            else resetNoiseCancellationState()
-            return
-        }
-        if (!noiseCancellationAvailable()) return
-        val request = ++noiseRequest
-        noiseCancellation.value = noiseCancellation.value.copy(loading = true)
-        lifecycleScope.launch {
-            var candidate: NoiseOutput? = null
-            try {
-                withContext(NonCancellable + Dispatchers.IO) {
-                    candidate = NoiseOutput.create(this@PlaybackService, level) {
-                        if (noiseRequest == request) {
-                            setNoiseCancellation(NoiseCancellationLevel.OFF)
-                            showToast(getString(R.string.noise_cancellation_error), Toast.LENGTH_SHORT)
-                        }
-                    }
-                }
-                if (!isActive || noiseRequest != request || !noiseCancellationAvailable()) return@launch
-                val output = candidate!!
-                candidate = null // PlayerController owns and releases it even if installation fails.
-                val installed = playlistManager.player.changeNoiseOutput(output)
-                noiseCancellation.value = NoiseCancellationState(level = if (installed) level else NoiseCancellationLevel.OFF, available = noiseCancellationAvailable())
-                if (!installed) showToast(getString(R.string.noise_cancellation_error), Toast.LENGTH_SHORT)
-            } catch (_: Exception) {
-                if (noiseRequest == request) {
-                    resetNoiseCancellationState()
-                    showToast(getString(R.string.noise_cancellation_error), Toast.LENGTH_SHORT)
-                }
-            } catch (_: LinkageError) {
-                if (noiseRequest == request) {
-                    resetNoiseCancellationState()
-                    showToast(getString(R.string.noise_cancellation_error), Toast.LENGTH_SHORT)
-                }
-            } finally {
-                withContext(NonCancellable + Dispatchers.IO) { candidate?.close() }
-                if (noiseRequest == request && noiseCancellation.value.loading) resetNoiseCancellationState()
-            }
-        }
     }
 
     @MainThread

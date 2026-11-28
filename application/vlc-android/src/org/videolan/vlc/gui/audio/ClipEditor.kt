@@ -108,10 +108,6 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
         }
         controls.findViewById<View>(R.id.clip_cut).setOnClickListener {
             val service = player.playlistModel.service ?: return@setOnClickListener
-            if (service.noiseCancellation.value.loading) {
-                UiTools.snacker(player.requireActivity(), R.string.clip_noise_loading)
-                return@setOnClickListener
-            }
             if (!commitTimes()) return@setOnClickListener
             finishEditing()
             val audio = player.playlistModel.currentMediaWrapper?.discourseAudioSnapshot() ?: return@setOnClickListener
@@ -125,7 +121,7 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
             val mixer = service.mixerMedia?.takeIf { service.mixerEnabled }?.let {
                 ClipMixerOptions(it.uri.toString(), it.title ?: it.uri.lastPathSegment.orEmpty(), service.mixerVolume, service.mixerLoop)
             }
-            val options = ClipExportOptions(service.noiseCancellation.value.level, mixer)
+            val options = ClipExportOptions(mixer = mixer)
             if (player.parentFragmentManager.findFragmentByTag("clip_download") == null)
                 ClipDownloadDialog.newInstance(audio, selected, options).show(player.parentFragmentManager, "clip_download")
         }
@@ -240,7 +236,6 @@ internal class ClipEditor(private val player: AudioPlayer, private val binding: 
         if (range?.isValid(duration) == false) range = null
         binding.playerClip.isEnabled = audio != null && duration >= 1_000
         binding.playerClip.alpha = if (binding.playerClip.isEnabled) 1f else 0.4f
-        controls.findViewById<View>(R.id.clip_cut).isEnabled = player.playlistModel.service?.noiseCancellation?.value?.loading != true
         render()
         val activity = player.activity as? DiscourseDetailActivity
         val behavior = activity?.getBehavior()

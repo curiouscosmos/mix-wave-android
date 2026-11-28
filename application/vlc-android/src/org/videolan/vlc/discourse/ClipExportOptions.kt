@@ -1,7 +1,6 @@
 package org.videolan.vlc.discourse
 
 import org.json.JSONObject
-import org.videolan.vlc.audio.NoiseCancellationLevel
 
 internal data class ClipMixerOptions(val uri: String, val title: String, val volume: Int, val loop: Boolean) {
     init { require(uri.isNotBlank() && volume in 0..100) }
@@ -12,7 +11,6 @@ internal enum class ClipVideoRatio { ORIGINAL, PORTRAIT, LANDSCAPE }
 
 /** Export snapshot; independent of the service's subsequent playback settings. */
 internal data class ClipExportOptions(
-    val noiseLevel: NoiseCancellationLevel = NoiseCancellationLevel.OFF,
     val mixer: ClipMixerOptions? = null,
     val output: ClipOutput = ClipOutput.AUDIO,
     val visualUri: String? = null,
@@ -22,10 +20,9 @@ internal data class ClipExportOptions(
     val exportFolderUri: String? = null,
     val videoRatio: ClipVideoRatio = ClipVideoRatio.ORIGINAL
 ) {
-    val processed get() = noiseLevel != NoiseCancellationLevel.OFF || mixer != null || fadeIn || fadeOut
+    val processed get() = mixer != null || fadeIn || fadeOut
 
     fun toJson() = JSONObject().apply {
-        put("noise", noiseLevel.name)
         put("output", output.name)
         put("video_ratio", videoRatio.name)
         put("fade_in", fadeIn)
@@ -42,7 +39,6 @@ internal data class ClipExportOptions(
 
     companion object {
         fun fromJson(json: JSONObject?) = if (json == null) ClipExportOptions() else ClipExportOptions(
-            NoiseCancellationLevel.valueOf(json.getString("noise")),
             json.optJSONObject("mixer")?.let { ClipMixerOptions(it.getString("uri"), it.getString("title"), it.getInt("volume"), it.getBoolean("loop")) },
             ClipOutput.valueOf(json.optString("output", "AUDIO")),
             if (json.has("visual_uri")) json.getString("visual_uri") else null,

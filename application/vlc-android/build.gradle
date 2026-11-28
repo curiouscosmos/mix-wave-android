@@ -181,9 +181,6 @@ task generateSources(type: Jar) {
 }
 
 dependencies {
-    implementation('io.github.kaleyravideo:android-deepfilternet:0.0.8') {
-        exclude group: 'org.jetbrains.kotlinx' // Use the application's shared coroutine runtime.
-    }
     devApi project(':libvlcjni:libvlc')
     devApi project(':medialibrary')
     debugApi "org.videolan.android:libvlc-all:$rootProject.ext.libvlcVersion"

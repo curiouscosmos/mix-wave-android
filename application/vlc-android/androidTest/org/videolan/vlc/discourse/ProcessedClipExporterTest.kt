@@ -14,7 +14,6 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.videolan.vlc.audio.NoiseCancellationLevel
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -100,29 +99,7 @@ class ProcessedClipExporterTest {
         } finally { listOf(source, music, once, loop).forEach(File::delete) }
     }
 
-    @Test fun everyNoiseLevelExportsWithAndWithoutBackground() = runBlocking {
-        val source = wav("speech", 48_000, 2, 2_500) { sample, channel ->
-            ((0.3 + 0.1 * sin(2 * PI * 4 * sample / 48_000)) *
-                (sin(2 * PI * 220 * sample / 48_000) + 0.2 * sin(2 * PI * 1_100 * sample / 48_000)) *
-                (if (channel == 0) 1.0 else 0.6)).toFloat()
-        }
-        val output = File(context.cacheDir, "filtered.m4a")
-        try {
-            for (level in NoiseCancellationLevel.values().filter { it != NoiseCancellationLevel.OFF }) {
-                for (withMusic in listOf(false, true)) {
-                    val mixer = if (withMusic) ClipMixerOptions(Uri.fromFile(source).toString(), "Music", 40, false) else null
-                    ProcessedClipExporter.export(context, source, ClipRange(500, 1_500), ClipExportOptions(level, mixer), output) {}
-                    checkContainer(output, 1_000)
-                    val pcm = decode(output)
-                    assertTrue("Silent output at $level", rms(pcm, 200, 800) > 0.0001)
-                    if (!withMusic) assertTrue("Denoised speech must be mono", channelDifference(pcm, 200, 800) < 0.003)
-                    assertTrue("Missing final audio", rms(pcm, 850, 950) > 0.0001)
-                }
-            }
-        } finally { source.delete(); output.delete() }
-    }
-
-    @Test fun discourseRemainsStereoAndEndsAtTheTrackBoundaryWithoutNoiseCancellation() = runBlocking {
+    @Test fun discourseRemainsStereoAndEndsAtTheTrackBoundary() = runBlocking {
         val source = wav("stereo-source", 48_000, 2, 2_000) { sample, channel ->
             (0.3 * sin(2 * PI * (if (channel == 0) 440 else 880) * sample / 48_000)).toFloat()
         }
@@ -140,7 +117,7 @@ class ProcessedClipExporterTest {
     }
 
     @Test fun settingsSurviveBundleRoundTripAndOldRequestsHaveNoEffects() {
-        val expected = ClipExportOptions(NoiseCancellationLevel.MEDIUM, ClipMixerOptions("content://test/music", "Background", 37, true), fadeIn = true, fadeOut = true,
+        val expected = ClipExportOptions(ClipMixerOptions("content://test/music", "Background", 37, true), fadeIn = true, fadeOut = true,
             exportFolderUri = "content://documents/tree/clips")
         val parcel = Parcel.obtain()
         try {
@@ -170,7 +147,7 @@ class ProcessedClipExporterTest {
                 ProcessedClipExporter.export(context, source, ClipRange(0, 1_000), missing, output) {}
                 fail("Missing background was silently ignored")
             } catch (_: java.io.IOException) { }
-            val options = ClipExportOptions(NoiseCancellationLevel.LOW)
+            val options = ClipExportOptions(fadeIn = true)
             try {
                 ProcessedClipExporter.export(context, source, ClipRange(0, 1_000), options, output) { throw CancellationException("Test cancellation") }
                 fail("Expected cancellation")

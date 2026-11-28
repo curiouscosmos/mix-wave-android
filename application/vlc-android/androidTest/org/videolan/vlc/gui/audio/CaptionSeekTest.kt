@@ -72,7 +72,6 @@ class CaptionSeekTest {
         instrumentation.context.assets.open("clips/caption-seek-vbr.mp3").use { input ->
             source.outputStream().use { input.copyTo(it) }
         }
-        System.loadLibrary("discourse_audio")
         System.loadLibrary("caption_seek_probe")
         val server = if (stream) RangeServer(source.readBytes()) else null
         player = MediaPlayer(VLCInstance.getInstance(context))

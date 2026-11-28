@@ -21,7 +21,6 @@
 package org.videolan.vlc.gui.audio
 
 import androidx.appcompat.widget.PopupMenu
-import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.videolan.vlc.discourse.discoursePlaybackIds
 import org.videolan.vlc.discourse.discourseAudioSnapshot
 import org.videolan.vlc.discourse.DiscourseDownloadStore
@@ -257,13 +256,6 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
         return binding.root
     }
 
-    private fun noiseLevelLabel(level: NoiseCancellationLevel) = getString(when (level) {
-        NoiseCancellationLevel.OFF -> R.string.noise_cancellation_off
-        NoiseCancellationLevel.LOW -> R.string.noise_cancellation_low
-        NoiseCancellationLevel.MEDIUM -> R.string.noise_cancellation_medium
-        NoiseCancellationLevel.HIGH -> R.string.noise_cancellation_high
-    })
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         clipEditor = ClipEditor(this, binding, savedInstanceState)
@@ -290,41 +282,6 @@ class AudioPlayer : Fragment(), PlaylistAdapter.IPlayer, TextWatcher, IAudioPlay
                     clipEditor?.update()
                     captions?.update()
                     delay(1_000)
-                }
-            }
-        }
-        binding.noiseCancellation.setOnClickListener { button ->
-            val service = playlistModel.service
-            binding.noiseCancellation.isSelected = service?.noiseCancellation?.value?.enabled == true
-            if (service != null) {
-                PopupMenu(requireContext(), button).apply {
-                    NoiseCancellationLevel.values().forEach { level ->
-                        menu.add(0, level.ordinal, level.ordinal, noiseLevelLabel(level)).apply {
-                            isCheckable = true
-                            isChecked = service.noiseCancellation.value.level == level
-                        }
-                    }
-                    menu.setGroupCheckable(0, true, true)
-                    setOnMenuItemClickListener { item ->
-                        service.setNoiseCancellation(NoiseCancellationLevel.values()[item.itemId])
-                        true
-                    }
-                    show()
-                }
-            }
-        }
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                PlaybackService.serviceFlow.collectLatest { service ->
-                    if (service == null) {
-                        binding.noiseCancellation.isSelected = false
-                        binding.noiseCancellation.isEnabled = false
-                        binding.noiseCancellation.contentDescription = getString(R.string.noise_cancellation_state, noiseLevelLabel(NoiseCancellationLevel.OFF))
-                    } else service.noiseCancellation.collect { state ->
-                        binding.noiseCancellation.isSelected = state.enabled
-                        binding.noiseCancellation.isEnabled = !state.loading && (state.available || state.enabled)
-                        binding.noiseCancellation.contentDescription = getString(R.string.noise_cancellation_state, noiseLevelLabel(state.level))
-                    }
                 }
             }
         }

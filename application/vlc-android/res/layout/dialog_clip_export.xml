@@ -145,46 +145,6 @@
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:contentDescription="@null"
-                                android:src="@drawable/ic_clip_noise"
-                                android:tint="@color/clip_export_icon" />
-
-                        <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="16dp"
-                                android:layout_weight="1"
-                                android:text="@string/clip_noise_cancellation"
-                                android:textColor="@color/clip_export_text"
-                                android:textSize="16sp" />
-
-                        <androidx.appcompat.widget.SwitchCompat
-                                android:id="@+id/clip_export_noise_switch"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:clickable="false"
-                                android:enabled="false"
-                                android:focusable="false"
-                                app:thumbTint="@color/clip_export_switch_thumb"
-                                app:trackTint="@color/clip_export_switch_track" />
-                    </LinearLayout>
-
-                    <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginHorizontal="16dp"
-                            android:background="@color/clip_export_divider" />
-
-                    <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="64dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:paddingHorizontal="16dp">
-
-                        <ImageView
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:contentDescription="@null"
                                 android:src="@drawable/ic_song"
                                 android:tint="@color/clip_export_icon" />
 

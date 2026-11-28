@@ -164,7 +164,7 @@ class PlayerCaptionsTest {
             assertNull(panel.findViewById<View>(R.id.clip_cut))
             root.findViewById<View>(R.id.songs_list).visibility = View.GONE
             for (id in listOf(R.id.cover_media_switcher, R.id.caption_panel, R.id.clip_controls,
-                R.id.player_cc, R.id.player_clip, R.id.player_download, R.id.noise_cancellation))
+                R.id.player_cc, R.id.player_clip, R.id.player_download))
                 root.findViewById<View>(id).visibility = View.VISIBLE
             root.findViewById<View>(R.id.expanded_actions)?.visibility = View.VISIBLE
             panel.findViewById<View>(R.id.caption_status).visibility = View.GONE

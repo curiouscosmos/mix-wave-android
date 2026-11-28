@@ -14,8 +14,6 @@ import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer
 import org.videolan.resources.AppContextProvider
 import org.videolan.resources.VLCInstance
-import org.videolan.vlc.audio.NoiseCancellationLevel
-import org.videolan.vlc.audio.NoiseOutput
 import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -41,8 +39,6 @@ class StalledPlaybackTest {
 
     @Test fun pausedLocalRecoveryResumesWithOnePlay() = exerciseRestoredLocalTrack(paused = true)
 
-    @Test fun restoredLocalTrackKeepsPlayingAfterOutputRestart() = exerciseRestoredLocalTrack(paused = false, outputRestart = true)
-
     @Test fun downloadedInputPreservesPlayingPositionVolumeAndSpeed() = exerciseDownloadSwitch()
 
     @Test fun downloadedInputKeepsPausedPlaybackPaused() = exerciseDownloadSwitch(paused = true)
@@ -51,9 +47,7 @@ class StalledPlaybackTest {
 
     @Test fun invalidOfflineInputRestoresStreamWithoutSkipping() = exerciseDownloadSwitch(invalid = true)
 
-    @Test fun downloadedInputPreservesNoiseCancellation() = exerciseDownloadSwitch(filtered = true)
-
-    private fun exerciseDownloadSwitch(paused: Boolean = false, earlyPlay: Boolean = false, invalid: Boolean = false, filtered: Boolean = false) {
+    private fun exerciseDownloadSwitch(paused: Boolean = false, earlyPlay: Boolean = false, invalid: Boolean = false) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         AppContextProvider.init(context)
@@ -77,11 +71,6 @@ class StalledPlaybackTest {
                 }
             }
             await { controller.getCurrentTime() > 500 }
-            if (filtered) {
-                val output = NoiseOutput.create(context, NoiseCancellationLevel.LOW) { fail("Noise output failed") }
-                main { assertTrue(controller.changeNoiseOutput(output)) }
-                await { output.processedSamples > 24000 }
-            }
             main { controller.setVolume(37); controller.setRate(1.25f, false) }
             if (paused) {
                 main { controller.pause() }
@@ -122,12 +111,6 @@ class StalledPlaybackTest {
                 main { controller.play() }
             }
             await { controller.getCurrentTime() > position + 1000 }
-            if (filtered) {
-                val field = PlayerController::class.java.getDeclaredField("noiseOutput").apply { isAccessible = true }
-                val output = field.get(controller) as NoiseOutput
-                await { output.processedSamples > 24000 }
-                assertEquals(NoiseCancellationLevel.LOW, output.appliedLevel)
-            }
             assertFalse(events.contains(MediaPlayer.Event.EncounteredError))
             assertFalse(events.contains(MediaPlayer.Event.EndReached))
         } finally {
@@ -137,7 +120,7 @@ class StalledPlaybackTest {
         }
     }
 
-    private fun exerciseRestoredLocalTrack(paused: Boolean, outputRestart: Boolean = false) {
+    private fun exerciseRestoredLocalTrack(paused: Boolean) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         AppContextProvider.init(context)
@@ -160,12 +143,9 @@ class StalledPlaybackTest {
             await { controller.getCurrentTime() > 1000 }
             val position = controller.getCurrentTime()
             main {
-                if (outputRestart) controller.changeNoiseOutput(null)
-                else {
-                    // Trigger the same recovery already covered by the stalled-HTTP tests, with a restored local file.
-                    controller.javaClass.getDeclaredMethod("recoverAudioPlayback", Boolean::class.javaPrimitiveType)
-                        .apply { isAccessible = true }.invoke(controller, paused)
-                }
+                // Trigger the same recovery already covered by the stalled-HTTP tests, with a restored local file.
+                controller.javaClass.getDeclaredMethod("recoverAudioPlayback", Boolean::class.javaPrimitiveType)
+                    .apply { isAccessible = true }.invoke(controller, paused)
             }
             if (paused) {
                 await { controller.isPaused() }

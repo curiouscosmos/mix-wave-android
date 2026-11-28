@@ -29,7 +29,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.videolan.tools.HttpImageLoader
 import org.videolan.vlc.R
-import org.videolan.vlc.audio.NoiseCancellationLevel
 import org.videolan.vlc.databinding.DialogClipExportBinding
 import org.videolan.vlc.discourse.ClipExportOptions
 import org.videolan.vlc.discourse.ClipExportFolder
@@ -156,7 +155,6 @@ class ClipDownloadDialog : VLCBottomSheetDialogFragment() {
             clipTimestamp(args.getLong("end"))
         )
         val options = exportOptions()
-        binding.clipExportNoiseSwitch.isChecked = options.noiseLevel != NoiseCancellationLevel.OFF
         binding.clipExportMusicSwitch.isChecked = options.mixer != null
         binding.clipExportFadeIn.isChecked = fadeIn
         binding.clipExportFadeOut.isChecked = fadeOut

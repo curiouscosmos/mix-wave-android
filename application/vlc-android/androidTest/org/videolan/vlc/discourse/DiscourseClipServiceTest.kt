@@ -14,7 +14,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.videolan.tools.Settings
 import org.videolan.vlc.R
-import org.videolan.vlc.audio.NoiseCancellationLevel
 import java.io.File
 import java.util.UUID
 
@@ -61,7 +60,7 @@ class DiscourseClipServiceTest {
                 "https://example.invalid/unused.mp3", 6.0, source.length(), "audio/mpeg", 1, "", "")
             assertEquals(DiscourseDownloadState.DOWNLOADED, DiscourseDownloadStore(context).state(audio))
             instrumentation.uiAutomation.adoptShellPermissionIdentity()
-            var options = if (processed) ClipExportOptions(NoiseCancellationLevel.LOW,
+            var options = if (processed) ClipExportOptions(
                 ClipMixerOptions(android.net.Uri.fromFile(source).toString(), "Background", 37, true)) else ClipExportOptions()
             if (captions) options = options.copy(captionPath = "http://example.invalid/captions.srt")
             // The request is persisted before starting the service and removed only after completion.
