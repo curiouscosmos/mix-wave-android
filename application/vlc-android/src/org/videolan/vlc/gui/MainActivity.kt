@@ -66,7 +66,6 @@ import org.videolan.vlc.BuildConfig
 import org.videolan.vlc.R
 import org.videolan.vlc.StartActivity
 import org.videolan.vlc.gui.audio.AudioBrowserFragment
-import org.videolan.vlc.gui.audio.DiscoursesFragment
 import org.videolan.vlc.gui.audio.ListeningStatsActivity
 import org.videolan.vlc.gui.SecondaryActivity
 import org.videolan.vlc.gui.dialogs.UPDATE_DATE
@@ -269,8 +268,7 @@ class MainActivity : ContentActivity(),
         menu?.findItem(R.id.ml_menu_listening_stats)?.isVisible = true
         menu?.findItem(R.id.ml_menu_bookmarks)?.isVisible = currentFragmentId == R.id.nav_audio
         menu?.findItem(R.id.ml_menu_refresh)?.isVisible = Permissions.canReadStorage(this)
-        menu?.findItem(R.id.ml_menu_discourse_search)?.isVisible =
-            currentFragmentId == R.id.nav_audio || (currentFragment as? DiscoursesFragment)?.isDiscourseTabSelected == true
+        menu?.findItem(R.id.ml_menu_discourse_search)?.isVisible = currentFragmentId == R.id.nav_audio
         return super.onPrepareOptionsMenu(menu)
     }
 
