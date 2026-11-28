@@ -95,7 +95,7 @@ class ClipHistoryFragment : BaseFragment() {
     }
 
     override fun onDestroyView() {
-        list.adapter = null
+        if (::list.isInitialized) list.adapter = null
         adapter = null
         super.onDestroyView()
     }
