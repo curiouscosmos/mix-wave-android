@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.os.SystemClock
 import android.graphics.Bitmap
 import android.view.LayoutInflater
 import android.view.Menu
@@ -49,6 +50,7 @@ import kotlinx.coroutines.cancelAndJoin
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import org.videolan.tools.HttpImageLoader
+import org.videolan.tools.Settings
 import org.videolan.medialibrary.Tools
 import org.videolan.vlc.R
 import org.videolan.vlc.discourse.Discourse
@@ -69,6 +71,8 @@ import org.videolan.vlc.gui.helpers.UiTools.addToPlaylist
 import org.videolan.vlc.gui.view.SwipeRefreshLayout
 import org.videolan.vlc.viewmodels.DiscourseViewModel
 import org.videolan.resources.util.registerReceiverCompat
+
+private const val KEY_DOWNLOAD_ALL_UNLOCKED = "osho_discourse_download_all_unlocked"
 
 class DiscourseFragment : BaseFragment() {
     private val model: DiscourseViewModel by viewModels { DiscourseViewModel.Factory(requireContext()) }
@@ -100,6 +104,8 @@ class DiscourseFragment : BaseFragment() {
     private var bulkDownloadJob: Job? = null
     private var trackThumbnailUrl: String? = null
     private var trackThumbnail: Bitmap? = null
+    private var downloadAllUnlocked = false
+    private val downloadAllUnlock = DownloadAllUnlock()
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             refreshDownloadIndicators(intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L))
@@ -168,6 +174,16 @@ class DiscourseFragment : BaseFragment() {
         tracks.layoutManager = LinearLayoutManager(requireContext())
         detail.setBackgroundResource(R.drawable.discourse_detail_background)
         header = layoutInflater.inflate(R.layout.discourse_detail_header, tracks, false)
+        downloadAllUnlocked = Settings.getInstance(requireContext()).getBoolean(KEY_DOWNLOAD_ALL_UNLOCKED, false)
+        header.findViewById<Button>(R.id.discourse_download_all).isVisible = downloadAllUnlocked
+        header.findViewById<View>(R.id.discourse_detail_image).setOnClickListener {
+            if (downloadAllUnlocked) return@setOnClickListener
+            if (downloadAllUnlock.tap(SystemClock.elapsedRealtime())) {
+                downloadAllUnlocked = true
+                Settings.getInstance(requireContext()).edit().putBoolean(KEY_DOWNLOAD_ALL_UNLOCKED, true).apply()
+                header.findViewById<Button>(R.id.discourse_download_all).isVisible = true
+            }
+        }
         tracks.clipToPadding = false
         tracks.itemAnimator = null
         trackAdapter = null
@@ -301,7 +317,10 @@ class DiscourseFragment : BaseFragment() {
                         requireContext().playDiscourseAudios(audios, 0)
                     }
                 }
-                header.findViewById<Button>(R.id.discourse_download_all).isEnabled = audios.isNotEmpty()
+                header.findViewById<Button>(R.id.discourse_download_all).apply {
+                    isVisible = downloadAllUnlocked
+                    isEnabled = audios.isNotEmpty()
+                }
                 header.findViewById<Button>(R.id.discourse_remove_all).isVisible = false
                 refreshProgress(null)
                 when {
@@ -382,7 +401,10 @@ class DiscourseFragment : BaseFragment() {
         val downloaded = audios.count { downloads.cachedState(it) == DiscourseDownloadState.DOWNLOADED }
         val active = audios.count { downloads.cachedState(it) == DiscourseDownloadState.DOWNLOADING }
         val busy = bulkDownloadJob?.isActive == true
-        header.findViewById<Button>(R.id.discourse_download_all).isEnabled = !busy && audios.isNotEmpty() && active == 0 && downloaded < audios.size
+        header.findViewById<Button>(R.id.discourse_download_all).apply {
+            isVisible = downloadAllUnlocked
+            isEnabled = !busy && audios.isNotEmpty() && active == 0 && downloaded < audios.size
+        }
         header.findViewById<Button>(R.id.discourse_remove_all).isEnabled = !busy
         header.findViewById<Button>(R.id.discourse_cancel_downloads).isEnabled = !busy
         header.findViewById<Button>(R.id.discourse_remove_all).isVisible = downloaded > 0
