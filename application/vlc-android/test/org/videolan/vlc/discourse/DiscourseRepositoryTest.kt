@@ -5,6 +5,9 @@ import io.mockk.coEvery
 import io.mockk.mockkObject
 import io.mockk.verify
 import io.mockk.every
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CancellationException
 import org.videolan.tools.ErrorReporter
@@ -119,14 +122,14 @@ class DiscourseRepositoryTest : BaseTest() {
     }
 
     @Test
-    fun storesFullDiscoursesNewestFirstAndCapsAt24() {
+    fun storesFullDiscoursesNewestFirstAndCapsAt16() {
         val discourses = (1..25).map { discourse("discourse-$it") }
 
         discourses.forEach(repository::recordRecentlyPlayed)
 
-        assertEquals(24, repository.recentlyPlayedDiscourses.size)
+        assertEquals(16, repository.recentlyPlayedDiscourses.size)
         assertEquals(discourses.last(), repository.recentlyPlayedDiscourses.first())
-        assertEquals(discourses[1], repository.recentlyPlayedDiscourses.last())
+        assertEquals(discourses[9], repository.recentlyPlayedDiscourses.last())
     }
 
     @Test
@@ -142,14 +145,38 @@ class DiscourseRepositoryTest : BaseTest() {
     }
 
     @Test
-    fun storesFullAudiosNewestFirstAndCapsAt24() {
+    fun storesFullAudiosNewestFirstAndCapsAt16() {
         val audios = (1..25).map { audio("audio-$it") }
 
         audios.forEach(repository::recordRecentlyPlayed)
 
-        assertEquals(24, repository.recentlyPlayedAudios.size)
+        assertEquals(16, repository.recentlyPlayedAudios.size)
         assertEquals(audios.last(), repository.recentlyPlayedAudios.first())
-        assertEquals(audios[1], repository.recentlyPlayedAudios.last())
+        assertEquals(audios[9], repository.recentlyPlayedAudios.last())
+    }
+
+    @Test
+    fun prunesLegacyRecentlyPlayedCachesToLatest16() {
+        val discourses = (1..20).map { discourse("discourse-$it") }
+        val audios = (1..20).map { audio("audio-$it") }
+        val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+        val discoursesAdapter = moshi.adapter<List<Discourse>>(
+            Types.newParameterizedType(List::class.java, Discourse::class.java))
+        val audiosAdapter = moshi.adapter<List<DiscourseAudio>>(
+            Types.newParameterizedType(List::class.java, DiscourseAudio::class.java))
+        Settings.getInstance(context).edit()
+            .putString("osho_api_recently_played_discourses", discoursesAdapter.toJson(discourses.reversed()))
+            .putString("osho_api_recently_played_audios", audiosAdapter.toJson(audios.reversed()))
+            .commit()
+
+        repository.pruneRecentlyPlayed()
+
+        assertEquals(16, repository.recentlyPlayedDiscourses.size)
+        assertEquals(discourses.last(), repository.recentlyPlayedDiscourses.first())
+        assertEquals(discourses[4], repository.recentlyPlayedDiscourses.last())
+        assertEquals(16, repository.recentlyPlayedAudios.size)
+        assertEquals(audios.last(), repository.recentlyPlayedAudios.first())
+        assertEquals(audios[4], repository.recentlyPlayedAudios.last())
     }
 
     @Test

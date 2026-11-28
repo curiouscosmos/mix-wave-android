@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import java.time.LocalDate
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import org.videolan.medialibrary.interfaces.Medialibrary
@@ -14,9 +15,12 @@ import org.videolan.tools.PLAYBACK_HISTORY
 import org.videolan.tools.Settings
 import org.videolan.vlc.discourse.*
 import org.videolan.vlc.media.ListeningStatsStore
+import org.videolan.vlc.media.MAX_RECENT_PLAYED
 import org.videolan.vlc.media.MediaSessionBrowser
 import org.videolan.vlc.media.MediaUtils
+import org.videolan.vlc.media.interleaveRecent
 import org.videolan.vlc.media.listeningTime
+import org.videolan.vlc.media.splitRecentHistory
 import org.videolan.vlc.mediadb.models.ListeningDay
 
 /** Display snapshots keep mutable medialibrary objects out of diff comparisons. */
@@ -43,11 +47,14 @@ class HomeViewModel @JvmOverloads constructor(
     private var historyJob: Job? = null
     private var statsJob: Job? = null
     private var listeningStatsJob: Job? = null
+    private val pruningLocalHistory = AtomicBoolean()
     private val preferences = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == PLAYBACK_HISTORY || key == "osho_api_recently_played_audios" || key == "osho_api_recently_played_discourses")
             viewModelScope.launch { refreshHistory() }
     }
-    private val history = Medialibrary.HistoryCb { viewModelScope.launch { refreshHistory() } }
+    private val history = Medialibrary.HistoryCb {
+        if (!pruningLocalHistory.get()) viewModelScope.launch { refreshHistory() }
+    }
 
     init {
         settings.registerOnSharedPreferenceChangeListener(preferences)
@@ -63,18 +70,31 @@ class HomeViewModel @JvmOverloads constructor(
         }
         historyJob = viewModelScope.launch {
             val result = historyLoader?.invoke() ?: withContext(Dispatchers.IO) {
+                repository.pruneRecentlyPlayed()
                 val audios = repository.recentlyPlayedAudios
                 playback.register(audios)
-                val local = Medialibrary.getInstance().history(Medialibrary.HISTORY_TYPE_LOCAL)
+                val localHistory = Medialibrary.getInstance().history(Medialibrary.HISTORY_TYPE_LOCAL)
                     ?.filter { MediaSessionBrowser.isMediaAudio(it) }.orEmpty()
-                val tracks = (audios.map { it.toMediaWrapper(getApplication()) } + local)
+                val (local, stale) = splitRecentHistory(localHistory)
+                if (stale.isNotEmpty() && pruningLocalHistory.compareAndSet(false, true)) {
+                    try {
+                        withContext(NonCancellable) { stale.forEach { it.removeFromHistory() } }
+                    } finally {
+                        pruningLocalHistory.set(false)
+                    }
+                }
+                val discourseTracks = audios.map { it.toMediaWrapper(getApplication()) }
                     .distinctBy { it.tag ?: it.uri }
+                val localTracks = local.distinctBy { it.tag ?: it.uri }
+                val tracks = interleaveRecent(discourseTracks, localTracks)
+                    .distinctBy { it.tag ?: it.uri }
+                    .take(MAX_RECENT_PLAYED)
                     .map { media ->
                         HomeTrack(media.discourseAudioSnapshot()?.id ?: media.uri.toString(), media.title,
                             MediaUtils.getDisplaySubtitle(getApplication(), media) ?: media.albumName ?: media.artistName.orEmpty(),
                             media.artworkMrl, media.discourseAudioSnapshot(), media.time).apply { this.media = media }
                     }
-                repository.recentlyPlayedDiscourses to tracks
+                repository.recentlyPlayedDiscourses.take(MAX_RECENT_PLAYED) to tracks
             }
             ensureActive()
             if (recentDiscourses.value != result.first) recentDiscourses.value = result.first

@@ -11,6 +11,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import org.videolan.tools.Settings
+import org.videolan.vlc.media.MAX_RECENT_PLAYED
 
 class DiscourseRepository(
     context: Context,
@@ -221,14 +222,28 @@ class DiscourseRepository(
             runCatching { recentlyPlayedAdapter.fromJson(json).orEmpty() }.getOrDefault(emptyList())
         } ?: emptyList()
 
-    fun recordRecentlyPlayed(discourse: Discourse) {
+    fun recordRecentlyPlayed(discourse: Discourse) = synchronized(settings) {
         val recent = recentlyPlayedDiscourses.filterNot { it.id == discourse.id }
         val target = DiscourseLikesStore.Target(discourse.id, false)
         val count = likes.value.counts[target]?.takeIf { target !in likes.value.pending }
         val updated = count?.let { discourse.copy(totalLikes = it) } ?: discourse
         settings.edit()
-            .putString(KEY_RECENTLY_PLAYED_DISCOURSES, recentlyPlayedAdapter.toJson((listOf(updated) + recent).take(MAX_RECENTLY_PLAYED)))
+            .putString(KEY_RECENTLY_PLAYED_DISCOURSES, recentlyPlayedAdapter.toJson((listOf(updated) + recent).take(MAX_RECENT_PLAYED)))
             .apply()
+    }
+
+    fun pruneRecentlyPlayed() = synchronized(settings) {
+        val discourses = recentlyPlayedDiscourses
+        val audios = recentlyPlayedAudios
+        val keptDiscourses = discourses.take(MAX_RECENT_PLAYED)
+        val keptAudios = audios.take(MAX_RECENT_PLAYED)
+        if (keptDiscourses.size == discourses.size && keptAudios.size == audios.size) return@synchronized
+        settings.edit().apply {
+            if (keptDiscourses.size != discourses.size)
+                putString(KEY_RECENTLY_PLAYED_DISCOURSES, recentlyPlayedAdapter.toJson(keptDiscourses))
+            if (keptAudios.size != audios.size)
+                putString(KEY_RECENTLY_PLAYED_AUDIOS, recentlyPlayedAudiosAdapter.toJson(keptAudios))
+        }.apply()
     }
 
     val recentlyPlayedAudios: List<DiscourseAudio>
@@ -236,13 +251,13 @@ class DiscourseRepository(
             runCatching { recentlyPlayedAudiosAdapter.fromJson(json).orEmpty() }.getOrDefault(emptyList())
         } ?: emptyList()
 
-    fun recordRecentlyPlayed(audio: DiscourseAudio) {
+    fun recordRecentlyPlayed(audio: DiscourseAudio) = synchronized(settings) {
         val recent = recentlyPlayedAudios.filterNot { it.id == audio.id }
         val target = DiscourseLikesStore.Target(audio.id, true)
         val count = likes.value.counts[target]?.takeIf { target !in likes.value.pending }
         val updated = count?.let { audio.copy(totalLikes = it) } ?: audio
         settings.edit()
-            .putString(KEY_RECENTLY_PLAYED_AUDIOS, recentlyPlayedAudiosAdapter.toJson((listOf(updated) + recent).take(MAX_RECENTLY_PLAYED)))
+            .putString(KEY_RECENTLY_PLAYED_AUDIOS, recentlyPlayedAudiosAdapter.toJson((listOf(updated) + recent).take(MAX_RECENT_PLAYED)))
             .apply()
     }
 
@@ -305,7 +320,6 @@ class DiscourseRepository(
         const val KEY_RECENTLY_PLAYED_AUDIOS = "osho_api_recently_played_audios"
         const val KEY_CATALOGUE_LANGUAGE = "osho_api_catalogue_language"
         const val KEY_CATALOGUE_SORT = "osho_api_catalogue_sort"
-        const val MAX_RECENTLY_PLAYED = 24
         const val KEY_STATS_DISCOURSES = "osho_api_stats_discourses"
         const val KEY_STATS_AUDIOS = "osho_api_stats_audios"
         const val STATS_CACHE_TTL = 3L * 60L * 60L * 1000L
