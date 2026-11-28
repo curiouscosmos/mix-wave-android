@@ -140,8 +140,9 @@
 -keep class org.videolan.vlc.gui.preferences.search.SettingEntry { *; }
 
 # KotlinJsonAdapterFactory resolves constructor parameters through Kotlin
-# metadata and kotlin-reflect, so the discourse models and runtime must stay.
+# metadata and kotlin-reflect, so the discourse and bookmark models must stay.
 -keep class org.videolan.vlc.discourse.** { *; }
+-keep class org.videolan.vlc.bookmarks.** { *; }
 -keep class kotlin.Metadata { *; }
 -keep class kotlin.reflect.jvm.internal.** { *; }
 -dontwarn kotlin.reflect.**
